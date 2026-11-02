@@ -23,17 +23,41 @@ importance are in [`reports/evaluation.md`](reports/evaluation.md).
 The top 6–7 cars are easy to call. Nearly all of the misses come from the midfield fight for P8–P12,
 where the gaps are often under a tenth.
 
-## Quick start
+## Quick start (uv)
+
+The project is managed with [uv](https://docs.astral.sh/uv/). `uv sync` creates `.venv/` with the
+pinned dependencies from `uv.lock`, including the dev group (pytest).
 
 ```bash
-pip install -r requirements.txt
-python -m f1qp.train              # evaluate + write reports/evaluation.md + save models/top10_model.joblib
-python -m f1qp.predict 2024 monaco
-python -m f1qp.predict 2025 7     # by round number
-pytest -q
+uv sync
+uv run f1qp-train                  # evaluate, write reports/evaluation.md, save models/top10_model.joblib
+uv run f1qp-dashboard              # build reports/dashboard.html (interactive results)
+uv run f1qp-predict 2024 monaco    # one race, predicted vs actual
+uv run f1qp-predict 2025 7         # by round number
+uv run f1qp-data                   # re-download F1DB and rebuild data/qualifying_entries.csv
+uv run pytest
 ```
 
-Example output (`python -m f1qp.predict 2024 monaco`). ✓ means the driver was correctly placed
+To add a dependency, run `uv add <package>` (or `uv add --dev <package>`) and commit
+`pyproject.toml` and `uv.lock`.
+
+## Dashboard
+
+`reports/dashboard.html` is a single self-contained file. Open it in a browser. Every prediction in it
+is out-of-sample: it comes from the walk-forward run, where the model is retrained before each session.
+
+- **Overview:** correct picks per season, the model vs the simple rules, how often each score happened,
+  and feature importance.
+- **Drivers by track:** pick a driver to see every track they raced at: visits, average and best
+  qualifying position, Q3 rate, poles, a colour-coded result chip for each season, the model's average
+  P(Q3), and how often the model called it right.
+- **Tracks:** the same stats for every driver at one track, plus the model's score at each session there.
+- **Heatmap:** average qualifying position for each driver at each track.
+- **Sessions:** the model's full predicted order for any race, with the actual result.
+
+All views can be filtered by season.
+
+Example output (`uv run f1qp-predict 2024 monaco`). ✓ means the driver was correctly placed
 inside or outside the top 10:
 
 ```
@@ -49,11 +73,16 @@ Correct top-10 picks: 8/10
 
 ## Data
 
+**Is this FastF1?** No. FastF1 reads the F1 live-timing API, which the cloud environment this was built
+in cannot reach. F1DB has every session result, practice classification and standings table we need.
+FastF1 adds telemetry and sector times, so it would be a good next step on a machine with normal
+internet access.
+
 [F1DB](https://github.com/f1db/f1db) (CC BY 4.0). `data/qualifying_entries.csv` is committed, so
 no download is needed. To rebuild it from the latest F1DB (sparse git clone, seasons 2019–2025):
 
 ```bash
-python -m f1qp.data
+uv run f1qp-data
 ```
 
 One row per driver per qualifying session: classification, Q1–Q3 times, FP1–FP3 position and gap
@@ -90,7 +119,8 @@ f1qp/features.py   leakage-free pre-qualifying features
 f1qp/model.py      models, baselines, metrics, permutation importance
 f1qp/train.py      hold-out + walk-forward evaluation, saves final model
 f1qp/predict.py    predict any 2020–2025 GP vs. the actual result
-reports/           generated evaluation report
+f1qp/dashboard.py  build the interactive HTML dashboard (template: dashboard_template.html)
+reports/           evaluation report + dashboard.html
 tests/             data sanity + leakage tests
 ```
 
