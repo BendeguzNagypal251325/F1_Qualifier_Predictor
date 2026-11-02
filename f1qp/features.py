@@ -46,7 +46,20 @@ FEATURES = [
     "street_circuit",
 ]
 
-TARGET = "top10"
+TARGET = "quali_pos"
+
+# Teams that changed name but are the same team (same factory, same staff, same car line).
+# Constructor form and "sessions with this team" are tracked per lineage, so a rebrand
+# does not look like a brand-new team with no history.
+TEAM_LINEAGE = {
+    "racing-point": "aston-martin",
+    "renault": "alpine",
+    "toro-rosso": "racing-bulls",
+    "alphatauri": "racing-bulls",
+    "rb": "racing-bulls",
+    "alfa-romeo": "audi",
+    "kick-sauber": "audi",
+}
 
 
 def _pace_gap(df: pd.DataFrame) -> pd.Series:
@@ -70,6 +83,7 @@ def build_features(entries: pd.DataFrame) -> pd.DataFrame:
     df["date"] = pd.to_datetime(df["date"])
     df = df.sort_values(["date", "quali_pos"]).reset_index(drop=True)
     df["pace_gap"] = _pace_gap(df)
+    df["team_id"] = df["constructor_id"].replace(TEAM_LINEAGE)
 
     # Driver rolling form across seasons.
     df["drv_pos_last"] = df.groupby("driver_id")["quali_pos"].shift(1)
@@ -78,7 +92,7 @@ def build_features(entries: pd.DataFrame) -> pd.DataFrame:
     df["drv_top10_rate5"] = _rolling_past(df, "driver_id", "top10", 5)
     df["drv_pace_gap_mean3"] = _rolling_past(df, "driver_id", "pace_gap", 3)
     df["drv_career_sessions"] = df.groupby("driver_id").cumcount()
-    df["drv_team_sessions"] = df.groupby(["driver_id", "constructor_id"]).cumcount()
+    df["drv_team_sessions"] = df.groupby(["driver_id", "team_id"]).cumcount()
 
     ds = ["driver_id", "season"]
     prev = df.groupby(ds)["quali_pos"].shift(1)
@@ -98,22 +112,22 @@ def build_features(entries: pd.DataFrame) -> pd.DataFrame:
 
     # Constructor form: aggregate per (race, team) first, then roll over the team's sessions.
     team = (
-        df.groupby(["race_key", "constructor_id", "season"], sort=False)
+        df.groupby(["race_key", "team_id", "season"], sort=False)
         .agg(date=("date", "first"), pos=("quali_pos", "mean"), top10=("top10", "mean"), gap=("pace_gap", "min"))
         .reset_index()
         .sort_values("date")
         .reset_index(drop=True)
     )
-    team["con_pos_mean3"] = _rolling_past(team, "constructor_id", "pos", 3)
-    team["con_top10_rate3"] = _rolling_past(team, "constructor_id", "top10", 3)
-    team["con_pace_gap_mean3"] = _rolling_past(team, "constructor_id", "gap", 3)
-    prev_t = team.groupby(["constructor_id", "season"])["pos"].shift(1)
-    team["con_season_pos_mean"] = prev_t.groupby([team["constructor_id"], team["season"]]).expanding().mean().reset_index(
+    team["con_pos_mean3"] = _rolling_past(team, "team_id", "pos", 3)
+    team["con_top10_rate3"] = _rolling_past(team, "team_id", "top10", 3)
+    team["con_pace_gap_mean3"] = _rolling_past(team, "team_id", "gap", 3)
+    prev_t = team.groupby(["team_id", "season"])["pos"].shift(1)
+    team["con_season_pos_mean"] = prev_t.groupby([team["team_id"], team["season"]]).expanding().mean().reset_index(
         level=[0, 1], drop=True
     )
     df = df.merge(
-        team[["race_key", "constructor_id", "con_pos_mean3", "con_top10_rate3", "con_pace_gap_mean3", "con_season_pos_mean"]],
-        on=["race_key", "constructor_id"],
+        team[["race_key", "team_id", "con_pos_mean3", "con_top10_rate3", "con_pace_gap_mean3", "con_season_pos_mean"]],
+        on=["race_key", "team_id"],
         how="left",
     )
 

@@ -1,7 +1,7 @@
 [project]
 name = "f1qp"
 version = "0.1.0"
-description = "F1 top-10 qualifying predictor (2020-2025)"
+description = "F1 top-10 qualifying predictor (Ridge regression)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -17,6 +17,7 @@ f1qp-data = "f1qp.data:main"
 f1qp-train = "f1qp.train:main"
 f1qp-predict = "f1qp.predict:main"
 f1qp-dashboard = "f1qp.dashboard:main"
+f1qp-live = "f1qp.live:main"
 
 [dependency-groups]
 dev = ["pytest>=8.0"]

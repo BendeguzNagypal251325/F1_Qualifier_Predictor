@@ -1,68 +1,65 @@
-"""Models, baselines and per-session evaluation for top-10 qualifying prediction.
+"""Ridge regression model, baselines and per-session evaluation.
 
-A session prediction always picks exactly 10 drivers: the 10 with the highest predicted
-probability of reaching Q3. The headline metric is therefore "correct picks out of 10"
-(precision@10, which equals recall@10 because every session has exactly 10 Q3 drivers).
+The model predicts each driver's qualifying position. Sorting the predictions per session
+gives the predicted grid; the 10 best-placed drivers are the predicted Q3 (top 10).
+
+Metrics per session:
+  * correct picks out of 10 (how many predicted top-10 drivers really reached Q3)
+  * MAE: average number of places the predicted grid position is off (all drivers, and
+    only the drivers who really qualified top 10)
 """
 
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import log_loss, roc_auc_score
+from sklearn.linear_model import Ridge
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
+from . import TRAIN_FROM
 from .features import FEATURES, TARGET
 
 
-def make_model(kind: str = "logreg"):
-    if kind == "logreg":
-        return make_pipeline(
-            SimpleImputer(strategy="median", add_indicator=True, keep_empty_features=True),
-            StandardScaler(),
-            LogisticRegression(C=0.3, max_iter=2000),
-        )
-    if kind == "gbm":
-        return HistGradientBoostingClassifier(
-            learning_rate=0.05,
-            max_iter=300,
-            max_leaf_nodes=15,
-            min_samples_leaf=30,
-            l2_regularization=1.0,
-            early_stopping=False,
-            random_state=0,
-        )
-    raise ValueError(f"unknown model kind: {kind}")
+def make_model():
+    return make_pipeline(
+        SimpleImputer(strategy="median", add_indicator=True, keep_empty_features=True),
+        StandardScaler(),
+        Ridge(alpha=10.0),
+    )
 
 
-MODEL_KINDS = ("logreg", "gbm")
+# Used before a weekend's first practice session, when there are no practice results yet.
+PRACTICE_FEATURES = ["fp_last_pos", "fp_last_gap_pct", "fp_best_pos", "fp_mean_gap_pct", "fp_sessions"]
+PRE_WEEKEND_FEATURES = [f for f in FEATURES if f not in PRACTICE_FEATURES]
 
 
-def fit(train: pd.DataFrame, kind: str = "logreg"):
-    model = make_model(kind)
-    model.fit(train[FEATURES], train[TARGET])
+def fit(train: pd.DataFrame, features: list[str] = FEATURES):
+    """Fit on training rows from TRAIN_FROM onwards (earlier rows only serve as feature history)."""
+    train = train[(train["season"] >= TRAIN_FROM) & train[TARGET].notna()]
+    model = make_model()
+    model.fit(train[features], train[TARGET])
     return model
 
 
-def predict_proba(model, df: pd.DataFrame) -> np.ndarray:
-    return model.predict_proba(df[FEATURES])[:, 1]
+def predict_position(model, df: pd.DataFrame) -> np.ndarray:
+    """Raw predicted qualifying position (lower = better). Uses the features the model was fitted on."""
+    return model.predict(df[list(model.feature_names_in_)])
 
 
-def pick_top10(df: pd.DataFrame, score: pd.Series | np.ndarray, higher_is_better: bool = True) -> pd.Series:
-    """Boolean Series: the 10 best-scored drivers in each session (NaN scores rank last)."""
-    s = pd.Series(np.asarray(score, dtype=float), index=df.index)
-    if not higher_is_better:
-        s = -s
-    s = s.fillna(-np.inf)
-    rank = s.groupby(df["race_key"]).rank(method="first", ascending=False)
-    return rank <= 10
+def predicted_grid(df: pd.DataFrame, score) -> pd.Series:
+    """Positions 1..N per session from scores (lower = better). Missing scores go last."""
+    s = pd.Series(np.asarray(score, dtype=float), index=df.index).fillna(np.inf)
+    return s.groupby(df["race_key"]).rank(method="first").astype(int)
 
 
-# Baselines: simple heuristics a fan might use. Lower value = better for all of them.
+def pick_top10(df: pd.DataFrame, score) -> pd.Series:
+    """Boolean Series: the 10 best-scored drivers in each session (lower score = better)."""
+    return predicted_grid(df, score) <= 10
+
+
+# Baselines: simple rules a fan might use. Lower value = better for all of them.
 BASELINES = {
     "previous_quali": "drv_pos_last",
     "rolling_form_3": "drv_pos_mean3",
@@ -73,42 +70,37 @@ BASELINES = {
 
 def session_scores(df: pd.DataFrame, picked: pd.Series) -> pd.Series:
     """Correct picks (out of 10) per session."""
-    return (picked & (df[TARGET] == 1)).groupby(df["race_key"]).sum()
+    return (picked & (df["top10"] == 1)).groupby(df["race_key"]).sum()
 
 
-def evaluate(df: pd.DataFrame, proba: np.ndarray | None = None, picked: pd.Series | None = None) -> dict:
-    if picked is None:
-        picked = pick_top10(df, proba)
-    per_session = session_scores(df, picked)
-    out = {
+def evaluate(df: pd.DataFrame, score) -> dict:
+    grid = predicted_grid(df, score)
+    per_session = session_scores(df, grid <= 10)
+    err = (grid - df[TARGET]).abs()
+    return {
         "sessions": int(per_session.size),
         "correct_per_10": float(per_session.mean()),
         "perfect_sessions": int((per_session == 10).sum()),
         "worst_session": int(per_session.min()),
+        "mae_all": float(err.groupby(df["race_key"]).mean().mean()),
+        "mae_top10": float(err[df["top10"] == 1].mean()),
     }
-    if proba is not None:
-        out["roc_auc"] = float(roc_auc_score(df[TARGET], proba))
-        out["log_loss"] = float(log_loss(df[TARGET], np.clip(proba, 1e-6, 1 - 1e-6)))
-    return out
 
 
 def evaluate_baselines(df: pd.DataFrame) -> dict[str, dict]:
-    return {
-        name: evaluate(df, picked=pick_top10(df, df[col], higher_is_better=False))
-        for name, col in BASELINES.items()
-    }
+    return {name: evaluate(df, df[col]) for name, col in BASELINES.items()}
 
 
 def feature_importance(model, df: pd.DataFrame, n_repeats: int = 5, seed: int = 0) -> pd.Series:
     """Permutation importance measured as drop in correct picks per 10."""
     rng = np.random.default_rng(seed)
-    base = evaluate(df, predict_proba(model, df))["correct_per_10"]
+    base = evaluate(df, predict_position(model, df))["correct_per_10"]
     drops = {}
     for feat in FEATURES:
         scores = []
         for _ in range(n_repeats):
             shuffled = df.copy()
             shuffled[feat] = rng.permutation(shuffled[feat].to_numpy())
-            scores.append(evaluate(shuffled, predict_proba(model, shuffled))["correct_per_10"])
+            scores.append(evaluate(shuffled, predict_position(model, shuffled))["correct_per_10"])
         drops[feat] = base - float(np.mean(scores))
     return pd.Series(drops).sort_values(ascending=False)

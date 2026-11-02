@@ -1,4 +1,4 @@
-<title>Q3 Predictor 2020–2025</title>
+<title>F1 Q3 Predictor</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -123,7 +123,7 @@ svg .lbl { fill: var(--ink); font-family: var(--font-body); font-size: 12px; }
 <div class="wrap">
   <header class="top">
     <div>
-      <div class="eyebrow">Formula 1 · Qualifying · 2020–2025</div>
+      <div class="eyebrow" id="rangeEyebrow">Formula 1 · Qualifying</div>
       <h1>Q3 <span>Predictor</span></h1>
       <p class="lede">Which ten drivers make it into Q3? Predictions for <b id="nSessions"></b> qualifying sessions, made using only what was known before qualifying started.</p>
     </div>
@@ -143,7 +143,7 @@ svg .lbl { fill: var(--ink); font-family: var(--font-body); font-size: 12px; }
   <section class="view" id="v-sessions" hidden></section>
 
   <p class="footer">Every prediction here is out-of-sample: before each session the model was retrained on earlier sessions only.
-    Data: <a href="https://github.com/f1db/f1db">F1DB</a> (CC BY 4.0). Model: logistic regression on driver and team form, practice results and standings.</p>
+    Data: <a href="https://github.com/f1db/f1db">F1DB</a> (CC BY 4.0). Model: Ridge regression predicting each driver's qualifying position from driver and team form, practice results and standings (trained on 2019+ data).</p>
 </div>
 <div id="tip" hidden></div>
 
@@ -152,8 +152,10 @@ const DATA = /*__DATA__*/null;
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const fmt = (x, d = 1) => (x == null || Number.isNaN(x) ? "–" : x.toFixed(d));
+const fmtP = x => (x == null || Number.isNaN(x) ? "–" : "P" + x.toFixed(1));
 const pct = x => (x == null || Number.isNaN(x) ? "–" : Math.round(x * 100) + "%");
 const SEASONS = [...new Set(DATA.sessions.map(s => s.season))];
+{ const eb = document.getElementById("rangeEyebrow"); if (eb) eb.textContent += " · " + DATA.range; }
 const METHOD_NAMES = { previous_quali: "Previous qualifying order", rolling_form_3: "Average of last 3 qualis", championship: "Championship order", last_practice: "Last practice order" };
 
 // Expand compact rows.
@@ -189,7 +191,7 @@ function chip(r) {
   const s = DATA.sessions[r.si];
   const label = r.status || "P" + r.pos;
   const right = r.picked === r.top10;
-  const t = `<b>${s.season} ${esc(s.gp)} GP</b><br>${esc(DATA.drivers[r.driver])} · ${esc(DATA.teams[r.team])}<br>Qualified ${label}<br>Model: P(top 10) = ${pct(r.p)} · ${r.picked ? "picked" : "not picked"} · ${right ? "right" : "wrong"}`;
+  const t = `<b>${s.season} ${esc(s.gp)} GP</b><br>${esc(DATA.drivers[r.driver])} · ${esc(DATA.teams[r.team])}<br>Qualified ${label}<br>Model: predicted ${fmtP(r.p)} · ${r.picked ? "picked" : "not picked"} · ${right ? "right" : "wrong"}`;
   return `<span class="chip ${posClass(r.pos)}${right ? "" : " miss"}" data-tip="${esc(t)}">${label}</span>`;
 }
 function yearChips(rows) {
@@ -255,7 +257,7 @@ function q3Bar(x) { return `<div class="cell-bar"><div class="bar"><span style="
 
 // ---------- overview ----------
 function dotPlot() {
-  const rows = [{ label: "2020–25", model: DATA.overall.correct_per_10, base: DATA.baselines.championship.correct_per_10, strong: true }]
+  const rows = [{ label: DATA.range, model: DATA.overall.correct_per_10, base: DATA.baselines.championship.correct_per_10, strong: true }]
     .concat(SEASONS.map(y => ({ label: String(y), model: DATA.seasons[y].correct_per_10, base: DATA.baselinesBySeason[y].championship })));
   const W = 560, rowH = 34, top = 10, left = 70, right = 70, H = top + rows.length * rowH + 28;
   const lo = 6.5, hi = 9;
@@ -328,20 +330,20 @@ function seasonVerdict() {
   const ahead = [], behind = [], tied = [];
   SEASONS.forEach(y => { const d = DATA.seasons[y].correct_per_10 - DATA.baselinesBySeason[y].championship; (Math.abs(d) < 0.02 ? tied : d > 0 ? ahead : behind).push(y); });
   const list = a => a.length > 1 ? a.slice(0, -1).join(", ") + " and " + a[a.length - 1] : a.join("");
-  let t = `Over all six seasons the model is ${(DATA.overall.correct_per_10 - DATA.baselines.championship.correct_per_10).toFixed(2)} picks per session ahead of the championship order.`;
+  let t = `Over all ${SEASONS.length} seasons the model is ${(DATA.overall.correct_per_10 - DATA.baselines.championship.correct_per_10).toFixed(2)} picks per session ahead of the championship order.`;
   t += ` By season it was ahead in ${list(ahead) || "none"}`;
   if (behind.length) t += `, slightly behind in ${list(behind)}`;
   if (tied.length) t += `, and level in ${list(tied)}`;
-  return t + ". The standings fail when the order changes mid-season, as in 2023 and 2025.";
+  return t + ". The standings fail when the order changes mid-season, which is where the model gains most.";
 }
 function renderOverview() {
   const o = DATA.overall, b = DATA.baselines;
   const best = Object.entries(b).sort((x, y) => y[1].correct_per_10 - x[1].correct_per_10)[0];
   $("#v-overview").innerHTML = `
   <div class="tiles">
-    <div class="tile"><span class="eyebrow">Correct picks</span><span class="v">${o.correct_per_10.toFixed(2)}<small> / 10</small></span><span class="s">average per session, 2020–25</span></div>
+    <div class="tile"><span class="eyebrow">Correct picks</span><span class="v">${o.correct_per_10.toFixed(2)}<small> / 10</small></span><span class="s">average per session, ${DATA.range}</span></div>
     <div class="tile"><span class="eyebrow">vs best simple rule</span><span class="v">+${(o.correct_per_10 - best[1].correct_per_10).toFixed(2)}</span><span class="s">over ${esc(METHOD_NAMES[best[0]].toLowerCase())} (${best[1].correct_per_10.toFixed(2)})</span></div>
-    <div class="tile"><span class="eyebrow">ROC AUC</span><span class="v">${o.roc_auc.toFixed(3)}</span><span class="s">ranking quality across all drivers</span></div>
+    <div class="tile"><span class="eyebrow">MAE (real top 10)</span><span class="v">${o.mae_top10.toFixed(2)}</span><span class="s">average places off, ${DATA.range}</span></div>
     <div class="tile"><span class="eyebrow">Perfect sessions</span><span class="v">${o.perfect_sessions}<small> / ${o.sessions}</small></span><span class="s">all ten Q3 drivers named; worst: ${o.worst_session}/10</span></div>
   </div>
   <div class="grid-2">
@@ -364,7 +366,7 @@ function renderOverview() {
     <div class="panel">
       <div class="panel-head"><h2>What drives the prediction</h2></div>
       <div class="scroll">${importanceChart()}</div>
-      <p class="note">Permutation importance on the 2025 hold-out season (model trained on 2020–23). This weekend's practice order carries most of the signal.</p>
+      <p class="note">Permutation importance on the ${DATA.latest} season (model trained on 2019–${DATA.latest - 1}). This weekend's practice order carries most of the signal.</p>
     </div>
   </div>`;
 }
@@ -412,13 +414,13 @@ function renderDrivers() {
       <div class="legend"><span class="chip pole">P1</span>pole <span class="chip q3">P2–10</span>Q3 <span class="chip q2">P11–15</span>Q2 <span class="chip out">P16+</span>Q1 <span class="chip q3 miss">Px</span>model wrong</div></div>
     <div class="scroll"><table id="${id}"><thead><tr>
       ${thSort(id, "track", "Track")}${thSort(id, "n", "Visits", "num")}${thSort(id, "avg", "Avg pos", "num")}${thSort(id, "best", "Best", "num")}
-      ${thSort(id, "q3", "Q3 rate")}${thSort(id, "poles", "Poles", "num")}<th>Results by season</th>${thSort(id, "p", "Avg P(Q3)", "num")}${thSort(id, "right", "Model right", "num")}
+      ${thSort(id, "q3", "Q3 rate")}${thSort(id, "poles", "Poles", "num")}<th>Results by season</th>${thSort(id, "p", "Avg predicted P", "num")}${thSort(id, "right", "Model right", "num")}
     </tr></thead><tbody>
     ${byTrack.map(t => `<tr>
       <td><a href="#tracks" data-track="${t.c}" style="color:inherit">${esc(DATA.circuits[t.c])}</a></td><td class="num">${t.n}</td><td class="num">${fmt(t.avg)}</td><td class="num">P${t.best}</td>
-      <td>${q3Bar(t.q3)}</td><td class="num">${t.poles || "–"}</td><td>${yearChips(t.rs)}</td><td class="num">${pct(t.p)}</td><td class="num">${t.right}/${t.n}</td></tr>`).join("")}
+      <td>${q3Bar(t.q3)}</td><td class="num">${t.poles || "–"}</td><td>${yearChips(t.rs)}</td><td class="num">${fmtP(t.p)}</td><td class="num">${t.right}/${t.n}</td></tr>`).join("")}
     </tbody></table></div>
-    <p class="note">Hover a result for the model's pre-qualifying probability. Click a track to see every driver there.</p>
+    <p class="note">Hover a result for the model's predicted position. Click a track to see every driver there.</p>
   </div>`;
   $("#drvSel", root).addEventListener("change", e => { state.driver = +e.target.value; renderDrivers(); });
   bindSeasonFilter(root, renderDrivers);
@@ -457,11 +459,11 @@ function renderTracks() {
       <div class="session-pick">${sess.map(s => `<a href="#sessions" data-session="${s.i}" class="chip ${s.correct >= 8 ? "q3" : s.correct >= 7 ? "q2" : "out"}" style="text-decoration:none" data-tip="${s.season} ${esc(s.gp)} GP: model got ${s.correct}/10. Click to open.">${s.season} · ${s.correct}/10</a>`).join("")}</div></div>
     <div class="scroll"><table id="${id}"><thead><tr>
       ${thSort(id, "drv", "Driver")}${thSort(id, "n", "Visits", "num")}${thSort(id, "avg", "Avg pos", "num")}${thSort(id, "best", "Best", "num")}
-      ${thSort(id, "q3", "Q3 rate")}${thSort(id, "poles", "Poles", "num")}<th>Results by season</th>${thSort(id, "p", "Avg P(Q3)", "num")}${thSort(id, "right", "Model right", "num")}
+      ${thSort(id, "q3", "Q3 rate")}${thSort(id, "poles", "Poles", "num")}<th>Results by season</th>${thSort(id, "p", "Avg predicted P", "num")}${thSort(id, "right", "Model right", "num")}
     </tr></thead><tbody>
     ${byDriver.map(t => `<tr>
       <td>${swatch(t.team)}<a href="#drivers" data-driver="${t.d}" style="color:inherit">${esc(DATA.drivers[t.d])}</a></td><td class="num">${t.n}</td><td class="num">${fmt(t.avg)}</td><td class="num">P${t.best}</td>
-      <td>${q3Bar(t.q3)}</td><td class="num">${t.poles || "–"}</td><td>${yearChips(t.rs)}</td><td class="num">${pct(t.p)}</td><td class="num">${t.right}/${t.n}</td></tr>`).join("")}
+      <td>${q3Bar(t.q3)}</td><td class="num">${t.poles || "–"}</td><td>${yearChips(t.rs)}</td><td class="num">${fmtP(t.p)}</td><td class="num">${t.right}/${t.n}</td></tr>`).join("")}
     </tbody></table></div>
     <p class="note">The chips above the table are the model's score for each session at this track; click one to see the full prediction.</p>
   </div>`;
@@ -523,10 +525,10 @@ function renderSessions() {
     <div class="tile"><span class="eyebrow">Track</span><span class="v" style="font-size:1.2rem">${esc(DATA.circuits[s.circuit])}</span><span class="s">${s.date}${s.sprint ? " · sprint weekend" : ""}</span></div>
   </div>
   <div class="panel">
-    <div class="panel-head"><h2>${s.season} ${esc(s.gp)} Grand Prix</h2><span class="note">Sorted by the model's probability. The dashed line is the predicted Q3 cut.</span></div>
-    <div class="scroll"><table><thead><tr><th class="num">Pred</th><th>Driver</th><th>Team</th><th>P(reach Q3)</th><th class="num">Actual</th><th>Call</th></tr></thead><tbody>
+    <div class="panel-head"><h2>${s.season} ${esc(s.gp)} Grand Prix</h2><span class="note">Sorted by the model's predicted position. The dashed line is the predicted Q3 cut.</span></div>
+    <div class="scroll"><table><thead><tr><th class="num">Pred</th><th>Driver</th><th>Team</th><th class="num">Model</th><th class="num">Actual</th><th>Call</th></tr></thead><tbody>
     ${rows.map(r => `<tr class="${r.pred === 10 ? "cut" : ""}"><td class="num">${r.pred}</td><td>${esc(DATA.drivers[r.driver])}</td><td>${swatch(r.team)}${esc(DATA.teams[r.team])}</td>
-      <td>${q3Bar(r.p)}</td><td class="num"><span class="chip ${posClass(r.pos)}">${r.status || "P" + r.pos}</span></td>
+      <td class="num">${fmtP(r.p)}</td><td class="num"><span class="chip ${posClass(r.pos)}">${r.status || "P" + r.pos}</span></td>
       <td>${r.picked === r.top10 ? '<span class="ok">✓ right</span>' : '<span class="no">✗ ' + (r.picked ? "missed Q3" : "surprise Q3") + "</span>"}</td></tr>`).join("")}
     </tbody></table></div>
   </div>`;

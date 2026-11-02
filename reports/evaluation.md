@@ -1,71 +1,50 @@
-# Evaluation: F1 top-10 qualifying predictor (2020-2025)
+# Evaluation: F1 top-10 qualifying predictor (Ridge regression)
 
-Each session the model picks the 10 drivers with the highest probability of reaching Q3. 
-**Correct / 10** is the average number of those picks that actually qualified top 10.
+Ridge regression predicts each driver's qualifying position; the 10 best predicted drivers are the
+predicted Q3. Walk-forward: before every session the model is retrained on all earlier sessions
+(training rows from 2019 on), so each real result is added before the next race is predicted.
 
-Data: 131 qualifying sessions, 2614 driver entries.
+**Correct / 10** = how many of the 10 picks really reached Q3.
+**MAE** = average number of places the predicted position is off.
 
-## 1. Hold-out (train 2020-2023)
+## 2026 season (19 races so far)
 
-### Validation: 2024
-
-| Method | Correct / 10 | Perfect sessions | Worst session | ROC AUC | Log loss |
+| Method | Correct / 10 | Perfect sessions | Worst session | MAE (all) | MAE (top 10) |
 |---|---|---|---|---|---|
-| logreg | 8.04 | 2/24 | 6 | 0.887 | 0.426 |
-| gbm | 8.04 | 1/24 | 5 | 0.879 | 0.446 |
-| previous_quali | 7.42 | 0/24 | 5 | - | - |
-| rolling_form_3 | 7.62 | 1/24 | 6 | - | - |
-| championship | 8.04 | 1/24 | 5 | - | - |
-| last_practice | 7.58 | 1/24 | 5 | - | - |
+| **Ridge regression** | 8.95 | 2/19 | 8 | 2.00 | 2.02 |
+| Previous quali order | 8.26 | 1/19 | 6 | 2.94 | 3.02 |
+| Rolling form (last 3 qualis) | 8.42 | 1/19 | 7 | 2.64 | 2.55 |
+| Championship order | 8.53 | 1/19 | 7 | 2.37 | 2.19 |
+| Last practice order | 8.63 | 2/19 | 8 | 2.15 | 2.08 |
 
-Selected model: **logreg**
+## All seasons (same walk-forward)
 
-### Test: 2025 (untouched until now)
-
-| Method | Correct / 10 | Perfect sessions | Worst session | ROC AUC | Log loss |
+| Method | Correct / 10 | Perfect sessions | Worst session | MAE (all) | MAE (top 10) |
 |---|---|---|---|---|---|
-| logreg | 7.83 | 0/24 | 6 | 0.872 | 0.445 |
-| previous_quali | 7.58 | 1/24 | 5 | - | - |
-| rolling_form_3 | 7.71 | 1/24 | 6 | - | - |
-| championship | 7.17 | 1/24 | 5 | - | - |
-| last_practice | 7.71 | 0/24 | 6 | - | - |
+| 2020 | 8.12 | 2/17 | 7 | 2.27 | 2.16 |
+| 2021 | 8.14 | 1/22 | 6 | 2.44 | 2.23 |
+| 2022 | 7.91 | 0/22 | 6 | 2.87 | 2.46 |
+| 2023 | 7.50 | 0/22 | 5 | 3.52 | 3.16 |
+| 2024 | 8.00 | 1/24 | 6 | 2.79 | 2.42 |
+| 2025 | 7.96 | 0/24 | 6 | 3.14 | 2.70 |
+| 2026 | 8.95 | 2/19 | 8 | 2.00 | 2.02 |
+| **2020-2026** | 8.06 | 6/150 | 5 | 2.75 | 2.47 |
 
-## 2. Walk-forward (retrained before every session)
-
-| Method | Correct / 10 | Perfect sessions | Worst session | ROC AUC | Log loss |
-|---|---|---|---|---|---|
-| 2020 | 8.18 | 2/17 | 7 | 0.901 | 0.402 |
-| 2021 | 8.14 | 1/22 | 7 | 0.906 | 0.388 |
-| 2022 | 7.91 | 0/22 | 6 | 0.887 | 0.425 |
-| 2023 | 7.59 | 1/22 | 5 | 0.817 | 0.551 |
-| 2024 | 7.92 | 1/24 | 6 | 0.888 | 0.427 |
-| 2025 | 7.88 | 0/24 | 6 | 0.874 | 0.440 |
-| **2020-2025** | 7.92 | 5/131 | 5 | 0.881 | 0.440 |
-
-Baselines over the same 2020-2025 sessions:
-
-| Method | Correct / 10 | Perfect sessions | Worst session | ROC AUC | Log loss |
-|---|---|---|---|---|---|
-| previous_quali | 7.40 | 2/131 | 5 | - | - |
-| rolling_form_3 | 7.70 | 3/131 | 5 | - | - |
-| championship | 7.79 | 7/131 | 5 | - | - |
-| last_practice | 7.56 | 3/131 | 4 | - | - |
-
-## Feature importance (permutation, 2025 test set)
+## Feature importance (permutation, 2026)
 
 Drop in correct picks per 10 when the feature is shuffled.
 
 | Feature | Drop |
 |---|---|
-| fp_last_pos | +0.367 |
-| drv_pos_mean5 | +0.067 |
-| drv_vs_teammate5 | +0.058 |
-| fp_best_pos | +0.042 |
-| constructor_points_before | +0.033 |
-| driver_points_before | +0.025 |
-| drv_career_sessions | +0.017 |
-| con_season_pos_mean | +0.017 |
-| drv_season_pos_mean | +0.000 |
-| con_pace_gap_mean3 | +0.000 |
-| drv_pos_last | -0.017 |
-| sprint_weekend | -0.017 |
+| fp_last_pos | +0.463 |
+| con_season_pos_mean | +0.284 |
+| con_pos_mean3 | +0.274 |
+| fp_best_pos | +0.232 |
+| constructor_champ_pos_before | +0.221 |
+| drv_pos_mean5 | +0.221 |
+| drv_season_pos_mean | +0.211 |
+| fp_mean_gap_pct | +0.179 |
+| drv_career_sessions | +0.158 |
+| driver_points_before | +0.147 |
+| drv_circuit_last_pos | +0.147 |
+| driver_champ_pos_before | +0.147 |

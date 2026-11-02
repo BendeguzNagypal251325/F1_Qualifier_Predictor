@@ -15,7 +15,6 @@ from pathlib import Path
 
 import numpy as np
 
-from . import SEASONS
 from . import model as M
 from .data import ROOT, load_entries
 from .features import build_features
@@ -36,6 +35,7 @@ CIRCUIT_NAMES = {
     "jeddah": "Jeddah",
     "las-vegas": "Las Vegas",
     "lusail": "Lusail",
+    "madring": "Madring (Madrid)",
     "marina-bay": "Marina Bay",
     "melbourne": "Albert Park",
     "mexico-city": "Mexico City",
@@ -47,6 +47,7 @@ CIRCUIT_NAMES = {
     "nurburgring": "Nürburgring",
     "paul-ricard": "Paul Ricard",
     "portimao": "Portimão",
+    "sepang": "Sepang",
     "shanghai": "Shanghai",
     "silverstone": "Silverstone",
     "sirius": "Sochi",
@@ -61,7 +62,9 @@ TEAM_NAMES = {
     "alfa-romeo": "Alfa Romeo",
     "alphatauri": "AlphaTauri",
     "alpine": "Alpine",
+    "audi": "Audi",
     "aston-martin": "Aston Martin",
+    "cadillac": "Cadillac",
     "ferrari": "Ferrari",
     "haas": "Haas",
     "kick-sauber": "Kick Sauber",
@@ -80,7 +83,9 @@ TEAM_COLORS = {
     "alfa-romeo": "#9b0000",
     "alphatauri": "#2b4562",
     "alpine": "#2293d1",
+    "audi": "#bb0a30",
     "aston-martin": "#229971",
+    "cadillac": "#c8a45a",
     "ferrari": "#e8002d",
     "haas": "#9c9fa2",
     "kick-sauber": "#52e252",
@@ -114,25 +119,26 @@ def _metrics(r: dict) -> dict:
 
 def build_payload() -> dict:
     feat = build_features(load_entries())
-    data = feat[feat["season"].isin(SEASONS)]
-    proba = walk_forward(feat, "logreg")
-    wf = data.loc[proba.index].copy()
-    wf["p"] = proba.loc[wf.index]
+    pred = walk_forward(feat)
+    data = feat.loc[pred.index]
+    seasons_list = sorted(int(s) for s in data["season"].unique())
+    latest = seasons_list[-1]
+    wf = data.loc[pred.index].copy()
+    wf["p"] = pred.loc[wf.index]  # predicted qualifying position (lower = better)
     wf["picked"] = M.pick_top10(wf, wf["p"])
-    wf["pred_rank"] = wf.groupby("race_key")["p"].rank(method="first", ascending=False).astype(int)
+    wf["pred_rank"] = M.predicted_grid(wf, wf["p"])
 
-    seasons = {str(s): _metrics(M.evaluate(wf[wf["season"] == s], wf.loc[wf["season"] == s, "p"].to_numpy())) for s in SEASONS}
+    seasons = {str(s): _metrics(M.evaluate(wf[wf["season"] == s], wf.loc[wf["season"] == s, "p"])) for s in seasons_list}
     baselines_by_season = {
         str(s): {k: round(v["correct_per_10"], 3) for k, v in M.evaluate_baselines(wf[wf["season"] == s]).items()}
-        for s in SEASONS
+        for s in seasons_list
     }
-    overall = _metrics(M.evaluate(wf, wf["p"].to_numpy()))
+    overall = _metrics(M.evaluate(wf, wf["p"]))
     baselines = {k: _metrics(v) for k, v in M.evaluate_baselines(wf).items()}
     per_session = M.session_scores(wf, wf["picked"])
 
-    # Feature importance from the hold-out model (train 2020-2023, test 2025).
-    train, test = data[data["season"] <= 2023], data[data["season"] == 2025]
-    imp = M.feature_importance(M.fit(train, "logreg"), test)
+    # Feature importance: model trained on everything before the test season, scored on it.
+    imp = M.feature_importance(M.fit(feat[feat["season"] < latest]), data[data["season"] == latest])
 
     drivers = sorted(wf["driver_id"].unique())
     circuits = sorted(wf["circuit"].unique())
@@ -148,7 +154,7 @@ def build_payload() -> dict:
     )
     s_idx = {k: i for i, k in enumerate(sessions["race_key"])}
 
-    # Compact rows: [session, driver, team, quali_pos, top10, p(x1000), picked, pred_rank, status]
+    # Compact rows: [session, driver, team, quali_pos, top10, predicted position(x1000), picked, pred_rank, status]
     rows = [
         [
             s_idx[r.race_key],
@@ -165,6 +171,8 @@ def build_payload() -> dict:
     ]
 
     return {
+        "range": f"{seasons_list[0]}–{str(latest)[2:]}",
+        "latest": latest,
         "overall": overall,
         "baselines": baselines,
         "seasons": seasons,

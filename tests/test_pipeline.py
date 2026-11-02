@@ -61,9 +61,15 @@ def test_pick_top10_picks_ten_per_session(feat):
     assert (picked.groupby(data["race_key"]).sum() == 10).all()
 
 
-def test_model_beats_coin_flip(feat):
-    data = feat[feat["season"].isin(SEASONS)]
-    train, test = data[data["season"] <= 2023], data[data["season"] == 2025]
-    result = M.evaluate(test, M.predict_proba(M.fit(train), test))
-    assert result["roc_auc"] > 0.8
-    assert result["correct_per_10"] > 7
+def test_model_beats_simple_rules_on_2025(feat):
+    train, test = feat[feat["season"] < 2025], feat[feat["season"] == 2025]
+    result = M.evaluate(test, M.predict_position(M.fit(train), test))
+    best_rule = max(r["correct_per_10"] for r in M.evaluate_baselines(test).values())
+    assert result["correct_per_10"] > best_rule
+    assert result["mae_top10"] < 3.0
+
+
+def test_rebranded_teams_share_history(feat):
+    """Racing Bulls' first 2025 race must still have team form from its RB/AlphaTauri seasons."""
+    row = feat[(feat["season"] == 2025) & (feat["round"] == 1) & (feat["constructor_id"] == "racing-bulls")]
+    assert row["con_pos_mean3"].notna().all()

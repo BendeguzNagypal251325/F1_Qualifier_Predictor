@@ -118,6 +118,7 @@ def build_entries(seasons_dir: Path, seasons: list[int] = HISTORY_SEASONS) -> pd
                     "qualifying_format": race.get("qualifyingFormat"),
                     "sprint_weekend": sprint,
                     "driver_id": drv,
+                    "driver_number": r.get("driverNumber"),
                     "constructor_id": con,
                     "engine": r.get("engineManufacturerId"),
                     "quali_status": str(r.get("position")),
@@ -141,8 +142,23 @@ def build_entries(seasons_dir: Path, seasons: list[int] = HISTORY_SEASONS) -> pd
     return df.sort_values(["season", "round", "quali_pos"]).reset_index(drop=True)
 
 
-def load_entries(path: Path = ENTRIES_CSV) -> pd.DataFrame:
-    return pd.read_csv(path)
+LIVE_DIR = ROOT / "data" / "live"
+
+
+def load_entries(path: Path = ENTRIES_CSV, include_live: bool = True) -> pd.DataFrame:
+    """F1DB entries, plus live weekends (from ``f1qp-live``) that F1DB does not have yet.
+
+    A live weekend is only added once its qualifying is done, so it can be used for training.
+    """
+    df = pd.read_csv(path)
+    if include_live and LIVE_DIR.exists():
+        known = set(df["race_key"])
+        extra = [pd.read_csv(f) for f in sorted(LIVE_DIR.glob("*.csv"))]
+        extra = [e for e in extra if len(e) and e["race_key"].iloc[0] not in known and e["quali_pos"].notna().all()]
+        if extra:
+            df = pd.concat([df, *extra], ignore_index=True)
+            df = df.sort_values(["season", "round", "quali_pos"]).reset_index(drop=True)
+    return df
 
 
 def main() -> None:
