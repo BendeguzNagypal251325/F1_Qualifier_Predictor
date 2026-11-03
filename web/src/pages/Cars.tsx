@@ -39,8 +39,8 @@ export function CarList() {
           </div>
           <div className="card-grid">
             {data.cars.map((c, i) => (
-              <Link key={c.team} to={`/cars/${season}/${c.team}`} className="card" style={{ ["--stripe" as string]: c.livery[0] }}>
-                <div className="media" style={{ background: "radial-gradient(120% 90% at 50% 15%, #24242f, #0b0b0f 70%)" }}>
+              <Link key={c.team} to={`/cars/${season}/${c.team}`} className="card">
+                <div className="media" style={{ background: "linear-gradient(180deg, #1d1d26, #101016)" }}>
                   <CarImage era={c.era} livery={c.livery} alt={`${c.name} ${c.chassis ?? ""} 3D model`} />
                 </div>
                 <div className="body">

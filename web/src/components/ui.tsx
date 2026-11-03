@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useMeta } from "../api";
 import type { Contrib, Group, Result } from "../types";
 import { GROUPS } from "../types";
+import { HELMET_REFS, type Motif } from "../three/helmetRefs";
 
 // ---------------------------------------------------------------- formatting
 
@@ -164,16 +165,30 @@ export function useDriverTeam(driver: string, season?: number): string {
   return (season && d.teams[String(season)]) || d.team;
 }
 
-/** Colours and number for a driver's helmet in ``season`` (team livery of that season). */
+/** Helmet paint for a driver: reference colours of their 2026 helmet where we have them, else team colours. */
 export function useHelmetSpec(driver: string, season?: number, teamOverride?: string) {
   const meta = useMeta();
   const d = meta.drivers.find((x) => x.id === driver);
   const year = season ?? d?.last_season ?? meta.latest;
   const team = teamOverride ?? ((d && d.teams[String(year)]) || d?.team || "");
+  const ref = HELMET_REFS[driver];
   const car = meta.cars[String(year)]?.[team];
   const t = meta.teams.find((x) => x.id === team);
-  const colors: [string, string, string] = car?.livery ?? [t?.color ?? "#444444", "#ffffff", "#e10600"];
-  return { driverId: driver, initials: initials(d?.name ?? driver), number: d?.number ?? null, colors, team, year };
+  const teamColors = car?.livery ?? [t?.color ?? "#444444", "#ffffff", "#e10600"];
+  const fallbackMotifs: Motif[] = ["bands", "flourish", "halves"];
+  const hash = [...driver].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
+  return {
+    driverId: driver,
+    initials: initials(d?.name ?? driver),
+    number: d?.number ?? null,
+    colors: ref ? [...ref.colors].filter(Boolean) as string[] : [...teamColors],
+    motif: ref?.motif ?? fallbackMotifs[hash % fallbackMotifs.length],
+    crown: ref?.crown ?? "stripe",
+    team,
+    year,
+    source: ref ? ("reference" as const) : ("team" as const),
+    note: ref?.note ?? null,
+  };
 }
 
 /** Readable text colour on a team colour. */

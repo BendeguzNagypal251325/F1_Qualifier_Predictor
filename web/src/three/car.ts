@@ -190,7 +190,7 @@ export function disposeObject(obj: THREE.Object3D) {
   obj.traverse((o) => {
     const m = o as THREE.Mesh;
     if (m.isMesh) {
-      m.geometry.dispose();
+      if (!m.geometry.userData.shared) m.geometry.dispose();
       const mats = Array.isArray(m.material) ? m.material : [m.material];
       mats.forEach((mat) => {
         const mm = mat as THREE.MeshStandardMaterial;

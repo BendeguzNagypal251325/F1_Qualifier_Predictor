@@ -172,11 +172,21 @@ loaded only on pages that show 3D.
 
 ### Helmets and names
 
-Every driver has a 3D helmet (`web/src/three/helmet.ts`). The pattern is chosen once per driver from
-eight designs, seeded by their id, so it stays the same every season. The colours follow the team
-they drove for that season, and the car number is on both sides. These are our own designs, not
-the drivers' real helmets, which are their own artwork. On a driver's profile the helmet can be
-rotated, and picking one season repaints it in that year's colours.
+Every driver has a 3D helmet (`web/src/three/helmet.ts`). The shell is lofted front to back through
+cross-sections: round dome, chin bar, flat base. The eye port has a visor and a rubber seal fitted to
+its edge, plus side pivots, chin vents, top ducts, a rear gurney and the car number on both sides.
+
+Paint comes from published descriptions of each driver's 2026 race helmet
+(`web/src/three/helmetRefs.ts`): PlanetF1's 2026 helmet round-up, Sky Sport Italia, Motorsport.com's
+2026 guide, auto motor und sport, Red Bull, and official replica listings. Only the colours and the
+kind of motif come from those sources, for example "red upper half, white lower half" or
+"Argentinian flag wrap with triangles on top". The artwork itself is our own simplified version, not a
+copy. The profile page shows each description. Drivers with no description found (Hülkenberg,
+Bottas, Pérez, Tsunoda, anyone not on the 2026 grid) are painted in their team's colours, and the page
+says so. To refine a helmet, edit its entry in `helmetRefs.ts`.
+
+Card thumbnails are rendered once per helmet by a shared off-screen renderer, only for cards on
+screen. All helmets share one geometry, so only the paint is rebuilt for each driver.
 
 Driver cards show the name in a handwritten-style font (Mrs Saint Delafield). It is a font, not the
 driver's real signature: we do not reproduce real signatures.

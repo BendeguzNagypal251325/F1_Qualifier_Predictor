@@ -215,7 +215,7 @@ export function Helmet3D({ spec, label }: { spec: HelmetSpec; label: string }) {
     const h = buildHelmet(spec);
     h.rotation.y = -0.5;
     api.current.setObject(h);
-  }, [ready, spec.driverId, spec.colors.join(","), spec.number]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ready, spec.driverId, spec.colors.join(","), spec.motif, spec.number]); // eslint-disable-line react-hooks/exhaustive-deps
   return <div className="viewer square" ref={box} role="img" aria-label={`${label}, interactive 3D helmet`} style={{ background: "transparent" }} />;
 }
 
@@ -233,10 +233,19 @@ function useSnapshot(key: string, make: () => Promise<string>) {
 }
 
 export function HelmetImage({ spec, alt }: { spec: HelmetSpec; alt: string }) {
-  const key = `helmet|${spec.driverId}|${spec.colors.join(",")}|${spec.number}`;
-  const src = useSnapshot(key, () => snapshot({
-    key, width: 420, height: 420, floor: false,
-    build: () => { const h = buildHelmet(spec); h.rotation.y = -0.95; return h; },
+  const key = `helmet|${spec.driverId}|${spec.colors.join(",")}|${spec.motif}|${spec.number}`;
+  const box = useRef<HTMLSpanElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && (setVisible(true), io.disconnect()), { rootMargin: "300px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  const src = useSnapshot(visible ? key : "", () => visible ? snapshot({
+    key, width: 360, height: 360, floor: false,
+    build: () => { const h = buildHelmet(spec, 0.5); h.rotation.y = 0.1; return h; },
     camera: (o) => {
       const { centre } = frame(o);
       const cam = new THREE.PerspectiveCamera(24, 1, 0.1, 50);
@@ -244,8 +253,8 @@ export function HelmetImage({ spec, alt }: { spec: HelmetSpec; alt: string }) {
       cam.lookAt(centre.x, centre.y - 0.08, centre.z);
       return cam;
     },
-  }));
-  return src ? <img src={src} alt={alt} /> : <span className="helmet-ph" aria-hidden>{spec.initials}</span>;
+  }) : Promise.resolve(""));
+  return src ? <img src={src} alt={alt} /> : <span ref={box} className="helmet-ph" aria-label="Rendering helmet" />;
 }
 
 export function CarImage({ era, livery, alt }: { era: string; livery: [string, string, string]; alt: string }) {

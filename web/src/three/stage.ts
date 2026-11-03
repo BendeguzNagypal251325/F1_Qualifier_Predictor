@@ -17,7 +17,7 @@ export function makeStage(renderer: THREE.WebGLRenderer, opts: { floor?: boolean
   Object.assign(key.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 0.5, far: 25 });
   key.shadow.bias = -0.0004;
   scene.add(key);
-  const rim = new THREE.DirectionalLight("#ff3b30", 1.1);
+  const rim = new THREE.DirectionalLight("#cfd6ff", 0.8);
   rim.position.set(-6, 3, -4);
   scene.add(rim);
   if (opts.floor !== false) {
@@ -25,13 +25,6 @@ export function makeStage(renderer: THREE.WebGLRenderer, opts: { floor?: boolean
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     scene.add(floor);
-    const glow = new THREE.Mesh(
-      new THREE.CircleGeometry(3.6, 64),
-      new THREE.MeshBasicMaterial({ color: "#e10600", transparent: true, opacity: 0.08, depthWrite: false }),
-    );
-    glow.rotation.x = -Math.PI / 2;
-    glow.position.y = 0.001;
-    scene.add(glow);
   }
   return { scene, key, env };
 }
@@ -79,13 +72,14 @@ export function snapshot(job: SnapJob): Promise<string> {
         const obj = job.build();
         stage.scene.add(obj);
         r.setClearColor(0x000000, 0);
+        r.shadowMap.enabled = job.floor !== false; // no floor, no shadow pass
         r.render(stage.scene, job.camera(obj));
-        resolve(r.domElement.toDataURL("image/png"));
+        resolve(r.domElement.toDataURL("image/webp", 0.92));
         stage.scene.remove(obj);
         obj.traverse((o) => {
           const m = o as THREE.Mesh;
           if (m.isMesh) {
-            m.geometry.dispose();
+            if (!m.geometry.userData.shared) m.geometry.dispose();
             (Array.isArray(m.material) ? m.material : [m.material]).forEach((mt) => { (mt as THREE.MeshStandardMaterial).map?.dispose(); mt.dispose(); });
           }
         });
@@ -93,8 +87,7 @@ export function snapshot(job: SnapJob): Promise<string> {
         resolve("");
       }
     };
-    const idle = (window as unknown as { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback;
-    if (idle) idle(run); else setTimeout(run, 0);
+    setTimeout(run, 0);
   }))) as Promise<string>;
   cache.set(job.key, p);
   return p;

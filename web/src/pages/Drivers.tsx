@@ -12,10 +12,10 @@ function DriverCard({ d, latest }: { d: DriverMeta; latest: number }) {
   const team = useTeam(d.team);
   const spec = useHelmetSpec(d.id, d.last_season);
   return (
-    <Link to={`/drivers/${d.id}`} className="card" style={{ ["--stripe" as string]: team.color }}>
-      <div className="dcard-media" style={{ ["--glow" as string]: `color-mix(in oklab, ${team.color} 45%, #15151e)` }}>
+    <Link to={`/drivers/${d.id}`} className="card">
+      <div className="dcard-media">
         <HelmetImage spec={spec} alt={`${d.name}'s helmet design`} />
-        {d.number != null && <span className="num">{d.number}</span>}
+        {d.number != null && <span className="num">#{d.number}</span>}
         <span className="script" aria-hidden>{d.name}</span>
       </div>
       <div className="body">
@@ -84,13 +84,15 @@ export function DriverPage() {
 
   return (
     <>
-      <section className="hero" style={{ ["--stripe" as string]: team.color }}>
+      <section className="hero">
         <div className="hero-text">
           <span className="eyebrow">{team.name}{d.number ? ` · #${d.number}` : ""}</span>
           <h1>{d.name}</h1>
           <span className="script-name" aria-hidden>{d.name}</span>
           <SeasonStrip driver={d.id} labels />
-          <p className="note">Helmet: our own design for {d.name.split(" ")[0]}, in the {heroTeam.name} colours of {helmet.year}. Pick one season below to repaint it. Not the real helmet.</p>
+          <p className="note">{helmet.source === "reference"
+            ? <>Helmet colours from descriptions of {d.name.split(" ")[0]}'s 2026 helmet: {helmet.note} Simplified artwork, not an exact copy.</>
+            : <>No published description of {d.name.split(" ")[0]}'s helmet found, so it is shown in {heroTeam.name} colours ({helmet.year}).</>}</p>
           <div className="controls"><SeasonFilter value={seasons} onChange={setSeasons} /></div>
           <div className="legend">
             {[...stints.entries()].map(([t, ys]) => (
@@ -100,9 +102,9 @@ export function DriverPage() {
             ))}
           </div>
         </div>
-        <div className="hero-img helmet-stage" style={{ background: `radial-gradient(70% 75% at 50% 50%, color-mix(in oklab, ${heroTeam.color} 55%, #15151e), #0b0b0f 78%)` }}>
+        <div className="hero-img helmet-stage" style={{ background: "linear-gradient(180deg, #1c1c25, #121219)" }}>
           <Helmet3D spec={helmet} label={`${d.name}'s helmet in ${heroTeam.name} colours, ${helmet.year}`} />
-          {d.number != null && <span className="hero-num" aria-hidden>{d.number}</span>}
+          {d.number != null && <span className="hero-num" aria-hidden>#{d.number}</span>}
         </div>
       </section>
 
