@@ -204,30 +204,43 @@ noise, so the model itself is unchanged.
 
 ### 3D cars
 
-Every car is a real-time 3D model (three.js, `web/src/three/car.ts`) built from the published FIA
-dimensions of its era:
+The 2022–2025 and 2026 cars are adapted from detailed reference models (see [3D references](#3d-references)):
+the Alpine A525 for the ground-effect era and the Red Bull RB22 for 2026. `tools/models/` turns them into
+the app's assets (`web/public/models/`, about 0.8 MB per car):
 
-| Era | Width | Wheelbase | Wheels | Shape |
-|---|---|---|---|---|
-| 2017–2021 | 2.0 m | ~3.65 m | 13-inch | high nose, bargeboards, five-element front wing, box sidepods |
-| 2022–2025 | 2.0 m | 3.6 m | 18-inch with covers | lower nose, downwash sidepods, floor edge wings |
-| 2026– | 1.9 m | 3.4 m | 18-inch, narrower | shorter and narrower, active front and rear wings |
+1. keep only the car (the A525 file is a whole pit scene with a driver, mechanics' tools and a laptop);
+2. line it up with the app's axes from the four tyres (rear axle at x = 0, ground at y = 0) and scale it
+   to the era's width; the resulting wheelbases (3.58 m and 3.39 m) match the regulations;
+3. split every triangle into one of the eight clickable parts by where it sits on the car;
+4. give every material a paint slot (team primary, secondary or accent colour, carbon, rubber, metal,
+   chrome, glass, light) and drop sponsor decals, numbers and the original textures;
+5. turn painted textures into colour-zone masks (primary / secondary / accent / carbon) with lettering
+   and logos filtered out, so the app can paint every team's livery onto the same model;
+6. simplify and compress with meshoptimizer (`tools/models/optimize.sh`).
 
-Each car is painted in its team's colours for that season (`f1qp/cars.py`) and carries a helmet in
-the cockpit. You can rotate and zoom it, jump to front, side, top or rear views, and click any of
-eight parts: front wing, nose, cockpit and halo, sidepods, floor, power unit, rear wing, and tyres
+```bash
+uv run tools/models/prepare_models.py --refs <unpacked models> --out build/models
+tools/models/optimize.sh build/models web/public/models
+```
+
+Each car is painted in its team's colours for that season (`f1qp/cars.py`) and carries the driver's
+helmet in the cockpit. You can rotate and zoom it, jump to front, side, top or rear views, and click any
+of eight parts: front wing, nose, cockpit and halo, sidepods, floor, power unit, rear wing, and tyres
 and suspension. The selected part glows red, and the side panel explains it with the car-level
-numbers. Shapes are simplified and carry no sponsor logos: the models follow each era's rules, but
-they are not replicas of the real cars. The car list shows still renders of the same models, made
-by one hidden renderer, because browsers allow only about 16 live 3D views per page. three.js is
-loaded only on pages that show 3D.
+numbers. Every team of an era shares the reference car's shape, so it shows the era's car, not each
+team's own design. The 2020–2021 cars (no reference model) are built in code from that era's FIA
+dimensions (`web/src/three/car.ts`). The car list shows still renders of the same models, made by one
+hidden renderer, because browsers allow only about 16 live 3D views per page; renders are kept in the
+browser's Cache Storage. three.js and the models load only on pages that show 3D.
 
 ### Helmets and names
 
-Every driver has a 3D helmet (`web/src/three/helmet.ts`), always shown from the front. The shell is
-lofted front to back through cross-sections: round dome, chin bar, flat base. The eye port has a visor
-and rubber seal fitted to its edge, plus side pivots, chin vents, top ducts and a rear gurney. On a
-driver's profile the helmet turns a little toward the pointer and sways gently when idle.
+Every driver has a 3D helmet (`web/src/three/helmet.ts`), always shown from the front. The shell,
+visor and trim come from a reference helmet model (see [3D references](#3d-references)); its original
+paint and sponsor logos are not used. The shell gets new texture coordinates (angle around the head,
+position front to back) so each driver's own paint design fits it. If the model cannot be loaded, a
+helmet lofted in code is used instead. On a driver's profile the helmet turns a little toward the
+pointer and sways gently when idle.
 
 Paint comes from published descriptions of each driver's 2026 race helmet
 (`web/src/three/helmetRefs.ts`): PlanetF1's 2026 helmet round-up, Sky Sport Italia, Motorsport.com's
@@ -253,6 +266,21 @@ the season (`/api/meta` gives each driver's team per season), so Hamilton is Mer
 and Ferrari red from 2025. Each driver card and profile has a season strip in those colours. Tracks are
 drawn from the outlines in [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits) (MIT,
 bundled in `f1qp/assets/`). All graphics are our own or openly licensed.
+
+### 3D references
+
+The cars and the helmet are adapted from these Sketchfab models, all licensed under
+[CC BY 4.0](http://creativecommons.org/licenses/by/4.0/). Changes: repainted in each team's or driver's
+colours, sponsor decals, numbers and original textures removed, props removed, simplified and
+compressed.
+
+- "2026 Redbull RB22" (https://skfb.ly/pOvxI) by Dave Love SketchFab: 2026 cars
+- "2025 alpine A525" (https://skfb.ly/pHXyZ) by Abu Saif: 2022–2025 cars
+- "Helmet Redbull - Max Verstappen" (https://skfb.ly/pEDBZ) by Maubian: helmets
+- "Scuderia Ferrari F1 SF23 2023" (https://skfb.ly/oRV79) by Redgrund: used to check proportions only
+
+Not used: "Formula 1 2022 Car" (https://skfb.ly/owxuQ) by Luis Adrian V. (a Blender file; the A525
+covers that era).
 
 ## Deployment
 
@@ -362,6 +390,8 @@ f1qp/cars.py        chassis names, liveries and regulation eras per team and sea
 f1qp/tracks.py      track outlines as SVG paths (MIT GeoJSON in f1qp/assets/)
 f1qp/names.py       display names and team colours
 web/                React + TypeScript front end (Vite); 3D in web/src/three (cars, helmets, references)
+web/public/models/  prepared 3D models (CC BY 4.0 sources, see 3D references)
+tools/models/       scripts that prepare those models from the downloaded originals
 data/               F1DB entries table, data/live/ weekends
 Dockerfile, docker-compose.yml, .github/workflows/ci.yml
 tests/              data sanity, leakage, live (fake OpenF1), API and explanation tests

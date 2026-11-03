@@ -3,7 +3,7 @@ __pycache__/
 .venv/
 .pytest_cache/
 data/raw/
-models/
+/models/
 artifacts/
 web/node_modules/
 web/dist/

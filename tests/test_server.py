@@ -191,3 +191,15 @@ def test_api_cache_serves_identical_gzipped_responses(client):
     plain = client.get(path, headers={"Accept-Encoding": "identity"})
     assert plain.json() == first.json()
     assert "x-cache" not in client.get("/api/health").headers
+
+
+def test_versioned_models_are_cached(artifact, tmp_path):
+    (tmp_path / "models").mkdir()
+    (tmp_path / "models" / "car.json").write_text('{"wheelbase": 3.4}')
+    (tmp_path / "index.html").write_text("<!doctype html>")
+    (tmp_path / "assets").mkdir()
+    app = create_app(Settings(live_interval=0, artifact=artifact, static_dir=tmp_path))
+    with TestClient(app) as c:
+        versioned = c.get("/models/car.json?v=1")
+        assert versioned.status_code == 200 and "immutable" in versioned.headers["cache-control"]
+        assert "immutable" not in c.get("/models/car.json").headers.get("cache-control", "")

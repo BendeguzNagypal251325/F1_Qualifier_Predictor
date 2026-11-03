@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApi, useMeta } from "../api";
 import { Car3D, CarImage, HelmetImage } from "../components/lazy3d";
+import { MODEL_CREDIT } from "../three/credits";
 import { ERA_SPECS, PART_LABEL, PART_ORDER, type PartId } from "../three/parts";
 import { RaceLine } from "../components/Charts";
 import { Avatar, ContribBars, ErrorBox, fmt, Loading, pct, signed, Swatch, Tile, useHelmetSpec, Info } from "../components/ui";
@@ -207,7 +208,9 @@ export function CarPage() {
           <div className="part-list" role="group" aria-label="Car parts">
             {PART_ORDER.map((p) => <button key={p} type="button" aria-pressed={part === p} onClick={() => setPart(part === p ? null : p)}>{PART_LABEL[p]}</button>)}
           </div>
-          <p className="credit">3D model built from the {car.era_label.toLowerCase()} regulation dimensions (wheelbase, width, wheels, wing spans) in {car.name}'s {car.season} colours. Simplified shapes, no sponsor logos; not a replica of the real car.</p>
+          <p className="credit">{MODEL_CREDIT[car.era]
+            ? <>3D model adapted from <a href={MODEL_CREDIT[car.era].url}>"{MODEL_CREDIT[car.era].title}"</a> by {MODEL_CREDIT[car.era].author} (<a href="http://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>): repainted in {car.name}'s {car.season} colours, sponsor logos and numbers removed. It shows the era's car shape, not {car.name}'s own car.</>
+            : <>3D model built from the {car.era_label.toLowerCase()} regulation dimensions (wheelbase, width, wheels, wing spans) in {car.name}'s {car.season} colours. Simplified shapes, no sponsor logos; not a replica of the real car.</>}</p>
         </section>
         <div className="tiles car-tiles">
           <Tile label="Avg quali" value={fmt(car.avg_pos)} sub={`${car.sessions} entries`} />

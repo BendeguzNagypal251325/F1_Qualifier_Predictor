@@ -2,8 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { buildCar, disposeObject } from "../three/car";
-import { buildHelmet, type HelmetSpec } from "../three/helmet";
+import { disposeObject } from "../three/car";
+import { loadCar } from "../three/models";
+import { buildHelmet, helmetModelReady, type HelmetSpec } from "../three/helmet";
 import { PART_LABEL, type PartId } from "../three/parts";
 import { makeRenderer, makeStage, snapshot, want } from "../three/stage";
 
@@ -140,11 +141,15 @@ export function Car3D({ era, livery, selected, onSelect, helmet, label }: {
 
   useEffect(() => {
     if (!ready || !api.current) return;
-    const built = buildCar(era, livery, helmet);
-    built.group.traverse((o) => { if ((o as THREE.Mesh).isMesh && (o as THREE.Mesh).material && ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissiveIntensity > 1) o.userData.light = true; });
-    parts.current = built.parts;
-    api.current.setObject(built.group);
-    highlight();
+    let stale = false;
+    void loadCar(era, livery, helmet).then((built) => {
+      if (stale || !api.current) { disposeObject(built.group); return; }
+      built.group.traverse((o) => { if ((o as THREE.Mesh).isMesh && (o as THREE.Mesh).material && ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissiveIntensity > 1) o.userData.light = true; });
+      parts.current = built.parts;
+      api.current.setObject(built.group);
+      highlight();
+    });
+    return () => { stale = true; };
   }, [ready, era, livery.join(","), helmet?.driverId, helmet?.colors.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { selRef.current = selected; highlight(); }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -210,8 +215,10 @@ export function Car3D({ era, livery, selected, onSelect, helmet, label }: {
 export function Helmet3D({ spec, label }: { spec: HelmetSpec; label: string }) {
   const box = useRef<HTMLDivElement>(null);
   const { api, ready } = useViewer(box, { floor: false, fov: 24, fit: 2.25 });
+  const [modelReady, setModelReady] = useState(false);
+  useEffect(() => { void helmetModelReady().then(() => setModelReady(true)); }, []);
   useEffect(() => {
-    if (!ready || !api.current) return;
+    if (!ready || !modelReady || !api.current) return;
     const { controls, camera } = api.current;
     const h = buildHelmet(spec);
     const pivot = new THREE.Group();
@@ -249,7 +256,7 @@ export function Helmet3D({ spec, label }: { spec: HelmetSpec; label: string }) {
       el.removeEventListener("pointermove", move);
       el.removeEventListener("pointerleave", leave);
     };
-  }, [ready, spec.driverId, spec.colors.join(","), spec.motif, spec.number]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ready, modelReady, spec.driverId, spec.colors.join(","), spec.motif, spec.number]); // eslint-disable-line react-hooks/exhaustive-deps
   return <div className="viewer square helmet-viewer" ref={box} role="img" aria-label={`${label}, 3D helmet; move the pointer over it to turn it`} style={{ background: "transparent" }} />;
 }
 
@@ -286,7 +293,7 @@ export function HelmetImage({ spec, alt }: { spec: HelmetSpec; alt: string }) {
   const [box, visible] = useNearScreen<HTMLSpanElement>();
   const src = useSnapshot(visible ? key : "", () => visible ? snapshot({
     key, width: 360, height: 360, floor: false,
-    build: () => buildHelmet(spec, 0.5),
+    build: () => helmetModelReady().then(() => buildHelmet(spec, 0.5)),
     camera: (o) => {
       const { centre } = frame(o);
       const cam = new THREE.PerspectiveCamera(24, 1, 0.1, 50);
@@ -303,7 +310,7 @@ export function CarImage({ era, livery, alt }: { era: string; livery: [string, s
   const [box, visible] = useNearScreen<HTMLSpanElement>();
   const src = useSnapshot(visible ? key : "", () => visible ? snapshot({
     key, width: 720, height: 405,
-    build: () => buildCar(era, livery).group,
+    build: () => loadCar(era, livery).then((c) => c.group),
     camera: (o) => {
       const { centre, size } = frame(o);
       const d = Math.max(size.x, size.z) * 1.12;

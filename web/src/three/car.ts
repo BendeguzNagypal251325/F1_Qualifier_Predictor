@@ -11,15 +11,22 @@ interface Era {
   wb: number; width: number; R: number; rim: number; twF: number; twR: number; covers: boolean;
   noseY: number; noseLen: number; fwSpan: number; fwEls: number; rwSpan: number; rwY: number;
   floorHalf: number; pod: "box" | "downwash"; podZ: number; bargeboards: boolean; active: boolean; tLen: number;
+  fwSweep: number;          // how far the front wing tips sit behind its centre (plan view), m
+  rwTop: number;            // top of the rear wing endplates, m
+  cover: [number, number];  // engine cover top at 0.35 m ahead of the rear axle and at the axle, m
+  podLift: number;          // extra height of the rear half of the sidepods, m
 }
 
 export const ERAS: Record<string, Era> = {
   "2017-2021": { wb: 3.65, width: 2.0, R: 0.335, rim: 0.2, twF: 0.305, twR: 0.405, covers: false, noseY: 0.25, noseLen: 1.15,
-    fwSpan: 1.8, fwEls: 5, rwSpan: 0.95, rwY: 0.92, floorHalf: 0.7, pod: "box", podZ: 0.56, bargeboards: true, active: false, tLen: 5.6 },
-  "2022-2025": { wb: 3.6, width: 2.0, R: 0.36, rim: 0.245, twF: 0.305, twR: 0.405, covers: true, noseY: 0.2, noseLen: 1.08,
-    fwSpan: 1.8, fwEls: 4, rwSpan: 0.95, rwY: 0.86, floorHalf: 0.8, pod: "downwash", podZ: 0.55, bargeboards: false, active: false, tLen: 5.5 },
-  "2026-": { wb: 3.4, width: 1.9, R: 0.355, rim: 0.245, twF: 0.28, twR: 0.375, covers: true, noseY: 0.2, noseLen: 1.0,
-    fwSpan: 1.7, fwEls: 3, rwSpan: 0.95, rwY: 0.86, floorHalf: 0.74, pod: "downwash", podZ: 0.52, bargeboards: false, active: true, tLen: 5.2 },
+    fwSpan: 1.8, fwEls: 5, rwSpan: 0.95, rwY: 0.92, floorHalf: 0.7, pod: "box", podZ: 0.56, bargeboards: true, active: false, tLen: 5.6,
+    fwSweep: 0.12, rwTop: 1.02, cover: [0.74, 0.59], podLift: 0 },
+  "2022-2025": { wb: 3.6, width: 2.0, R: 0.36, rim: 0.245, twF: 0.305, twR: 0.405, covers: true, noseY: 0.17, noseLen: 1.08,
+    fwSpan: 1.8, fwEls: 4, rwSpan: 0.95, rwY: 0.8, floorHalf: 0.8, pod: "downwash", podZ: 0.55, bargeboards: false, active: false, tLen: 5.5,
+    fwSweep: 0.42, rwTop: 0.91, cover: [0.8, 0.72], podLift: 0.06 },
+  "2026-": { wb: 3.4, width: 1.9, R: 0.355, rim: 0.245, twF: 0.28, twR: 0.375, covers: true, noseY: 0.26, noseLen: 1.0,
+    fwSpan: 1.7, fwEls: 3, rwSpan: 0.95, rwY: 0.86, floorHalf: 0.7, pod: "downwash", podZ: 0.42, bargeboards: false, active: true, tLen: 5.2,
+    fwSweep: 0.38, rwTop: 0.98, cover: [0.99, 0.93], podLift: 0.13 },
 };
 
 export interface BuiltCar { group: THREE.Group; parts: Map<PartId, THREE.Mesh[]>; length: number; centre: THREE.Vector3 }
@@ -71,7 +78,8 @@ export function buildCar(era: string, livery: [string, string, string], helmet?:
   ]);
   add("cockpit", new THREE.TubeGeometry(halo, 80, 0.024, 12), carbon());
   add("cockpit", rod(new THREE.Vector3(F - 0.82, 0.7, 0), new THREE.Vector3(F - 1.0, 0.92, 0), 0.022), carbon());
-  for (const z of [-0.42, 0.42]) {
+  const mz = E.pod === "downwash" ? 0.52 : 0.42; // modern mirrors sit further out, on the sidepod shoulders
+  for (const z of [-mz, mz]) {
     add("cockpit", roundedBox(0.04, 0.06, 0.13, 0.01).translate(F - 1.22, 0.78, z), paint(P));
     add("cockpit", rod(new THREE.Vector3(F - 1.22, 0.7, z * 0.75), new THREE.Vector3(F - 1.22, 0.76, z), 0.008), carbon());
   }
@@ -86,10 +94,10 @@ export function buildCar(era: string, livery: [string, string, string], helmet?:
   // ---- power unit / engine cover, airbox, spine stripe
   const cover: Section[] = [
     { x: F - 2.05, y: 0.66, w: 0.34, h: 0.34, n: 3 },
-    { x: F - 2.5, y: 0.6, w: 0.3, h: 0.32, n: 2.8 },
-    { x: F - 3.05, y: 0.5, w: 0.2, h: 0.24, n: 2.6 },
-    { x: 0.0, y: 0.44, w: 0.11, h: 0.15, n: 2.4 },
-    { x: -0.45, y: 0.42, w: 0.05, h: 0.09, n: 2.2 },
+    { x: F - 2.5, y: 0.6 + Math.max(0, E.cover[0] - 0.8) * 0.6, w: 0.3, h: 0.32, n: 2.8 },
+    { x: 0.35, y: E.cover[0] - 0.26, w: 0.2, h: 0.26, n: 2.6 },
+    { x: 0.0, y: E.cover[1] - 0.22, w: 0.13, h: 0.22, n: 2.4 },
+    { x: -0.32, y: E.cover[1] - 0.2, w: 0.06, h: 0.14, n: 2.2 },
   ];
   add("power-unit", loft(cover, 44, 10), paint(P));
   add("power-unit", loft(cover.map((s) => ({ ...s, y: s.y + s.h * 0.95, w: Math.max(0.012, s.w * 0.14), h: s.h * 0.08 })), 16, 8), paint(S));
@@ -108,11 +116,22 @@ export function buildCar(era: string, livery: [string, string, string], helmet?:
     ? [{ x: F - 1.28, y: 0.47, z: E.podZ, w: 0.2, h: 0.2, n: 4 }, { x: F - 1.75, y: 0.46, z: E.podZ, w: 0.22, h: 0.21, n: 4 },
        { x: F - 2.5, y: 0.4, z: E.podZ - 0.08, w: 0.18, h: 0.16, n: 3.2 }, { x: 0.55, y: 0.32, z: 0.28, w: 0.1, h: 0.1, n: 2.6 }, { x: 0.1, y: 0.3, z: 0.18, w: 0.05, h: 0.06, n: 2.4 }]
     : [{ x: F - 1.3, y: 0.43, z: E.podZ, w: 0.19, h: 0.16, n: 3.2 }, { x: F - 1.72, y: 0.42, z: E.podZ + 0.02, w: 0.21, h: 0.18, n: 3 },
-       { x: F - 2.3, y: 0.36, z: E.podZ - 0.05, w: 0.19, h: 0.13, n: 2.6 }, { x: 0.7, y: 0.3, z: 0.34, w: 0.13, h: 0.09, n: 2.4 }, { x: 0.15, y: 0.28, z: 0.18, w: 0.05, h: 0.05, n: 2.2 }];
+       { x: F - 2.3, y: 0.36, z: E.podZ - 0.05, w: 0.19, h: 0.13, n: 2.6 }, { x: 0.7, y: 0.3, z: 0.34, w: 0.13, h: 0.09, n: 2.4 }, { x: 0.15, y: 0.28, z: 0.18, w: 0.05, h: 0.05, n: 2.2 }]
+      // the rear half sits higher on the modern cars (downwash ramp into the engine cover)
+      .map((s, i) => ({ ...s, y: s.y + E.podLift * Math.min(1, i / 2) }));
   add("sidepods", loft(pod, 40, 10), paint(P), true);
   add("sidepods", loft(pod.slice(0, 4).map((s) => ({ ...s, y: s.y + s.h * 0.9, w: s.w * 0.55, h: s.h * 0.1 })), 20, 8), paint(S), true);
   const inlet = roundedBox(0.02, pod[0].h * 1.5, pod[0].w * 1.5, 0.03).translate(pod[0].x + 0.005, pod[0].y, E.podZ);
   add("sidepods", inlet, new THREE.MeshStandardMaterial({ color: "#020203", roughness: 0.9 }), true);
+  if (E.pod === "downwash") {
+    // ground-effect cars: bodywork under the sidepod undercut runs down to the floor
+    const under: Section[] = [
+      { x: F - 1.12, y: 0.19, z: E.podZ + 0.1, w: 0.18, h: 0.1, n: 3 }, { x: F - 1.7, y: 0.2, z: E.podZ + 0.06, w: 0.22, h: 0.11, n: 3 },
+      { x: F - 2.4, y: 0.18, z: E.podZ - 0.04, w: 0.2, h: 0.09, n: 2.8 }, { x: 0.6, y: 0.16, z: 0.32, w: 0.12, h: 0.07, n: 2.6 },
+      { x: 0.15, y: 0.14, z: 0.2, w: 0.06, h: 0.05, n: 2.4 },
+    ];
+    add("floor", loft(under, 36, 10), carbon(), true);
+  }
   if (E.bargeboards) {
     for (let k = 0; k < 3; k++) {
       add("sidepods", roundedBox(0.32 - k * 0.06, 0.2, 0.012, 0.005).translate(F - 0.95 + k * 0.04, 0.2, 0.42 + k * 0.08), paint(A, { metalness: 0.2 }), true);
@@ -138,13 +157,13 @@ export function buildCar(era: string, livery: [string, string, string], helmet?:
   const fwX = tip + 0.08;
   for (let k = 0; k < E.fwEls; k++) {
     const chord = 0.17 - k * 0.02, span = E.fwSpan - (k === 0 ? 0 : 0.12 + k * 0.03);
-    const g = airfoil(chord, 0.035, span, 0.08);
+    const g = airfoil(chord, 0.035, span, 0.08, E.fwSweep);
     g.rotateZ(-(0.04 + k * 0.17));
     g.translate(fwX - k * 0.115, 0.085 + k * 0.05, 0);
     add("front-wing", g, k < E.fwEls - 2 ? carbon() : paint(k === E.fwEls - 1 ? S : P));
   }
   for (const z of [-1, 1]) {
-    add("front-wing", roundedBox(0.46, 0.22, 0.012, 0.04).translate(fwX - 0.22, 0.17, (z * E.fwSpan) / 2), paint(A));
+    add("front-wing", roundedBox(0.46, 0.22, 0.012, 0.04).translate(fwX - 0.22 - E.fwSweep, 0.17, (z * E.fwSpan) / 2), paint(A));
   }
   add("front-wing", rod(new THREE.Vector3(tip - 0.25, E.noseY + 0.02, 0.06), new THREE.Vector3(tip - 0.2, 0.1, 0.12), 0.012), carbon(), true);
 
@@ -156,9 +175,14 @@ export function buildCar(era: string, livery: [string, string, string], helmet?:
   add("rear-wing", flap, paint(S));
   const beam = airfoil(0.14, 0.05, E.rwSpan * 0.8, 0.05); beam.rotateZ(-0.25); beam.translate(rwX - 0.05, 0.46, 0);
   add("rear-wing", beam, carbon());
+  const ep = new THREE.Shape();
+  ep.moveTo(rwX + 0.08, E.rwTop); ep.lineTo(rwX - 0.46, E.rwTop); ep.lineTo(rwX - 0.48, E.rwTop - 0.3);
+  ep.quadraticCurveTo(rwX - 0.46, 0.38, rwX - 0.3, 0.3); ep.lineTo(rwX - 0.05, 0.3);
+  ep.quadraticCurveTo(rwX + 0.08, 0.45, rwX + 0.08, E.rwTop - 0.22); ep.closePath();
   for (const z of [-1, 1]) {
-    add("rear-wing", roundedBox(0.5, 0.44, 0.012, 0.06).translate(rwX - 0.18, E.rwY - 0.04, (z * E.rwSpan) / 2), paint(P));
-    add("rear-wing", roundedBox(0.5, 0.035, 0.014, 0.01).translate(rwX - 0.18, E.rwY + 0.17, (z * E.rwSpan) / 2), paint(A));
+    const plate = new THREE.ExtrudeGeometry(ep, { depth: 0.012, bevelEnabled: false, curveSegments: 10 });
+    add("rear-wing", plate.translate(0, 0, (z * E.rwSpan) / 2 - 0.006), paint(P));
+    add("rear-wing", roundedBox(0.54, 0.03, 0.016, 0.01).translate(rwX - 0.19, E.rwTop - 0.015, (z * E.rwSpan) / 2), paint(A));
   }
   add("rear-wing", roundedBox(0.16, 0.42, 0.02, 0.01).translate(rwX - 0.12, E.rwY - 0.24, 0), carbon());
   const light = new THREE.Mesh(roundedBox(0.02, 0.05, 0.12, 0.005), new THREE.MeshStandardMaterial({ color: "#ff1a1a", emissive: "#ff1a1a", emissiveIntensity: 1.4 }));
