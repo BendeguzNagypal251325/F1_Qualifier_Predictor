@@ -1,6 +1,7 @@
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApi, useMeta } from "../api";
-import { Avatar, ContribStack, ErrorBox, GroupLegend, Loading, PosChip, Swatch, Tile, TrackOutline } from "../components/ui";
+import { PredictionTable } from "../components/PredictionTable";
+import { ErrorBox, GroupLegend, Info, Loading, Tile, TrackOutline } from "../components/ui";
 import type { SessionDetail, SessionSummary } from "../types";
 
 export default function Sessions() {
@@ -17,8 +18,6 @@ export default function Sessions() {
   const s = detail.data;
   const season = s?.season ?? meta.latest;
   const inSeason = all.data?.filter((x) => x.season === season) ?? [];
-  const name = (id: string) => meta.drivers.find((d) => d.id === id)?.name ?? id;
-  const tname = (id: string) => meta.teams.find((t) => t.id === id)?.name ?? id;
   const avg = inSeason.length ? inSeason.reduce((a, x) => a + x.correct, 0) / inSeason.length : null;
 
   return (
@@ -45,8 +44,8 @@ export default function Sessions() {
       {all.data && (
         <section className="panel reveal">
           <div className="panel-head">
-            <h2>{wantCorrect != null ? `Every session with ${wantCorrect}/10 correct` : `${season} at a glance`}</h2>
-            <span className="note">{wantCorrect != null ? <Link to="/sessions">show all</Link> : "correct picks per race · click to open"}</span>
+            <h2>{wantCorrect != null ? `Every session with ${wantCorrect}/10 correct` : `${season} at a glance`} <Info>Each cell is one race, shaded by how many of the ten picks were right. Click a cell to open it.</Info></h2>
+            {wantCorrect != null && <Link to="/sessions" className="link">Show all sessions</Link>}
           </div>
           <div className="season-strip-lg">
             {(wantCorrect != null ? pool ?? [] : inSeason).map((x) => (
@@ -67,27 +66,8 @@ export default function Sessions() {
             <Tile label="Weekend" value={s.date} small sub={s.sprint ? "sprint weekend (one practice)" : "standard weekend"} />
           </div>
           <section className="panel">
-            <div className="panel-head"><h2>Predicted order vs result</h2><GroupLegend /></div>
-            <div className="scroll">
-              <table>
-                <thead><tr><th className="num">Pred</th><th>Driver</th><th>Team</th><th className="num">Practice</th><th>Why</th><th className="num">Model</th><th className="num">Actual</th><th>Call</th></tr></thead>
-                <tbody>
-                  {s.rows.map((r) => (
-                    <tr key={r.driver} className={r.pred_rank === 10 ? "cut" : ""}>
-                      <td className="num">{r.pred_rank}</td>
-                      <td><Link className="cell-name" to={`/drivers/${r.driver}`}><Avatar driver={r.driver} team={r.team} size={30} /><span>{name(r.driver)}</span></Link></td>
-                      <td><Link to={`/cars/${s.season}/${r.team}`}><Swatch team={r.team} /> {tname(r.team)}</Link></td>
-                      <td className="num">{r.fp_last_pos ? `P${r.fp_last_pos}` : "–"}</td>
-                      <td style={{ minWidth: 150 }}><ContribStack contrib={r.contrib} /></td>
-                      <td className="num">{r.pred.toFixed(1)}</td>
-                      <td className="num"><PosChip pos={r.pos} status={r.status} /></td>
-                      <td>{r.right ? <span className="ok">✓ right</span> : <span className="no">✗ {r.picked ? "missed Q3" : "surprise Q3"}</span>}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="note">“Why” shows how far each group moved the driver: solid segments moved them forward, faded ones backward. The dashed line is the predicted Q3 cut. <Link to={`/what-if?season=${s.season}&race=${s.race_key}`}>Try a car swap for this race →</Link></p>
+            <div className="panel-head"><h2>Predicted order vs result <Info>“Why” shows how far each group moved the driver: solid segments moved them forward, faded ones backward. The dashed line is the predicted Q3 cut. <Link to={`/what-if?season=${s.season}&race=${s.race_key}`}>Try a car swap for this race →</Link></Info></h2><GroupLegend /></div>
+            <PredictionTable s={s} />
           </section>
         </>
       )}

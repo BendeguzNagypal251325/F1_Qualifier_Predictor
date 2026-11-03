@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import time
 import unicodedata
 import urllib.parse
@@ -173,7 +174,7 @@ def find_race_dir(season_dir: Path, race: str | None) -> Path:
         if live.exists() and pd.read_csv(live)["quali_pos"].notna().all():
             continue  # qualifying already done (saved by an earlier live run)
         return d
-    raise SystemExit("No upcoming race left in this season.")
+    raise LiveUnavailable("No upcoming race left in this season. Live predictions start again with next season's first weekend.")
 
 
 # ---------------------------------------------------------------- weekend table ---------------------------------------
@@ -307,16 +308,27 @@ def report(pred: pd.DataFrame, used: list[str]) -> str:
     return "\n".join(lines)
 
 
+class LiveUnavailable(RuntimeError):
+    """A live prediction cannot be made right now; the message is meant for people, not logs."""
+
+
 def _prepare(race: str | None, season: int, update: bool, get):
     """Shared by the CLI and the web server: (entries, prediction table, finished sessions used)."""
+    sdir = seasons_dir()
     if update:
-        sdir = fetch_f1db(seasons=HISTORY_SEASONS)
-        entries = build_entries(sdir, HISTORY_SEASONS)
-        entries.to_csv(ENTRIES_CSV, index=False)
-    else:
-        sdir = seasons_dir()
+        try:
+            sdir = fetch_f1db(seasons=HISTORY_SEASONS)
+            entries = build_entries(sdir, HISTORY_SEASONS)
+            entries.to_csv(ENTRIES_CSV, index=False)
+        except (subprocess.CalledProcessError, OSError) as e:
+            # No network or no git: carry on with the copy we already have, if any.
+            if not (sdir / str(season)).exists():
+                raise LiveUnavailable(
+                    "Could not download the race calendar (F1DB on GitHub). Check that the server can reach "
+                    "github.com and that git is installed."
+                ) from e
     if not (sdir / str(season)).exists():
-        raise SystemExit(f"No F1DB calendar for {season} in {sdir}. Run once without --no-update.")
+        raise LiveUnavailable(f"No race calendar for {season} yet. Run once with network access to download it.")
     entries = load_entries()
 
     race_dir = find_race_dir(sdir / str(season), race)

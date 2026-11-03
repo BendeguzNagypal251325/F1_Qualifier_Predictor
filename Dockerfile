@@ -34,8 +34,11 @@ COPY f1qp/ f1qp/
 COPY data/qualifying_entries.csv data/
 RUN uv sync --frozen --no-dev && f1qp-build
 COPY --from=web /web/dist web/dist
-RUN useradd --create-home --uid 10001 f1qp && chown -R f1qp /app
-USER f1qp
+RUN useradd --create-home --uid 10001 f1qp && mkdir -p data/raw data/live artifacts && chown -R f1qp /app
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# The entrypoint fixes volume ownership as root, then runs the server as the f1qp user.
+ENTRYPOINT ["docker-entrypoint.sh"]
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health').status == 200 else 1)"
 CMD ["sh", "-c", "uvicorn f1qp.server:create_app --factory --host $HOST --port $PORT --proxy-headers --forwarded-allow-ips='*'"]

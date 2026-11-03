@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { useApi, useMeta } from "../api";
-import { Avatar, ContribStack, ErrorBox, GroupLegend, Loading, PosChip, Swatch, Tile, TrackOutline } from "../components/ui";
-import type { Live } from "../types";
+import { PredictionTable } from "../components/PredictionTable";
+import { Avatar, ContribStack, ErrorBox, GroupLegend, Info, Loading, PosChip, Swatch, Tile, TrackOutline } from "../components/ui";
+import type { Live, SessionDetail, SessionSummary } from "../types";
 
 const SESSIONS = ["Practice 1", "Practice 2", "Practice 3", "Qualifying"];
+const titleCase = (s: string) => s.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function LivePage() {
   const meta = useMeta();
@@ -14,47 +16,44 @@ export default function LivePage() {
   const name = (id: string) => meta.drivers.find((d) => d.id === id)?.name ?? id;
   const team = (id: string) => meta.teams.find((t) => t.id === id)?.name ?? id;
   const circuit = p ? meta.circuits.find((c) => c.id === p.circuit) : undefined;
+  const state = !status.enabled ? "off" : status.error ? "error" : p ? "live" : "waiting";
 
   return (
     <>
-      <div className="page-head">
+      <div className="page-head reveal">
         <div>
-          <span className="eyebrow">Live weekend <span className={`badge${status.enabled ? " live" : ""}`}>{status.enabled ? "auto-updating" : "updates off"}</span></span>
-          <h1>{p ? `${p.season} ${p.grand_prix.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} Grand Prix` : "Next qualifying"}</h1>
-          <p className="lede">The prediction is rebuilt after every finished session of the weekend: before FP1 from form and standings only, then with each practice result. After qualifying it shows the real result and the race is added to the training data.</p>
+          <span className="eyebrow"><span className={`live-dot${state === "live" ? " on" : ""}`} aria-hidden /> Live weekend</span>
+          <h1>{p ? `${p.season} ${titleCase(p.grand_prix)} Grand Prix` : "Live weekend"}
+            <Info>Rebuilt after every finished session: before FP1 from form and standings, then with each practice result. After qualifying the real result appears and the race joins the training data.</Info>
+          </h1>
         </div>
         {circuit && <TrackOutline circuit={circuit.id} size={96} stroke={5} />}
       </div>
 
-      {!p && (
-        <div className="panel empty-state">
-          <h2>No live prediction yet</h2>
-          <p className="note">
-            {status.error
-              ? <>The last refresh failed: <span className="mono">{status.error}</span>. The server keeps retrying every {Math.round(status.interval_s / 60)} minutes.</>
-              : status.enabled
-                ? "The server is fetching this weekend's sessions from OpenF1. This page refreshes every minute."
-                : "Live updates are switched off on this server (F1QP_LIVE_INTERVAL=0)."}
-          </p>
-          <Link to="/sessions" className="btn ghost">Browse past sessions instead</Link>
-        </div>
-      )}
+      <div className={`status-bar ${state}`} role="status">
+        <b>{state === "live" ? "Live" : state === "error" ? "Live data unavailable" : state === "off" ? "Live updates off" : "Waiting for the next session"}</b>
+        <span>
+          {state === "error" && status.error}
+          {state === "off" && "Live timing is switched off on this server. Showing the latest completed weekend."}
+          {state === "waiting" && "Checking OpenF1 for this weekend's sessions."}
+          {state === "live" && p && `${p.sessions_used.length} of 4 sessions in · ${p.model.startsWith("full") ? "using practice" : "pre-weekend model"}`}
+        </span>
+        {status.last_run && <span className="mono">updated {new Date(status.last_run).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}
+      </div>
 
-      {p && (
+      {p ? (
         <>
           <div className="tiles stagger">
-            <Tile label="Sessions used" value={`${p.sessions_used.length} / 4`} sub={SESSIONS.map((s) => (p.sessions_used.includes(s) ? "●" : "○") + " " + s.replace("Practice ", "FP")).join("  ")} />
-            <Tile label="Model" value={p.model.startsWith("full") ? "With practice" : "Pre-weekend"} small sub={p.model} />
+            <Tile label="Sessions in" value={`${p.sessions_used.length} / 4`} sub={SESSIONS.map((s) => (p.sessions_used.includes(s) ? "●" : "○") + " " + s.replace("Practice ", "FP")).join("  ")} />
             {p.qualifying_done
-              ? <Tile label="Result" value={<>{p.correct}<small> / 10</small></>} sub={`correct Q3 picks · ${p.mae} places off on average`} />
-              : <Tile label="Qualifying" value="Not run yet" small sub={`race weekend of ${p.date}`} />}
-            <Tile label="Last refresh" value={status.last_run ? new Date(status.last_run).toLocaleTimeString() : "–"} small sub={status.error ? `error: ${status.error}` : `every ${Math.round(status.interval_s / 60)} min`} />
+              ? <Tile label="Result" value={null} countUp={p.correct ?? 0} decimals={0} suffix=" / 10" sub={`${p.mae} places off on average`} />
+              : <Tile label="Qualifying" value="Not run yet" small sub={p.date} />}
           </div>
-          <section className="panel">
-            <div className="panel-head"><h2>Predicted qualifying order</h2><GroupLegend /></div>
+          <section className="panel reveal">
+            <div className="panel-head"><h2>Predicted qualifying order <Info>The dashed line is the predicted Q3 cut. “Why” shows how much the driver, the car and practice moved each prediction.</Info></h2><GroupLegend /></div>
             <div className="scroll">
               <table>
-                <thead><tr><th className="num">Pred</th><th>Driver</th><th>Team</th><th className="num">Practice</th><th>Why (gain vs an average entry)</th><th className="num">Model</th>{p.qualifying_done && <th className="num">Actual</th>}</tr></thead>
+                <thead><tr><th className="num">Pred</th><th>Driver</th><th>Team</th><th className="num">Practice</th><th>Why</th><th className="num">Model</th>{p.qualifying_done && <th className="num">Actual</th>}</tr></thead>
                 <tbody>
                   {p.rows.map((r) => (
                     <tr key={r.driver_id} className={r.pred_pos === 10 ? "cut" : ""}>
@@ -70,10 +69,36 @@ export default function LivePage() {
                 </tbody>
               </table>
             </div>
-            <p className="note">Data: OpenF1 (results of finished sessions) and F1DB (history). The dashed line is the predicted Q3 cut.</p>
           </section>
         </>
-      )}
+      ) : <LatestWeekend />}
+    </>
+  );
+}
+
+/** When there is no live prediction, show the most recent completed weekend instead of an empty page. */
+function LatestWeekend() {
+  const meta = useMeta();
+  const list = useApi<SessionSummary[]>(`/api/sessions?season=${meta.latest}`);
+  const last = list.data?.[list.data.length - 1];
+  const s = useApi<SessionDetail>(last ? `/api/sessions/${last.race_key}` : null);
+  if (list.error || s.error) return <ErrorBox error={(list.error || s.error)!} />;
+  if (!s.data) return <Loading height={420} />;
+  const d = s.data;
+  return (
+    <>
+      <div className="tiles stagger">
+        <Tile label="Latest weekend" value={`${d.gp}`} small sub={`${d.season} · round ${d.round} · ${d.date}`} />
+        <Tile label="Correct picks" value={null} countUp={d.correct} decimals={0} suffix=" / 10" />
+        <Tile label="Places off" value={null} countUp={d.mae} sub="average, all drivers" />
+      </div>
+      <section className="panel reveal">
+        <div className="panel-head">
+          <h2>{d.season} {d.gp}: prediction vs result <Info>Shown until the next weekend's first session is in. The dashed line is the predicted Q3 cut.</Info></h2>
+          <Link to={`/sessions/${d.race_key}`} className="btn ghost">Open session</Link>
+        </div>
+        <PredictionTable s={d} />
+      </section>
     </>
   );
 }

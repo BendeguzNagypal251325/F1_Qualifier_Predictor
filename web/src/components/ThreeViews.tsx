@@ -5,7 +5,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { buildCar, disposeObject } from "../three/car";
 import { buildHelmet, type HelmetSpec } from "../three/helmet";
 import { PART_LABEL, type PartId } from "../three/parts";
-import { makeRenderer, makeStage, snapshot } from "../three/stage";
+import { makeRenderer, makeStage, snapshot, want } from "../three/stage";
 
 type View = "3/4" | "front" | "side" | "top" | "rear";
 
@@ -255,28 +255,35 @@ export function Helmet3D({ spec, label }: { spec: HelmetSpec; label: string }) {
 
 // ---------------------------------------------------------------- still images
 
+/** True once the element is within 300 px of the viewport (renders are only queued for those). */
+function useNearScreen<T extends Element>() {
+  const ref = useRef<T>(null);
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && (setNear(true), io.disconnect()), { rootMargin: "300px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return [ref, near] as const;
+}
+
 function useSnapshot(key: string, make: () => Promise<string>) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
     setSrc(null);
+    const release = key ? want(key) : () => {};
     make().then((s) => alive && setSrc(s || null));
-    return () => { alive = false; };
+    return () => { alive = false; release(); };
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   return src;
 }
 
 export function HelmetImage({ spec, alt }: { spec: HelmetSpec; alt: string }) {
   const key = `helmet|${spec.driverId}|${spec.colors.join(",")}|${spec.motif}|${spec.number}`;
-  const box = useRef<HTMLSpanElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([e]) => e.isIntersecting && (setVisible(true), io.disconnect()), { rootMargin: "300px" });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+  const [box, visible] = useNearScreen<HTMLSpanElement>();
   const src = useSnapshot(visible ? key : "", () => visible ? snapshot({
     key, width: 360, height: 360, floor: false,
     build: () => buildHelmet(spec, 0.5),
@@ -293,7 +300,8 @@ export function HelmetImage({ spec, alt }: { spec: HelmetSpec; alt: string }) {
 
 export function CarImage({ era, livery, alt }: { era: string; livery: [string, string, string]; alt: string }) {
   const key = `car|${era}|${livery.join(",")}`;
-  const src = useSnapshot(key, () => snapshot({
+  const [box, visible] = useNearScreen<HTMLSpanElement>();
+  const src = useSnapshot(visible ? key : "", () => visible ? snapshot({
     key, width: 720, height: 405,
     build: () => buildCar(era, livery).group,
     camera: (o) => {
@@ -304,6 +312,8 @@ export function CarImage({ era, livery, alt }: { era: string; livery: [string, s
       cam.lookAt(centre);
       return cam;
     },
-  }));
-  return src ? <img src={src} alt={alt} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : null;
+  }) : Promise.resolve(""));
+  return src
+    ? <img src={src} alt={alt} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+    : <span ref={box} style={{ display: "block", width: "100%", height: "100%" }} aria-label="Rendering car" />;
 }

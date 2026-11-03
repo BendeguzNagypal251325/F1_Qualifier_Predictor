@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { seasonsParam, useApi, useMeta } from "../api";
 import {
-  Bar, ContribBars, ErrorBox, fmt, Loading, pct, PosLegend, SeasonFilter, SeasonStrip, Sortable, Swatch, Tile, useHelmetSpec,
+  Bar, ContribBars, ErrorBox, Info, fmt, Loading, pct, PosLegend, SeasonFilter, SeasonStrip, Sortable, Swatch, Tile, useHelmetSpec,
   TrackOutline, useSeasons, useTeam, YearChips,
 } from "../components/ui";
 import type { DriverDetail, DriverMeta } from "../types";
@@ -87,12 +87,11 @@ export function DriverPage() {
       <section className="hero">
         <div className="hero-text">
           <span className="eyebrow">{team.name}{d.number ? ` · #${d.number}` : ""}</span>
-          <h1>{d.name}</h1>
+          <h1>{d.name} <Info label="About the helmet">{helmet.source === "reference"
+            ? <>Helmet colours from descriptions of {d.name.split(" ")[0]}'s 2026 helmet: {helmet.note} Simplified artwork, not an exact copy.</>
+            : <>No published description of {d.name.split(" ")[0]}'s helmet found, so it is shown in {heroTeam.name} colours ({helmet.year}).</>}</Info></h1>
           <span className="script-name" aria-hidden>{d.name}</span>
           <SeasonStrip driver={d.id} labels />
-          <p className="note">{helmet.source === "reference"
-            ? <>Helmet colours from descriptions of {d.name.split(" ")[0]}'s 2026 helmet: {helmet.note} Simplified artwork, not an exact copy.</>
-            : <>No published description of {d.name.split(" ")[0]}'s helmet found, so it is shown in {heroTeam.name} colours ({helmet.year}).</>}</p>
           <div className="controls"><SeasonFilter value={seasons} onChange={setSeasons} /></div>
           <div className="legend">
             {[...stints.entries()].map(([t, ys]) => (
@@ -120,18 +119,17 @@ export function DriverPage() {
           </div>
           <div className="split">
             <section className="panel">
-              <div className="panel-head"><h2>Driver or car?</h2><span className="note">average push, in grid places</span></div>
+              <div className="panel-head"><h2>Driver or car?<Info>average push, in grid places Negative = the model moved {d.name.split(" ")[0]} up the grid, compared with an average entry. Car = the form of the team's car; driver = {d.name.split(" ")[0]}'s own record, which also reflects the cars driven before.</Info></h2></div>
               <ContribBars contrib={{ driver: data.contrib_driver ?? 0, car: data.contrib_car ?? 0, weekend: data.contrib_weekend ?? 0, context: data.contrib_context ?? 0 }} />
-              <p className="note">Negative = the model moved {d.name.split(" ")[0]} up the grid, compared with an average entry. Car = the form of the team's car; driver = {d.name.split(" ")[0]}'s own record, which also reflects the cars driven before.</p>
             </section>
             <section className="panel">
-              <div className="panel-head"><h2>Teams</h2><span className="note">click a year to open that car</span></div>
+              <div className="panel-head"><h2>Teams<Info>click a year to open that car</Info></h2></div>
               <table className="wrap">
                 <thead><tr><th>Team</th><th>Cars</th><th className="num">Sessions</th></tr></thead>
                 <tbody>
                   {spells(data.teams).map((sp) => (
                     <tr key={`${sp.team}-${sp.seasons[0]}`}>
-                      <td><Swatch team={sp.team} /> {meta.teams.find((x) => x.id === sp.team)?.name} <span className="note">{sp.seasons[0]}{sp.seasons.length > 1 ? `–${String(sp.seasons[sp.seasons.length - 1]).slice(2)}` : ""}</span></td>
+                      <td><Swatch team={sp.team} /> {meta.teams.find((x) => x.id === sp.team)?.name} <span className="sub">{sp.seasons[0]}{sp.seasons.length > 1 ? `–${String(sp.seasons[sp.seasons.length - 1]).slice(2)}` : ""}</span></td>
                       <td><div className="legend">{sp.seasons.map((y) => <Link key={y} to={`/cars/${y}/${sp.team}`} className="badge">{meta.cars[String(y)]?.[sp.team]?.chassis ?? y}</Link>)}</div></td>
                       <td className="num">{sp.sessions}</td>
                     </tr>
@@ -141,7 +139,7 @@ export function DriverPage() {
             </section>
           </div>
           <section className="panel">
-            <div className="panel-head"><h2>{d.name} at every track</h2><PosLegend /></div>
+            <div className="panel-head"><h2>{d.name} at every track <Info>Hover a result for the model's prediction that weekend. A red dot means the model put the driver on the wrong side of the Q3 cut.</Info></h2><PosLegend /></div>
             <div className="scroll">
               <Sortable rows={data.tracks} initial={{ key: "avg_pos", dir: "asc" }}>
                 {(rows, th) => (
@@ -166,7 +164,6 @@ export function DriverPage() {
                 )}
               </Sortable>
             </div>
-            <p className="note">Hover a result for the model's prediction that weekend. A red dot means the model put the driver on the wrong side of the Q3 cut.</p>
           </section>
         </>
       )}

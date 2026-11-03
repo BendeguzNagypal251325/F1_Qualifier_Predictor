@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Start the Q3 Predictor web app on macOS/Linux without Docker.
+# Start the Gridcast web app on macOS/Linux without Docker.
 #
 #   ./start.sh            # http://127.0.0.1:8000
 #   ./start.sh --no-live  # skip live weekend updates
@@ -31,5 +31,5 @@ uv sync --no-dev
 
 # 3. Start the server.
 [ "${1:-}" = "--no-live" ] && export F1QP_LIVE_INTERVAL=0
-printf "\nStarting Q3 Predictor at http://127.0.0.1:%s (first start computes the predictions, ~10 s). Ctrl+C to stop.\n\n" "$PORT"
+printf "\nStarting Gridcast at http://127.0.0.1:%s (first start computes the predictions, ~10 s). Ctrl+C to stop.\n\n" "$PORT"
 exec uv run --no-dev f1qp-serve --port "$PORT"
