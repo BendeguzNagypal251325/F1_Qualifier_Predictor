@@ -51,6 +51,30 @@ export function TooltipLayer() {
   return <div id="tip" ref={ref} hidden role="tooltip" />;
 }
 
+// ---------------------------------------------------------------- info popover (replaces grey footnotes)
+
+/** A small "i" next to a heading; the explanation shows on hover or keyboard focus. */
+/** Nudge an open popover sideways so it stays inside the viewport on narrow screens. */
+function keepOnScreen(e: { currentTarget: HTMLElement }) {
+  const pop = e.currentTarget.querySelector<HTMLElement>(".info-pop");
+  if (!pop) return;
+  pop.style.marginLeft = "0px";
+  requestAnimationFrame(() => {
+    const r = pop.getBoundingClientRect(), pad = 12;
+    const shift = r.right > innerWidth - pad ? innerWidth - pad - r.right : r.left < pad ? pad - r.left : 0;
+    pop.style.marginLeft = `${shift}px`;
+  });
+}
+
+export function Info({ children, label = "About this" }: { children: ReactNode; label?: string }) {
+  return (
+    <span className="info" tabIndex={0} role="button" aria-label={label} onMouseEnter={keepOnScreen} onFocus={keepOnScreen}>
+      <span aria-hidden>i</span>
+      <span className="info-pop" role="tooltip">{children}</span>
+    </span>
+  );
+}
+
 // ---------------------------------------------------------------- states
 
 export function Loading({ height = 160 }: { height?: number }) {

@@ -167,3 +167,27 @@ def test_teams(client):
         assert wins <= s["races"]
     assert t["best_tracks"] and t["best_tracks"][0]["avg_pos"] <= t["worst_tracks"][0]["avg_pos"]
     assert client.get("/api/teams/nobody").status_code == 404
+
+
+def test_live_errors_are_readable(artifact, tmp_path):
+    from urllib.error import URLError
+
+    def offline():
+        raise URLError("Name or service not known")
+
+    app = create_app(Settings(live_interval=0, artifact=artifact, static_dir=tmp_path), live_fetch=offline)
+    with TestClient(app):
+        live = app.state.live
+        asyncio.run(live.refresh())
+        assert "OpenF1" in live.error and "URLError" not in live.error
+
+
+def test_api_cache_serves_identical_gzipped_responses(client):
+    path = "/api/drivers/max-verstappen"
+    first = client.get(path, headers={"Accept-Encoding": "gzip"})
+    second = client.get(path, headers={"Accept-Encoding": "gzip"})
+    assert second.headers["x-cache"] == "hit"
+    assert first.json() == second.json()  # TestClient decodes gzip; garbled bytes would fail here
+    plain = client.get(path, headers={"Accept-Encoding": "identity"})
+    assert plain.json() == first.json()
+    assert "x-cache" not in client.get("/api/health").headers

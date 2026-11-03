@@ -4,7 +4,7 @@ import { useApi, useMeta } from "../api";
 import { Car3D, CarImage, HelmetImage } from "../components/lazy3d";
 import { ERA_SPECS, PART_LABEL, PART_ORDER, type PartId } from "../three/parts";
 import { RaceLine } from "../components/Charts";
-import { Avatar, ContribBars, ErrorBox, fmt, Loading, pct, signed, Swatch, Tile, useHelmetSpec } from "../components/ui";
+import { Avatar, ContribBars, ErrorBox, fmt, Loading, pct, signed, Swatch, Tile, useHelmetSpec, Info } from "../components/ui";
 import type { CarDetail, CarList as CarListData } from "../types";
 
 const ENGINE_NAMES: Record<string, string> = {
@@ -34,8 +34,8 @@ export function CarList() {
       {!data ? <Loading height={400} /> : (
         <>
           <div className="panel">
-            <div className="panel-head"><h2>{data.cars[0]?.era_label}</h2><span className="note">{ERA_SPECS[data.era]?.extra}</span></div>
-            <p className="note">{data.cars[0]?.era_summary}</p>
+            <div className="panel-head"><h2>{data.cars[0]?.era_label}<Info>{ERA_SPECS[data.era]?.extra}</Info></h2></div>
+            <p className="body-text">{data.cars[0]?.era_summary}</p>
           </div>
           <div className="card-grid stagger">
             {data.cars.map((c, i) => (
@@ -73,14 +73,13 @@ function EngineTable({ data }: { data: CarListData }) {
     .sort((a, b) => a.best - b.best);
   return (
     <section className="panel">
-      <div className="panel-head"><h2>Power units in {data.season}</h2><span className="note">gap of each engine's cars to pole</span></div>
+      <div className="panel-head"><h2>Power units in {data.season}<Info>gap of each engine's cars to pole The engine supplier cannot be separated from the chassis in this data: these are whole-car gaps grouped by engine.</Info></h2></div>
       <div className="scroll">
         <table>
           <thead><tr><th>Engine</th><th>Customers</th><th className="num">Best car</th><th className="num">Average car</th></tr></thead>
           <tbody>{rows.map((r) => <tr key={r.e}><td>{engineName(r.e)}</td><td>{r.teams.join(", ")}</td><td className="num">+{r.best.toFixed(2)}%</td><td className="num">+{r.gap.toFixed(2)}%</td></tr>)}</tbody>
         </table>
       </div>
-      <p className="note">The engine supplier cannot be separated from the chassis in this data: these are whole-car gaps grouped by engine.</p>
     </section>
   );
 }
@@ -90,7 +89,7 @@ function PartPanel({ part, car, cars }: { part: PartId | null; car: CarDetail; c
     return (
       <div className="panel">
         <h2>Pick a part</h2>
-        <p className="note">Click any part of the car (or use the buttons below the model) to see what it does and the numbers the model uses for this car.</p>
+        <p className="body-text">Click a part of the car, or use the buttons under it.</p>
         <EraSpecs era={car.era} label={car.era_label} />
       </div>
     );
@@ -137,10 +136,9 @@ function PartPanel({ part, car, cars }: { part: PartId | null; car: CarDetail; c
   return (
     <div className="panel">
       <span className="eyebrow">{car.name} {car.chassis} · {car.season}</span>
-      <h2>{PART_LABEL[part]}</h2>
-      <p className="note" style={{ color: "var(--ink-2)" }}>{car.parts[part]}</p>
+      <h2>{PART_LABEL[part]} <Info>Numbers are for the whole car. The data has no measurements of single parts.</Info></h2>
+      <p className="body-text">{car.parts[part]}</p>
       {body}
-      <p className="note">Numbers are for the whole car. The data has no measurements of single parts.</p>
     </div>
   );
 }
@@ -222,7 +220,7 @@ export function CarPage() {
         <div className="stackcol">
           <PartPanel part={part} car={car} cars={cars} />
           <section className="panel">
-            <div className="panel-head"><h2>Who drove it</h2><span className="note">average push on the prediction</span></div>
+            <div className="panel-head"><h2>Who drove it<Info>average push on the prediction</Info></h2></div>
             {car.drivers.map((d) => (
               <div key={d.driver} style={{ display: "grid", gap: 8 }}>
                 <Link className="cell-name" to={`/drivers/${d.driver}`}><span className="mini-helmet"><DriverHelmet driver={d.driver} season={car.season} team={car.team} /></span><span><b>{d.name}</b> · {d.sessions} sessions · avg P{fmt(d.avg_pos)}</span></Link>
@@ -236,12 +234,11 @@ export function CarPage() {
 
       <div>
         <section className="panel">
-          <div className="panel-head"><h2>Pace through the season</h2><span className="note">gap to pole, % (lower is faster)</span></div>
+          <div className="panel-head"><h2>Pace through the season<Info>gap to pole, % (lower is faster) The team's fastest qualifying lap at each race, as a percentage slower than pole. Upgrades and regressions show up here.</Info></h2></div>
           <RaceLine
             points={car.trend.map((t) => ({ label: `R${t.round}`, value: t.gap, tip: `R${t.round} ${t.gp}\n+${t.gap?.toFixed(3)}% to pole · pace rank ${t.rank}\nbest grid slot P${t.best_pos}` }))}
             yLabel="Gap to pole by race" fmt={(v) => `${v.toFixed(1)}%`} width={1120} height={240}
           />
-          <p className="note">The team's fastest qualifying lap at each race, as a percentage slower than pole. Upgrades and regressions show up here.</p>
         </section>
       </div>
 

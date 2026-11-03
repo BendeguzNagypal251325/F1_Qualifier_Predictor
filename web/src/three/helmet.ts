@@ -93,6 +93,67 @@ interface Shared {
 }
 let shared: Shared | null = null;
 
+// ---------------------------------------------------------------- analytic surface queries
+// The shell is a family of superellipse cross-sections along x, so "where does a ray from the centre
+// meet the surface" can be solved from that definition directly. (Raycasting the 26k-triangle mesh
+// for every visor and seal point took seconds on the main thread.)
+
+const TABLE = 1024;
+let table: Float32Array | null = null; // per x sample: c, h, w, n
+let xMin = 0, xMax = 0;
+
+function sectionTable(): Float32Array {
+  if (table) return table;
+  const S = SECTIONS;
+  // Dense samples along the same Catmull-Rom spline the mesh uses, then resampled evenly in x.
+  const pts: number[][] = [];
+  for (let i = 0; i < S.length - 1; i++) {
+    const g = (j: number) => S[Math.max(0, Math.min(S.length - 1, j))];
+    for (let k = 0; k < 64; k++) pts.push([0, 1, 2, 3, 4].map((q) => cr(g(i - 1)[q], g(i)[q], g(i + 1)[q], g(i + 2)[q], k / 64)));
+  }
+  pts.push([...S[S.length - 1]]);
+  xMin = pts[0][0]; xMax = pts[pts.length - 1][0];
+  table = new Float32Array(TABLE * 4);
+  let j = 0;
+  for (let i = 0; i < TABLE; i++) {
+    const x = xMin + ((xMax - xMin) * i) / (TABLE - 1);
+    while (j < pts.length - 2 && pts[j + 1][0] < x) j++;
+    const a = pts[j], b = pts[j + 1], t = Math.min(1, Math.max(0, (x - a[0]) / (b[0] - a[0] || 1)));
+    for (let q = 0; q < 4; q++) table[i * 4 + q] = a[q + 1] + (b[q + 1] - a[q + 1]) * t;
+  }
+  return table;
+}
+
+/** Implicit shell function: < 0 inside, 0 on the surface, > 0 outside. */
+function shellF(x: number, y: number, z: number): number {
+  const T = sectionTable();
+  if (x <= xMin || x >= xMax) return 1;
+  const f = ((x - xMin) / (xMax - xMin)) * (TABLE - 1), i = Math.floor(f), t = f - i;
+  const k = i * 4, k2 = Math.min(TABLE - 1, i + 1) * 4;
+  const c = T[k] + (T[k2] - T[k]) * t, h = T[k + 1] + (T[k2 + 1] - T[k + 1]) * t;
+  const w = T[k + 2] + (T[k2 + 2] - T[k + 2]) * t, n = T[k + 3] + (T[k2 + 3] - T[k + 3]) * t;
+  return (Math.abs((y - c) / h) ** n + Math.abs(z / w) ** n) ** (1 / n) - 1;
+}
+
+/** Point and outward normal where the ray from CENTRE at (azimuth, elevation) leaves the shell. */
+function surfaceHit(az: number, el: number): { p: THREE.Vector3; n: THREE.Vector3 } {
+  const d = new THREE.Vector3(Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az));
+  const at = (r: number) => CENTRE.clone().addScaledVector(d, r);
+  let lo = 0, hi = 0.05;
+  while (hi < 3 && shellF(...(at(hi).toArray() as [number, number, number])) < 0) { lo = hi; hi += 0.05; }
+  for (let k = 0; k < 24; k++) {
+    const mid = (lo + hi) / 2;
+    if (shellF(...(at(mid).toArray() as [number, number, number])) < 0) lo = mid; else hi = mid;
+  }
+  const p = at((lo + hi) / 2), e = 1e-3;
+  const n = new THREE.Vector3(
+    shellF(p.x + e, p.y, p.z) - shellF(p.x - e, p.y, p.z),
+    shellF(p.x, p.y + e, p.z) - shellF(p.x, p.y - e, p.z),
+    shellF(p.x, p.y, p.z + e) - shellF(p.x, p.y, p.z - e),
+  ).normalize();
+  return { p, n };
+}
+
 /** Port outline in (azimuth, elevation) around CENTRE: a rounded band across the face. */
 const PORT = { az: 0.98, el0: -0.02, el1: 0.3 };
 
@@ -100,15 +161,7 @@ const PORT = { az: 0.98, el0: -0.02, el1: 0.3 };
 function geometries(): Shared {
   if (shared) return shared;
   const shell = shellGeometry();
-  const probe = new THREE.Mesh(shell);
-  probe.updateMatrixWorld();
-  const ray = new THREE.Raycaster();
-  const hit = (az: number, el: number) => {
-    const dir = new THREE.Vector3(Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az));
-    ray.set(CENTRE.clone().add(dir.clone().multiplyScalar(3)), dir.clone().negate());
-    const h = ray.intersectObject(probe, false)[0];
-    return { p: h ? h.point.clone() : CENTRE.clone(), n: h?.face ? h.face.normal.clone() : dir };
-  };
+  const hit = surfaceHit;
   // Port edge as a function of the parameter t in [0, 1): rounded rectangle in (az, el).
   const edge = (t: number, grow: number): [number, number] => {
     const a = t * Math.PI * 2;
@@ -337,7 +390,7 @@ export function buildHelmet(spec: HelmetSpec, res = 1): THREE.Group {
   const G = geometries();
   const grp = new THREE.Group();
   const { map, metal } = paintTextures(spec, res);
-  const shellMat = paint("#ffffff", { map, metalness: metal ? 1 : 0.12, metalnessMap: metal ?? undefined, roughness: 0.24, clearcoat: 1, clearcoatRoughness: 0.06 });
+  const shellMat = paint("#ffffff", { map, metalness: metal ? 1 : 0.12, roughness: 0.24, clearcoat: 1, clearcoatRoughness: 0.06, ...(metal ? { metalnessMap: metal } : {}) });
   const black = new THREE.MeshStandardMaterial({ color: "#0b0b0d", roughness: 0.6, metalness: 0.2 });
   const tint = new THREE.Color(spec.colors[1] ?? "#333333").lerp(new THREE.Color("#050507"), 0.985);
   const visorMat = new THREE.MeshPhysicalMaterial({ color: tint, metalness: 0.4, roughness: 0.03, clearcoat: 1, clearcoatRoughness: 0.02, iridescence: 0.12, iridescenceIOR: 1.5 });

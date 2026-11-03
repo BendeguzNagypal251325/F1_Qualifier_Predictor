@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { seasonsParam, useApi, useMeta } from "../api";
-import { ErrorBox, fmt, Loading, SeasonFilter, Swatch, useSeasons } from "../components/ui";
+import { ErrorBox, fmt, Info, Loading, SeasonFilter, Swatch, useSeasons } from "../components/ui";
 import type { Heatmap } from "../types";
 
 export default function HeatmapPage() {
@@ -20,7 +20,7 @@ export default function HeatmapPage() {
       <div className="page-head">
         <div>
           <span className="eyebrow">Heatmap</span>
-          <h1>Average qualifying position, driver × track</h1>
+          <h1>Average qualifying position, driver × track <Info>Darker is better. Drivers are sorted by average qualifying position. Click a cell to open the driver.</Info></h1>
         </div>
       </div>
       <section className="panel">
@@ -60,7 +60,6 @@ export default function HeatmapPage() {
               </tbody>
             </table>
           </div>
-          <p className="note">Darker is better. Drivers sorted by average qualifying position. Click a cell to open the driver.</p>
         </section>
       )}
     </>

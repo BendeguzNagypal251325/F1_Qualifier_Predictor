@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useApi, useMeta } from "../api";
 import { RaceLine } from "../components/Charts";
 import { CarImage } from "../components/lazy3d";
-import { Avatar, Bar, ErrorBox, fmt, Loading, pct, Swatch, Tile, TrackOutline } from "../components/ui";
+import { Avatar, Bar, ErrorBox, fmt, Loading, pct, Swatch, Tile, TrackOutline, Info } from "../components/ui";
 import type { TeamDetail, TeamSummary } from "../types";
 import { engineName } from "./Cars";
 
@@ -86,17 +86,17 @@ export function TeamPage() {
 
       <div className="grid-2">
         <section className="panel reveal">
-          <div className="panel-head"><h2>Pace rank by season</h2><span className="note">1 = fastest car</span></div>
+          <div className="panel-head"><h2>Pace rank by season<Info>1 = fastest car</Info></h2></div>
           <RaceLine points={bySeason} yLabel="Average pace rank per season" fmt={(v) => v.toFixed(1)} />
         </section>
         <section className="panel reveal">
-          <div className="panel-head"><h2>Race by race</h2><span className="note">pace rank, 5-race rolling average</span></div>
+          <div className="panel-head"><h2>Race by race<Info>pace rank, 5-race rolling average</Info></h2></div>
           <RaceLine points={rolling(t.trend.map((r) => r.rank), 5).map((v, i) => { const r = t.trend[i]; return { label: `${r.season}`, value: v, tip: `${r.season} R${r.round} ${r.gp}\nrank ${r.rank} this race · ${fmt(v)} rolling\n+${fmt(r.gap, 2)}% to pole` }; })} yLabel="Pace rank per race, rolling average" fmt={(v) => v.toFixed(1)} />
         </section>
       </div>
 
       <section className="panel reveal">
-        <div className="panel-head"><h2>Season by season</h2><span className="note">teammate battle = who out-qualified whom, race by race</span></div>
+        <div className="panel-head"><h2>Season by season<Info>teammate battle = who out-qualified whom, race by race</Info></h2></div>
         <div className="scroll">
           <table>
             <thead><tr><th>Season</th><th>Car</th><th>Engine</th><th className="num">Pace rank</th><th className="num">Gap</th><th className="num">Avg</th><th>Q3 rate</th><th className="num">Poles</th><th>Teammate battle</th></tr></thead>
@@ -109,7 +109,7 @@ export function TeamPage() {
                     <td className="mono">{s.season}</td>
                     <td><Link to={`/cars/${s.season}/${s.constructor}`}><Swatch team={s.constructor} /> {s.name} {s.chassis}</Link></td>
                     <td>{engineName(s.engine)}</td>
-                    <td className="num">{fmt(s.pace_rank)}<span className="note"> /{s.teams_in_season}</span></td>
+                    <td className="num">{fmt(s.pace_rank)}<span className="sub"> /{s.teams_in_season}</span></td>
                     <td className="num">+{fmt(s.pace_gap, 2)}%</td>
                     <td className="num">{fmt(s.avg_pos)}</td>
                     <td style={{ minWidth: 120 }}><Bar value={s.q3_rate} label={pct(s.q3_rate)} /></td>
@@ -123,7 +123,7 @@ export function TeamPage() {
                           <span className="mono">{b.h2h_wins}</span>
                           <Link to={`/drivers/${b.driver}`} className="cell-name"><span>{surname(b.name)}</span><Avatar driver={b.driver} team={s.constructor} size={22} /></Link>
                         </div>
-                      ) : <span className="note">{s.drivers.map((d) => d.name).join(", ")}</span>}
+                      ) : <span className="sub">{s.drivers.map((d) => d.name).join(", ")}</span>}
                     </td>
                   </tr>
                 );
@@ -136,7 +136,7 @@ export function TeamPage() {
       <div className="grid-2">
         {([["Strongest tracks", t.best_tracks], ["Weakest tracks", t.worst_tracks]] as const).map(([title, list]) => (
           <section key={title} className="panel reveal">
-            <div className="panel-head"><h2>{title}</h2><span className="note">average quali position, at least 4 entries</span></div>
+            <div className="panel-head"><h2>{title}<Info>average quali position, at least 4 entries</Info></h2></div>
             <div className="scroll"><table>
               <tbody>
                 {list.map((r) => (

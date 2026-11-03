@@ -56,11 +56,49 @@ export interface SnapJob {
   floor?: boolean;
 }
 
-/** Render ``build()`` once to a PNG data URL. Jobs run one at a time and are cached by key. */
+// Bump when the car or helmet models change, so stored thumbnails are re-rendered.
+const SNAP_VERSION = "gridcast-v1";
+const STORE = "gridcast-snapshots";
+const storeUrl = (key: string) => `/__snapshot/${SNAP_VERSION}/${encodeURIComponent(key)}`;
+
+/** Previously rendered image from the browser's Cache Storage (survives reloads), if any. */
+async function fromStore(key: string): Promise<string | null> {
+  try {
+    if (!("caches" in window)) return null;
+    const hit = await (await caches.open(STORE)).match(storeUrl(key));
+    return hit ? URL.createObjectURL(await hit.blob()) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function toStore(key: string, blob: Blob) {
+  try {
+    if ("caches" in window) await (await caches.open(STORE)).put(storeUrl(key), new Response(blob, { headers: { "Content-Type": blob.type } }));
+  } catch {
+    /* storage full or blocked: the image just gets rendered again next time */
+  }
+}
+
+/** Old versions of the thumbnails are removed once per page load. */
+let pruned = false;
+async function pruneStore() {
+  if (pruned || !("caches" in window)) return;
+  pruned = true;
+  try {
+    const c = await caches.open(STORE);
+    for (const req of await c.keys()) if (!new URL(req.url).pathname.startsWith(`/__snapshot/${SNAP_VERSION}/`)) await c.delete(req);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Render ``build()`` once to an image URL. Stored across visits; jobs run one at a time. */
 export function snapshot(job: SnapJob): Promise<string> {
   const hit = cache.get(job.key);
   if (hit) return hit;
-  const p = (queue = queue.then(() => new Promise<string>((resolve) => {
+  void pruneStore();
+  const p = fromStore(job.key).then((stored) => stored ?? (queue = queue.then(() => new Promise<string>((resolve) => {
     const run = () => {
       try {
         if (!snapRenderer) snapRenderer = makeRenderer(document.createElement("canvas"), true);
@@ -74,7 +112,6 @@ export function snapshot(job: SnapJob): Promise<string> {
         r.setClearColor(0x000000, 0);
         r.shadowMap.enabled = job.floor !== false; // no floor, no shadow pass
         r.render(stage.scene, job.camera(obj));
-        resolve(r.domElement.toDataURL("image/webp", 0.92));
         stage.scene.remove(obj);
         obj.traverse((o) => {
           const m = o as THREE.Mesh;
@@ -83,12 +120,19 @@ export function snapshot(job: SnapJob): Promise<string> {
             (Array.isArray(m.material) ? m.material : [m.material]).forEach((mt) => { (mt as THREE.MeshStandardMaterial).map?.dispose(); mt.dispose(); });
           }
         });
+        r.domElement.toBlob((blob) => {
+          if (!blob) return resolve("");
+          void toStore(job.key, blob);
+          resolve(URL.createObjectURL(blob));
+        }, "image/webp", 0.92);
       } catch {
         resolve("");
       }
     };
-    setTimeout(run, 0);
-  }))) as Promise<string>;
+    // Wait for a frame first, so images found in storage (and earlier renders) reach the screen
+    // before the next render occupies the main thread.
+    requestAnimationFrame(() => setTimeout(run, 0));
+  })) as Promise<string>));
   cache.set(job.key, p);
   return p;
 }

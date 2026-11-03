@@ -1,4 +1,4 @@
-# Start the Q3 Predictor web app on Windows without Docker.
+# Start the Gridcast web app on Windows without Docker.
 #
 #   powershell -ExecutionPolicy Bypass -File .\start.ps1           # http://127.0.0.1:8000
 #   powershell -ExecutionPolicy Bypass -File .\start.ps1 -NoLive   # skip live weekend updates
@@ -52,5 +52,5 @@ Start-Job -ScriptBlock {
         try { Invoke-WebRequest "$u/api/health" -UseBasicParsing -TimeoutSec 2 | Out-Null; Start-Process $u; break } catch { Start-Sleep 1 }
     }
 } -ArgumentList $url | Out-Null
-Write-Host "`nStarting Q3 Predictor at $url (first start computes the predictions, ~10 s). Press Ctrl+C to stop.`n" -ForegroundColor Green
+Write-Host "`nStarting Gridcast at $url (first start computes the predictions, ~10 s). Press Ctrl+C to stop.`n" -ForegroundColor Green
 uv run --no-dev f1qp-serve --port $Port

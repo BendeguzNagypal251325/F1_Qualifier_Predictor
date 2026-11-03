@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useApi, useMeta } from "../api";
-import { Avatar, ContribBars, ErrorBox, Loading, PosChip, Swatch } from "../components/ui";
+import { Avatar, ContribBars, ErrorBox, Loading, PosChip, Swatch, Info } from "../components/ui";
 import type { SessionDetail, SessionSummary, Swap } from "../types";
 
 export default function WhatIf() {
@@ -35,7 +35,7 @@ export default function WhatIf() {
       <div className="page-head">
         <div>
           <span className="eyebrow">What if</span>
-          <h1>Put any driver in any car</h1>
+          <h1>Put any driver in any car <Info>Grid position = rank of the what-if score among the other drivers of that session. This is a model estimate, not a simulation: the driver features still carry some of the cars the driver drove before. See <Link to={`/sessions/${key ?? ""}`}>the full session</Link>.</Info></h1>
           <p className="lede">The model keeps the driver's own features (form, teammate battles, experience, track record) and swaps in the car's: the team's recent form, its standings and its practice pace that weekend.</p>
         </div>
       </div>
@@ -64,7 +64,7 @@ export default function WhatIf() {
         <div className="grid-2" style={{ opacity: swap.loading ? 0.6 : 1 }}>
           <section className="panel">
             <span className="eyebrow">Real car</span>
-            <div className="cell-name"><Avatar driver={s.driver} team={s.from_team} size={48} /><div><h2>{name(s.driver)}</h2><span className="note"><Swatch team={s.from_team} /> {tname(s.from_team)}</span></div></div>
+            <div className="cell-name"><Avatar driver={s.driver} team={s.from_team} size={48} /><div><h2>{name(s.driver)}</h2><span className="sub"><Swatch team={s.from_team} /> {tname(s.from_team)}</span></div></div>
             <div className="tiles">
               <div className="tile"><span className="eyebrow">Predicted</span><span className="v">P{s.own_grid}</span><span className="s">model score {s.own_score.toFixed(1)}</span></div>
               <div className="tile"><span className="eyebrow">Actual</span><span className="v">{s.actual ? <PosChip pos={s.actual} /> : "–"}</span></div>
@@ -73,7 +73,7 @@ export default function WhatIf() {
           </section>
           <section className="panel" style={{ borderColor: "var(--focus)" }}>
             <span className="eyebrow">What if</span>
-            <div className="cell-name"><Avatar driver={s.driver} team={s.team} size={48} /><div><h2>{name(s.driver)}</h2><span className="note"><Swatch team={s.team} /> in the {tname(s.team)}</span></div></div>
+            <div className="cell-name"><Avatar driver={s.driver} team={s.team} size={48} /><div><h2>{name(s.driver)}</h2><span className="sub"><Swatch team={s.team} /> in the {tname(s.team)}</span></div></div>
             <div className="tiles">
               <div className="tile"><span className="eyebrow">Predicted</span><span className="v">P{s.grid}</span><span className="s">model score {s.score.toFixed(1)}</span></div>
               <div className="tile"><span className="eyebrow">Change</span><span className="v" style={{ color: s.grid < s.own_grid ? "var(--good)" : s.grid > s.own_grid ? "var(--bad)" : undefined }}>{s.grid === s.own_grid ? "±0" : `${s.grid < s.own_grid ? "▲" : "▼"} ${Math.abs(s.grid - s.own_grid)}`}</span><span className="s">grid places</span></div>
@@ -82,7 +82,6 @@ export default function WhatIf() {
           </section>
         </div>
       )}
-      <p className="note">Grid position = rank of the what-if score among the other drivers of that session. This is a model estimate, not a simulation: the driver features still carry some of the cars the driver drove before. See <Link to={`/sessions/${key ?? ""}`}>the full session</Link>.</p>
     </>
   );
 }

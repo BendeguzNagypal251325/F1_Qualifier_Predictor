@@ -18,6 +18,7 @@ import asyncio
 import logging
 import os
 import secrets
+from collections import OrderedDict
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -28,7 +29,7 @@ import pandas as pd
 from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import cars as C
@@ -55,6 +56,19 @@ class Settings:
 
 
 # ---------------------------------------------------------------- live service ------------------------------------------
+
+
+def _friendly(e: BaseException) -> str:
+    """A sentence for the Live page; technical details go to the server log."""
+    from urllib.error import URLError
+
+    from .live import LiveUnavailable
+
+    if isinstance(e, (LiveUnavailable, SystemExit)):
+        return str(e)
+    if isinstance(e, URLError | TimeoutError | ConnectionError):
+        return "Could not reach the OpenF1 timing service. Retrying automatically."
+    return "The live update failed. Retrying automatically; details are in the server log."
 
 
 class LiveService:
@@ -95,8 +109,8 @@ class LiveService:
             except BaseException as e:  # noqa: BLE001 - SystemExit from the CLI code means "no race"
                 if isinstance(e, asyncio.CancelledError):
                     raise
-                self.error = f"{type(e).__name__}: {e}"
-                log.warning("live refresh failed: %s", self.error)
+                self.error = _friendly(e)
+                log.warning("live refresh failed: %s: %s", type(e).__name__, e)
             finally:
                 self.last_run = datetime.now(timezone.utc).isoformat(timespec="seconds")
                 self.running = False
@@ -196,6 +210,25 @@ def _stats(df: pd.DataFrame) -> dict:
 # ---------------------------------------------------------------- app ---------------------------------------------------
 
 
+async def _warm(app: FastAPI) -> None:
+    """Fill the response cache with the pages people open first, so the first visit is fast too."""
+    import httpx
+
+    st = app.state.app_state.state
+    if st is None:
+        return
+    latest = st.overview["latest"]
+    paths = ["/api/meta", "/api/overview", "/api/sessions", f"/api/sessions?season={latest}", "/api/teams",
+             f"/api/cars?season={latest}", "/api/heatmap?min_sessions=20"]
+    try:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://warm") as client:
+            for path in paths:
+                await client.get(path)
+    except Exception as e:  # noqa: BLE001 - warming is best effort
+        log.info("cache warm-up skipped: %s", e)
+
+
 def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
     settings = settings or Settings()
     app_state = AppState(settings)
@@ -205,11 +238,12 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
     async def lifespan(app: FastAPI):
         await app_state.load()
         live.start()
+        asyncio.create_task(_warm(app))
         yield
         await live.stop()
 
     app = FastAPI(
-        title="F1 Q3 Predictor API",
+        title="Gridcast API",
         version="1.0.0",
         description="Out-of-sample F1 qualifying predictions (2020 to now), car/driver split, live weekend updates.",
         lifespan=lifespan,
@@ -217,6 +251,36 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
         openapi_url="/api/openapi.json",
         redoc_url=None,
     )
+    # Every GET answer except live/health depends only on the data version, so it is computed once
+    # and served from memory until the data changes (the version is part of the key).
+    cache: OrderedDict[tuple[str, str], tuple[int, bytes, str]] = OrderedDict()
+    uncached = ("/api/live", "/api/health", "/api/docs", "/api/openapi.json")
+
+    @app.middleware("http")
+    async def response_cache(request: Request, call_next):
+        path = request.url.path
+        if request.method != "GET" or not path.startswith("/api/") or path.startswith(uncached) or app_state.state is None:
+            response = await call_next(request)
+            if path.startswith("/assets/") and response.status_code == 200:
+                response.headers["Cache-Control"] = "public, max-age=31536000, immutable"  # file names are content hashes
+            return response
+        key = (app_state.state.built_at, str(request.url.path) + "?" + str(request.url.query))
+        hit = cache.get(key)
+        if hit:
+            cache.move_to_end(key)
+            status, body, ctype = hit
+            return Response(body, status_code=status, media_type=ctype, headers={"X-Cache": "hit", "Cache-Control": "no-cache"})
+        response = await call_next(request)
+        body = b"".join([chunk async for chunk in response.body_iterator])
+        if response.status_code == 200:
+            cache[key] = (200, body, response.media_type or "application/json")
+            while len(cache) > 600:
+                cache.popitem(last=False)
+        headers = {k: v for k, v in response.headers.items() if k.lower() != "content-length"}
+        headers["X-Cache"] = "miss"
+        return Response(body, status_code=response.status_code, headers=headers, media_type=response.media_type)
+
+    # Added after the cache so it wraps it: the cache stores plain JSON, compression happens per request.
     app.add_middleware(GZipMiddleware, minimum_size=1024)
     if settings.cors_origins:
         app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins), allow_methods=["GET", "POST"])

@@ -1,4 +1,8 @@
-# F1 Qualifier Predictor
+# Gridcast
+
+**Gridcast** is a Formula 1 qualifying forecaster: it calls the grid before the cars go out. The logo is
+a red, forward-leaning plate with two staggered grid-slot brackets (the painted boxes on a starting
+grid) and speed lines behind it; the wordmark is GRID in white and CAST in red, set in Saira Condensed.
 
 Predicts which 10 drivers reach Q3 (qualify in the top 10) for every Formula 1 Grand Prix, using only
 information available **before** qualifying starts. It can also run live during a race weekend: after
@@ -154,6 +158,18 @@ histogram bar to list the sessions with that score, or a group (driver / car / p
 its inputs. Numbers count up, sections and charts animate in, and cards respond to hover; all motion is
 switched off for visitors who ask their system for reduced motion.
 
+Look and feel: the app opens on a start-lights loading screen (five red lights come on while the data
+loads; it is plain HTML and CSS in `index.html`, so it shows before any JavaScript arrives). Behind the
+pages, neon red speed streaks alternate bright and dim and drift slowly (`SpeedLines.tsx`); the top bar
+ends in a red-and-white kerb stripe and the footer carries a chequered flag. Explanations of how a chart
+was made sit behind small **i** buttons next to each title (hover or focus), so the pages are not
+cluttered with small print.
+
+Fonts, all self-hosted through `@fontsource` (no Google Fonts request at runtime): **Saira Condensed**
+for headings, the wordmark and labels (a squared, condensed face in the style of motorsport timing
+graphics), **Barlow** for body text (a slightly rounded grotesk built on the look of road signage) and
+**Roboto Mono** for numbers, so positions and times line up like a timing screen.
+
 Colours: a dark carbon background with neon accents. The three contribution groups use electric blue
 (driver), neon red (car) and violet (practice), checked with a colour-vision-deficiency validator on
 the dark background (blue and violet are never placed next to each other). Red also marks the model's
@@ -264,7 +280,19 @@ docker run -p 8000:8000 f1qp
 (F1DB update plus OpenF1 sessions) in a background thread. When new results arrive (a new F1DB round,
 or a finished qualifying saved in `data/live/`), it rebuilds the predictions and swaps them in without
 a restart. The compose file keeps `data/live`, the F1DB checkout and the artifacts on volumes. The
-image runs as a non-root user and has a health check (`GET /api/health`).
+container starts as root only long enough for `docker-entrypoint.sh` to give those volume folders to the
+app user (new Docker volumes are created owned by root, which used to make the F1DB download fail with
+`git clone … exit status 128`), then runs the server as a non-root user. It has a health check
+(`GET /api/health`).
+
+If live timing cannot be reached (no internet, OpenF1 down, or live updates switched off), the Live page
+says so in one line and shows the most recent completed weekend instead of an error.
+
+**Speed:** the server answers repeat API requests from an in-memory cache (cleared whenever the
+predictions are rebuilt) and requests the main pages once at start-up, so the first visitor does not pay
+for them. Built JavaScript and CSS files have content hashes in their names and are cached by the
+browser for a year; the 3D helmet and car thumbnails are rendered once and kept in the browser's Cache
+Storage, so they appear immediately on later visits.
 
 It runs on any container host (Fly.io, Render, Railway, Google Cloud Run, a VM). Live updates need
 outbound HTTPS to `api.openf1.org` and `github.com`. Plan for about 1 GB of memory.
