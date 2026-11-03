@@ -86,7 +86,27 @@ uv run f1qp-live                   # live prediction for the next race (terminal
 uv run pytest
 ```
 
-Run the web app locally:
+### Run the web app (no Docker needed)
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Node.js LTS](https://nodejs.org), then
+from the project folder run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start.ps1
+```
+
+on Windows, or
+
+```bash
+./start.sh
+```
+
+on macOS/Linux. The script builds the front end when needed, prepares the Python environment, starts the
+server and (on Windows) opens http://127.0.0.1:8000. Add `-NoLive` / `--no-live` to skip the live
+weekend updates, or `-Port 8080` / `PORT=8080` for another port. The first start computes the
+predictions, which takes about 10 seconds.
+
+Step by step instead:
 
 ```bash
 cd web && npm ci && npm run build && cd ..   # build the front end into web/dist
@@ -217,7 +237,9 @@ bundled in `f1qp/assets/`). All graphics are our own or openly licensed.
 
 ## Deployment
 
-One Docker image holds the API, the built front end and the precomputed predictions:
+One Docker image holds the API, the built front end and the precomputed predictions. Docker must be
+running first: on Windows and macOS, open **Docker Desktop** and wait until it shows "Engine running".
+Otherwise `docker compose` fails with "failed to connect to the docker API … dockerDesktopLinuxEngine".
 
 ```bash
 docker compose up --build          # http://localhost:8000
