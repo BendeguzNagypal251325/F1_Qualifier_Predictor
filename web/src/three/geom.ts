@@ -62,7 +62,9 @@ export function loft(sections: Section[], ringPts = 40, sub = 8): THREE.BufferGe
 }
 
 /** Wing element: a cambered airfoil (chord along -x from the leading edge) extruded across the car (z). */
-export function airfoil(chord: number, thickness: number, span: number, camber = 0.06): THREE.BufferGeometry {
+/** Wing element along z. ``sweep`` bends the tips back (towards -x) by that many metres, so the plan view
+ *  curves like a modern front wing; the span is then split into segments so the bend is smooth. */
+export function airfoil(chord: number, thickness: number, span: number, camber = 0.06, sweep = 0): THREE.BufferGeometry {
   const shape = new THREE.Shape();
   const N = 24;
   const up: [number, number][] = [], lo: [number, number][] = [];
@@ -76,8 +78,12 @@ export function airfoil(chord: number, thickness: number, span: number, camber =
   shape.moveTo(up[0][0], up[0][1]);
   up.slice(1).forEach(([x, y]) => shape.lineTo(x, y));
   lo.reverse().forEach(([x, y]) => shape.lineTo(x, y));
-  const g = new THREE.ExtrudeGeometry(shape, { depth: span, bevelEnabled: false, curveSegments: 4 });
+  const g = new THREE.ExtrudeGeometry(shape, { depth: span, bevelEnabled: false, curveSegments: 4, steps: sweep ? 32 : 1 });
   g.translate(0, 0, -span / 2);
+  if (sweep) {
+    const pos = g.attributes.position;
+    for (let i = 0; i < pos.count; i++) pos.setX(i, pos.getX(i) - sweep * Math.abs((2 * pos.getZ(i)) / span) ** 1.8);
+  }
   g.computeVertexNormals();
   return g;
 }

@@ -21,22 +21,27 @@ export interface HelmetSpec {
 // ---------------------------------------------------------------- shape
 
 // x along the head (back -> front), c = centre height, h = half height, w = half width, n = roundness
-const SECTIONS: [number, number, number, number, number][] = [
-  [-1.02, 0.1, 0.12, 0.138, 2.2],
-  [-0.95, 0.07, 0.5, 0.493, 2.2],
-  [-0.8, 0.04, 0.75, 0.71, 2.25],
-  [-0.55, 0.02, 0.9, 0.828, 2.25],
+// Proportions checked against a scanned race-helmet reference: longer than it is wide (about 1.35 : 1
+// without the spoiler), taller than wide, tapering towards the back and the chin bar.
+const XS = 1.12, HS = 1.1;
+const SECTIONS: [number, number, number, number, number][] = ([
+  [-1.02, 0.16, 0.1, 0.12, 2.25],
+  [-0.95, 0.1, 0.45, 0.44, 2.25],
+  [-0.8, 0.04, 0.75, 0.64, 2.25],
+  [-0.55, 0.02, 0.9, 0.76, 2.25],
   [-0.2, 0.0, 0.98, 0.887, 2.25],
   [0.15, -0.03, 0.99, 0.887, 2.25],
-  [0.45, -0.08, 0.95, 0.848, 2.25],
-  [0.7, -0.15, 0.86, 0.779, 2.25],
-  [0.88, -0.24, 0.7, 0.66, 2.25],
-  [1.0, -0.35, 0.5, 0.513, 2.25],
-  [1.08, -0.47, 0.28, 0.325, 2.25],
-  [1.12, -0.56, 0.08, 0.128, 2.25],
-];
+  [0.45, -0.08, 0.95, 0.81, 2.25],
+  [0.7, -0.15, 0.86, 0.7, 2.25],
+  [0.88, -0.24, 0.7, 0.56, 2.25],
+  [1.0, -0.35, 0.5, 0.42, 2.25],
+  [1.08, -0.47, 0.28, 0.26, 2.25],
+  [1.12, -0.56, 0.08, 0.11, 2.25],
+] as [number, number, number, number, number][]).map(([x, c, h, w, n]) => [x * XS, c, h * HS, w, n]);
+/** The sides draw in below the middle of each section, so the chin is narrower than the temples. */
+const CHIN_TAPER = 0.1;
 const RING = 120, SUB = 10;
-const CENTRE = new THREE.Vector3(0.1, -0.08, 0);
+const CENTRE = new THREE.Vector3(0.1 * XS, -0.08, 0);
 
 const cr = (a: number, b: number, c: number, d: number, t: number) =>
   0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (-a + 3 * b - 3 * c + d) * t * t * t);
@@ -56,8 +61,8 @@ function shellGeometry(): THREE.BufferGeometry {
     for (let j = 0; j <= RING; j++) {
       const a = (j / RING) * Math.PI * 2, e = 2 / n, cs = Math.cos(a), sn = Math.sin(a);
       let y = c + h * Math.sign(sn) * Math.abs(sn) ** e;
-      const z = w * Math.sign(cs) * Math.abs(cs) ** e;
-      y = Math.max(y, -0.9 + 0.12 * Math.max(0, x)); // flat base rising toward the chin
+      const z = w * (1 - CHIN_TAPER * Math.min(1, Math.max(0, (c - y) / h))) * Math.sign(cs) * Math.abs(cs) ** e;
+      y = Math.max(y, -0.9 + (0.12 / XS) * Math.max(0, x)); // flat base rising toward the chin
       pos.push(x, y, z);
       uv.push(j / RING, ri / (rings.length - 1));
     }
@@ -132,7 +137,8 @@ function shellF(x: number, y: number, z: number): number {
   const k = i * 4, k2 = Math.min(TABLE - 1, i + 1) * 4;
   const c = T[k] + (T[k2] - T[k]) * t, h = T[k + 1] + (T[k2 + 1] - T[k + 1]) * t;
   const w = T[k + 2] + (T[k2 + 2] - T[k + 2]) * t, n = T[k + 3] + (T[k2 + 3] - T[k + 3]) * t;
-  return (Math.abs((y - c) / h) ** n + Math.abs(z / w) ** n) ** (1 / n) - 1;
+  const wy = w * (1 - CHIN_TAPER * Math.min(1, Math.max(0, (c - y) / h)));
+  return (Math.abs((y - c) / h) ** n + Math.abs(z / wy) ** n) ** (1 / n) - 1;
 }
 
 /** Point and outward normal where the ray from CENTRE at (azimuth, elevation) leaves the shell. */

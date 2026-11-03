@@ -218,7 +218,13 @@ the cockpit. You can rotate and zoom it, jump to front, side, top or rear views,
 eight parts: front wing, nose, cockpit and halo, sidepods, floor, power unit, rear wing, and tyres
 and suspension. The selected part glows red, and the side panel explains it with the car-level
 numbers. Shapes are simplified and carry no sponsor logos: the models follow each era's rules, but
-they are not replicas of the real cars. The car list shows still renders of the same models, made
+they are not replicas of the real cars. Their proportions were checked against reference models (see
+[3D references](#3d-references)): the 2022–2025 cars against a Ferrari SF23 and the 2026 cars against a
+Red Bull RB22, by overlaying side, top and front silhouettes at the same scale and comparing height and
+width profiles along the car. That moved the front wing tips back (the wings sweep back towards the
+endplates), lowered the 2022–2025 rear wing, raised the engine cover towards the rear (much higher on
+2026 cars), lifted the rear of the sidepods, added the bodywork under the sidepod undercut and moved
+the mirrors out. The car list shows still renders of the same models, made
 by one hidden renderer, because browsers allow only about 16 live 3D views per page. three.js is
 loaded only on pages that show 3D.
 
@@ -227,7 +233,10 @@ loaded only on pages that show 3D.
 Every driver has a 3D helmet (`web/src/three/helmet.ts`), always shown from the front. The shell is
 lofted front to back through cross-sections: round dome, chin bar, flat base. The eye port has a visor
 and rubber seal fitted to its edge, plus side pivots, chin vents, top ducts and a rear gurney. On a
-driver's profile the helmet turns a little toward the pointer and sways gently when idle.
+driver's profile the helmet turns a little toward the pointer and sways gently when idle. The shell's
+proportions were matched to a reference helmet model (see [3D references](#3d-references)): about 1.35
+times as long as it is wide, 1.1 times as tall, tapering towards the back and the chin, and narrower at
+the chin than at the temples when seen from the front.
 
 Paint comes from published descriptions of each driver's 2026 race helmet
 (`web/src/three/helmetRefs.ts`): PlanetF1's 2026 helmet round-up, Sky Sport Italia, Motorsport.com's
@@ -253,6 +262,22 @@ the season (`/api/meta` gives each driver's team per season), so Hamilton is Mer
 and Ferrari red from 2025. Each driver card and profile has a season strip in those colours. Tracks are
 drawn from the outlines in [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits) (MIT,
 bundled in `f1qp/assets/`). All graphics are our own or openly licensed.
+
+### 3D references
+
+These CC BY 4.0 models from Sketchfab were used as shape references for the procedural cars and
+helmet. Nothing from them (meshes, textures or logos) is included in the app:
+
+- "2026 Redbull RB22" (https://skfb.ly/pOvxI) by Dave Love SketchFab, licensed under
+  [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/)
+- "Scuderia Ferrari F1 SF23 2023" (https://skfb.ly/oRV79) by Redgrund, licensed under
+  [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/)
+- "Helmet Redbull - Max Verstappen" (https://skfb.ly/pEDBZ) by Maubian, licensed under
+  [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/)
+
+Also supplied but not used: "2025 alpine A525" (https://skfb.ly/pHXyZ) by Abu Saif, whose parts did not
+convert to one consistent scale, and "Formula 1 2022 Car" (https://skfb.ly/owxuQ) by Luis Adrian V.,
+which is a Blender file (the SF23 already covers that era).
 
 ## Deployment
 

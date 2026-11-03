@@ -112,7 +112,9 @@ export default function App() {
             Every prediction is out-of-sample: before each session the model is retrained on earlier sessions only.
             Results: <a href="https://github.com/f1db/f1db">F1DB</a> (CC BY 4.0). Live sessions: <a href="https://openf1.org">OpenF1</a>.
             Track outlines: <a href="https://github.com/bacinger/f1-circuits">bacinger/f1-circuits</a> (MIT). 3D cars and helmets are our own
-            models, not replicas. Not affiliated with Formula 1.
+            models, not replicas; their proportions were checked against CC BY 4.0 Sketchfab models: <a href="https://skfb.ly/pOvxI">2026 Redbull RB22</a> by Dave Love,{" "}
+            <a href="https://skfb.ly/oRV79">Scuderia Ferrari F1 SF23 2023</a> by Redgrund and <a href="https://skfb.ly/pEDBZ">Helmet Redbull - Max Verstappen</a> by Maubian.
+            Not affiliated with Formula 1.
           </Info>
         </footer>
       )}
