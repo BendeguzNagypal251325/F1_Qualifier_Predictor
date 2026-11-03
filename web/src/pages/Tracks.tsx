@@ -20,12 +20,12 @@ export function TrackList() {
           <p className="lede">Every driver's qualifying record at each track, and how well the model called each session there.</p>
         </div>
       </div>
-      <div className="card-grid">
+      <div className="card-grid stagger">
         {circuits.map((c) => {
           const v = visits.get(c.id) ?? [];
           const avg = v.length ? v.reduce((a, s) => a + s.correct, 0) / v.length : null;
           return (
-            <Link key={c.id} to={`/tracks/${c.id}`} className="card">
+            <Link key={c.id} to={`/tracks/${c.id}`} className="card lift">
               <div className="media" style={{ display: "grid", placeItems: "center", background: "var(--surface-2)" }}>
                 <TrackOutline circuit={c.id} size={130} stroke={4} />
               </div>
@@ -74,7 +74,7 @@ export function TrackPage() {
         <div style={{ display: "grid", gap: 12, alignContent: "start" }}>
           {!data ? <Loading /> : (
             <>
-              <div className="tiles">
+              <div className="tiles stagger">
                 <Tile label="Sessions" value={data.sessions.length} sub={data.sessions.map((s) => s.season).join(", ") || "none in range"} />
                 <Tile label="Model here" value={<>{fmt(data.model_correct, 2)}<small> / 10</small></>} sub="correct Q3 picks" />
                 <Tile label="Most poles" value={topPole?.[0] ?? "–"} small sub={topPole ? `${topPole[1]} pole${topPole[1] > 1 ? "s" : ""}` : ""} />

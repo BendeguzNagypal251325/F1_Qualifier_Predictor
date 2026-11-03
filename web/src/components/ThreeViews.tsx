@@ -209,14 +209,48 @@ export function Car3D({ era, livery, selected, onSelect, helmet, label }: {
 
 export function Helmet3D({ spec, label }: { spec: HelmetSpec; label: string }) {
   const box = useRef<HTMLDivElement>(null);
-  const { api, ready } = useViewer(box, { autoRotate: true, floor: false, fov: 26, fit: 2.0 });
+  const { api, ready } = useViewer(box, { floor: false, fov: 24, fit: 2.25 });
   useEffect(() => {
     if (!ready || !api.current) return;
+    const { controls, camera } = api.current;
     const h = buildHelmet(spec);
-    h.rotation.y = -0.5;
-    api.current.setObject(h);
+    const pivot = new THREE.Group();
+    pivot.add(h);
+    api.current.setObject(pivot);
+    // Front view only: no orbiting; the helmet itself turns a little toward the pointer.
+    controls.enabled = false;
+    const t = controls.target;
+    camera.position.set(t.x + 7.2, t.y + 0.55, t.z);
+    camera.lookAt(t);
+    const el = box.current!;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let tx = 0, ty = 0, hover = false, raf = 0;
+    const move = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect();
+      tx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+      ty = ((e.clientY - r.top) / r.height - 0.5) * 2;
+      hover = true;
+    };
+    const leave = () => { hover = false; };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerleave", leave);
+    const t0 = performance.now();
+    const tick = () => {
+      raf = requestAnimationFrame(tick);
+      const time = (performance.now() - t0) / 1000;
+      const wantY = hover ? tx * 0.38 : reduce ? 0 : Math.sin(time * 0.6) * 0.07;
+      const wantX = hover ? ty * 0.16 : 0;
+      pivot.rotation.y += (wantY - pivot.rotation.y) * 0.08;
+      pivot.rotation.z += (-wantX - pivot.rotation.z) * 0.08;
+    };
+    tick();
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerleave", leave);
+    };
   }, [ready, spec.driverId, spec.colors.join(","), spec.motif, spec.number]); // eslint-disable-line react-hooks/exhaustive-deps
-  return <div className="viewer square" ref={box} role="img" aria-label={`${label}, interactive 3D helmet`} style={{ background: "transparent" }} />;
+  return <div className="viewer square helmet-viewer" ref={box} role="img" aria-label={`${label}, 3D helmet; move the pointer over it to turn it`} style={{ background: "transparent" }} />;
 }
 
 // ---------------------------------------------------------------- still images
@@ -245,12 +279,12 @@ export function HelmetImage({ spec, alt }: { spec: HelmetSpec; alt: string }) {
   }, []);
   const src = useSnapshot(visible ? key : "", () => visible ? snapshot({
     key, width: 360, height: 360, floor: false,
-    build: () => { const h = buildHelmet(spec, 0.5); h.rotation.y = 0.1; return h; },
+    build: () => buildHelmet(spec, 0.5),
     camera: (o) => {
       const { centre } = frame(o);
       const cam = new THREE.PerspectiveCamera(24, 1, 0.1, 50);
-      cam.position.set(centre.x + 4.4, centre.y + 1.3, centre.z + 4.0);
-      cam.lookAt(centre.x, centre.y - 0.08, centre.z);
+      cam.position.set(centre.x + 6.2, centre.y + 0.9, centre.z);
+      cam.lookAt(centre.x, centre.y - 0.04, centre.z);
       return cam;
     },
   }) : Promise.resolve(""));

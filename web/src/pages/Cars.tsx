@@ -37,9 +37,9 @@ export function CarList() {
             <div className="panel-head"><h2>{data.cars[0]?.era_label}</h2><span className="note">{ERA_SPECS[data.era]?.extra}</span></div>
             <p className="note">{data.cars[0]?.era_summary}</p>
           </div>
-          <div className="card-grid">
+          <div className="card-grid stagger">
             {data.cars.map((c, i) => (
-              <Link key={c.team} to={`/cars/${season}/${c.team}`} className="card">
+              <Link key={c.team} to={`/cars/${season}/${c.team}`} className="card lift">
                 <div className="media" style={{ background: "linear-gradient(180deg, #1d1d26, #101016)" }}>
                   <CarImage era={c.era} livery={c.livery} alt={`${c.name} ${c.chassis ?? ""} 3D model`} />
                 </div>
@@ -90,7 +90,7 @@ function PartPanel({ part, car, cars }: { part: PartId | null; car: CarDetail; c
     return (
       <div className="panel">
         <h2>Pick a part</h2>
-        <p className="note">Click any part of the car (or use the buttons below the drawing) to see what it does and the numbers the model uses for this car.</p>
+        <p className="note">Click any part of the car (or use the buttons below the model) to see what it does and the numbers the model uses for this car.</p>
         <EraSpecs era={car.era} label={car.era_label} />
       </div>
     );
@@ -120,14 +120,14 @@ function PartPanel({ part, car, cars }: { part: PartId | null; car: CarDetail; c
     );
   } else if (part === "wheels") {
     body = (
-      <div className="tiles">
+      <div className="tiles stagger">
         <Tile label="Reached Q3" value={pct(car.q3_rate)} sub="of this car's entries" />
         <Tile label="Best grid slot" value={`P${car.best}`} sub={`${car.poles} pole${car.poles === 1 ? "" : "s"}`} />
       </div>
     );
   } else {
     body = (
-      <div className="tiles">
+      <div className="tiles stagger">
         <Tile label="Gap to pole" value={`+${fmt(car.pace_gap, 2)}%`} sub="team's best lap, season average" />
         <Tile label="Pace rank" value={fmt(car.pace_rank, 1)} sub={`of ${car.teams_in_season} teams, average`} />
         <Tile label="Car push" value={signed(car.contrib_car)} sub="places vs an average car" />

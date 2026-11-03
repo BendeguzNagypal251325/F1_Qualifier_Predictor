@@ -131,7 +131,6 @@ export function paint(color: string, opts: Partial<THREE.MeshPhysicalMaterialPar
 export const carbon = () => new THREE.MeshPhysicalMaterial({ color: "#101014", metalness: 0.25, roughness: 0.45, clearcoat: 0.6, clearcoatRoughness: 0.3 });
 export const rubber = () => new THREE.MeshStandardMaterial({ color: "#121214", metalness: 0, roughness: 0.92 });
 export const metal = () => new THREE.MeshStandardMaterial({ color: "#3a3d44", metalness: 0.9, roughness: 0.3 });
-export const glass = () => new THREE.MeshPhysicalMaterial({ color: "#0a0a0d", metalness: 0.6, roughness: 0.05, clearcoat: 1 });
 
 /** Mirror across the car's centre plane (z -> -z), keeping triangles facing outwards. */
 export function mirrorZ(src: THREE.BufferGeometry): THREE.BufferGeometry {

@@ -120,7 +120,7 @@ CARS: dict[tuple[int, str], tuple[str, tuple[str, str, str]]] = {
     (2026, "williams"): ("FW48", ("#0b1f4a", "#00a3e0", "#ffffff")),
 }
 
-# Schematic parts (hotspots). Each part says which model feature group it relates to, so the app
+# 3D car parts (clickable). Each part says which model feature group it relates to, so the app
 # can show the car-level numbers next to it. The model has no component-level data: the numbers are
 # team-level measures, and the parts explain what each area of the car does.
 PARTS = {

@@ -8,6 +8,7 @@ import LivePage from "./pages/Live";
 import { DriverList, DriverPage } from "./pages/Drivers";
 import { TrackList, TrackPage } from "./pages/Tracks";
 import { CarList, CarPage } from "./pages/Cars";
+import { TeamList, TeamPage } from "./pages/Teams";
 import WhatIf from "./pages/WhatIf";
 import Sessions from "./pages/Sessions";
 import HeatmapPage from "./pages/Heatmap";
@@ -16,6 +17,7 @@ const NAV = [
   ["/", "Overview"],
   ["/live", "Live"],
   ["/drivers", "Drivers"],
+  ["/teams", "Teams"],
   ["/cars", "Cars"],
   ["/tracks", "Tracks"],
   ["/what-if", "What if"],
@@ -50,6 +52,7 @@ export default function App() {
         {!meta.data && !meta.error && <Loading height={320} />}
         {meta.data && (
           <MetaContext.Provider value={meta.data}>
+            <div className="page" key={pathname} style={{ display: "grid", gap: 20 }}>
             <Routes>
               <Route path="/" element={<Overview />} />
               <Route path="/live" element={<LivePage />} />
@@ -57,6 +60,8 @@ export default function App() {
               <Route path="/drivers/:id" element={<DriverPage />} />
               <Route path="/tracks" element={<TrackList />} />
               <Route path="/tracks/:id" element={<TrackPage />} />
+              <Route path="/teams" element={<TeamList />} />
+              <Route path="/teams/:id" element={<TeamPage />} />
               <Route path="/cars" element={<CarList />} />
               <Route path="/cars/:season/:team" element={<CarPage />} />
               <Route path="/what-if" element={<WhatIf />} />
@@ -65,6 +70,7 @@ export default function App() {
               <Route path="/heatmap" element={<HeatmapPage />} />
               <Route path="*" element={<div className="panel empty-state"><h2>Page not found</h2><NavLink to="/" className="btn">Back to the overview</NavLink></div>} />
             </Routes>
+            </div>
           </MetaContext.Provider>
         )}
       </main>

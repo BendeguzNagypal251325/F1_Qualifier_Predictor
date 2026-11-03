@@ -174,3 +174,56 @@ export interface LivePrediction {
   rows: { pred_pos: number; score: number; driver_id: string; constructor_id: string; fp_last_pos: number | null; quali_pos: number | null; contrib: Contrib }[];
 }
 export interface Live { status: LiveStatus; prediction: LivePrediction | null }
+
+export interface TeamSummary {
+  id: string;
+  name: string;
+  constructor: string;
+  color: string;
+  names: string[];
+  seasons: number[];
+  last_season: number;
+  livery: [string, string, string];
+  era: string;
+  avg_pos: number | null;
+  q3_rate: number | null;
+  poles: number;
+  pace_rank: number | null;
+  drivers: number;
+}
+
+export interface TeamSeason {
+  season: number;
+  constructor: string;
+  name: string;
+  chassis: string | null;
+  livery: [string, string, string];
+  era: string;
+  engine: string;
+  races: number;
+  avg_pos: number | null;
+  best: number;
+  q3_rate: number | null;
+  poles: number;
+  pace_gap: number | null;
+  pace_rank: number | null;
+  teams_in_season: number;
+  contrib_car: number | null;
+  right: number | null;
+  drivers: { driver: string; name: string; sessions: number; avg_pos: number | null; q3_rate: number | null; h2h_wins: number; contrib_driver: number | null }[];
+}
+
+export interface TeamTrack { circuit: string; name: string; avg_pos: number | null; entries: number; q3_rate: number | null; poles: number }
+
+export interface TeamDetail extends Stats {
+  id: string;
+  name: string;
+  constructor: string;
+  color: string;
+  names: string[];
+  pace_rank: number | null;
+  seasons: TeamSeason[];
+  trend: { race_key: string; season: number; round: number; gp: string; gap: number | null; rank: number | null }[];
+  best_tracks: TeamTrack[];
+  worst_tracks: TeamTrack[];
+}

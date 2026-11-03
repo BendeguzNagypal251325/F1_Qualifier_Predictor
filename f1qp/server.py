@@ -260,7 +260,7 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
             "drivers": drivers,
             "teams": [{"id": t, "name": N.team_name(t), "color": N.team_color(t)} for t in teams],
             # season -> team -> {chassis, livery [primary, secondary, accent], era}: for 3D cars and helmets
-            "cars": {str(y): {t: {"chassis": c, "livery": list(l), "era": C.era_for(y)} for (yy, t), (c, l) in C.CARS.items() if yy == y}
+            "cars": {str(y): {t: {"chassis": c, "livery": list(liv), "era": C.era_for(y)} for (yy, t), (c, liv) in C.CARS.items() if yy == y}
                      for y in st.overview["seasons"]},
             "circuits": [{"id": c, "name": N.circuit_name(c), "outline": outl.get(c, {}).get("path"),
                           "length_m": outl.get(c, {}).get("length_m")} for c in circuits],
@@ -408,6 +408,91 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
                 **_stats(rows), "pace_gap": _f(team_best[team].mean(), 3),
                 "pace_rank": _f(rank[team].mean(), 1), "teams_in_season": int(team_best.shape[1]),
                 "trend": trend, "drivers": drivers}
+
+    # ---------------------------------------------------------------- teams (lineages: one team across renames)
+
+    def _team_rows(st: State, team_id: str) -> pd.DataFrame:
+        rows = st.wf[st.wf["team_id"] == team_id]
+        if rows.empty:
+            raise HTTPException(404, f"Unknown team '{team_id}'")
+        return rows
+
+    def _season_ranks(st: State) -> pd.DataFrame:
+        """Per race and lineage: best pace gap of the team's two cars, and its rank in the field."""
+        best = st.wf.groupby(["season", "race_key", "team_id"])["pace_gap"].min().reset_index()
+        best["rank"] = best.groupby("race_key")["pace_gap"].rank()
+        return best
+
+    @app.get("/api/teams", tags=["teams"])
+    def teams():
+        st = S()
+        ranks = _season_ranks(st)
+        out = []
+        for tid, g in st.wf.groupby("team_id"):
+            last = g.sort_values("date").iloc[-1]
+            names = list(dict.fromkeys(g.sort_values("date")["constructor_id"]))
+            r = ranks[ranks["team_id"] == tid]
+            out.append({
+                "id": tid, "name": N.team_name(last.constructor_id), "constructor": last.constructor_id,
+                "color": N.team_color(last.constructor_id), "names": [N.team_name(n) for n in names],
+                "seasons": sorted(int(x) for x in g["season"].unique()), "last_season": int(last.season),
+                "livery": C.car_info(int(last.season), last.constructor_id)["livery"], "era": C.era_for(int(last.season)),
+                "avg_pos": _f(g["quali_pos"].mean()), "q3_rate": _f(g["top10"].mean(), 3),
+                "poles": int((g["quali_pos"] == 1).sum()), "pace_rank": _f(r["rank"].mean(), 1),
+                "drivers": int(g["driver_id"].nunique()),
+            })
+        out.sort(key=lambda t: (-t["last_season"], t["pace_rank"] if t["pace_rank"] is not None else 99))
+        return out
+
+    @app.get("/api/teams/{team_id}", tags=["teams"])
+    def team(team_id: str):
+        st = S()
+        rows = _team_rows(st, team_id)
+        ranks = _season_ranks(st)
+        mine = ranks[ranks["team_id"] == team_id]
+        last = rows.sort_values("date").iloc[-1]
+        seasons = []
+        for y, g in rows.groupby("season"):
+            con = g["constructor_id"].mode().iloc[0]
+            r = mine[mine["season"] == y]
+            # Teammate battle: who out-qualified whom, race by race (only races with both cars).
+            h2h: dict[str, int] = {}
+            for _, race in g.groupby("race_key"):
+                if len(race) == 2:
+                    w = race.sort_values("quali_pos").iloc[0]["driver_id"]
+                    h2h[w] = h2h.get(w, 0) + 1
+            drivers = []
+            for d, dg in g.groupby("driver_id"):
+                drivers.append({"driver": d, "name": N.driver_name(d), "sessions": int(len(dg)), "avg_pos": _f(dg["quali_pos"].mean()),
+                                "q3_rate": _f(dg["top10"].mean(), 3), "h2h_wins": int(h2h.get(d, 0)),
+                                "contrib_driver": _f(dg["contrib_driver"].mean())})
+            drivers.sort(key=lambda x: -x["sessions"])
+            info = C.car_info(int(y), con)
+            seasons.append({
+                "season": int(y), "constructor": con, "name": N.team_name(con), "chassis": info["chassis"], "livery": info["livery"],
+                "era": info["era"], "engine": g["engine"].mode().iloc[0], "races": int(g["race_key"].nunique()),
+                "avg_pos": _f(g["quali_pos"].mean()), "best": int(g["quali_pos"].min()), "q3_rate": _f(g["top10"].mean(), 3),
+                "poles": int((g["quali_pos"] == 1).sum()), "pace_gap": _f(r["pace_gap"].mean(), 3), "pace_rank": _f(r["rank"].mean(), 1),
+                "teams_in_season": int(ranks.loc[ranks["season"] == y, "team_id"].nunique()),
+                "contrib_car": _f(g["contrib_car"].mean()), "right": _f(g["right"].mean(), 3), "drivers": drivers,
+            })
+        races = mine.merge(st.wf.drop_duplicates("race_key")[["race_key", "round", "grand_prix", "date"]], on="race_key").sort_values("date")
+        trend = [{"race_key": r.race_key, "season": int(r.season), "round": int(r.round), "gp": N.gp_name(r.grand_prix),
+                  "gap": _f(r.pace_gap, 3), "rank": _f(r.rank, 0)} for r in races.itertuples()]
+        by_track = rows.groupby("circuit").agg(avg=("quali_pos", "mean"), n=("quali_pos", "size"), q3=("top10", "mean"), poles=("quali_pos", lambda x: int((x == 1).sum())))
+        by_track = by_track[by_track["n"] >= 4].sort_values("avg")
+
+        def track(c, r):
+            return {"circuit": c, "name": N.circuit_name(c), "avg_pos": _f(r.avg), "entries": int(r.n), "q3_rate": _f(r.q3, 3), "poles": int(r.poles)}
+
+        return {
+            "id": team_id, "name": N.team_name(last.constructor_id), "constructor": last.constructor_id, "color": N.team_color(last.constructor_id),
+            "names": [N.team_name(n) for n in dict.fromkeys(rows.sort_values("date")["constructor_id"])],
+            **_stats(rows), "pace_rank": _f(mine["rank"].mean(), 1),
+            "seasons": seasons, "trend": trend,
+            "best_tracks": [track(c, r) for c, r in by_track.head(5).iterrows()],
+            "worst_tracks": [track(c, r) for c, r in by_track.tail(5).iloc[::-1].iterrows()],
+        }
 
     # ---------------------------------------------------------------- what-if
 

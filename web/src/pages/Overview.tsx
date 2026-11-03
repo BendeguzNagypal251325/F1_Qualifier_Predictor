@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useApi, useMeta } from "../api";
 import { Bars, DotPlot, Lollipops } from "../components/Charts";
 import { ErrorBox, GROUP_LABEL, Loading, Tile } from "../components/ui";
@@ -26,6 +27,8 @@ const FEATURE_LABELS: Record<string, string> = {
 
 export default function Overview() {
   const meta = useMeta();
+  const nav = useNavigate();
+  const [focus, setFocus] = useState<Group | null>(null);
   const { data, error } = useApi<OverviewData>("/api/overview");
   if (error) return <ErrorBox error={error} />;
   if (!data) return <Loading height={480} />;
@@ -53,7 +56,7 @@ export default function Overview() {
 
   return (
     <>
-      <div className="page-head">
+      <div className="page-head reveal">
         <div>
           <span className="eyebrow">Formula 1 qualifying · {range}</span>
           <h1>Which ten drivers make it into Q3?</h1>
@@ -62,20 +65,20 @@ export default function Overview() {
         <Link to="/live" className="btn">See the live weekend</Link>
       </div>
 
-      <div className="tiles">
-        <Tile label="Correct picks" value={<>{o.correct_per_10.toFixed(2)}<small> / 10</small></>} sub={`average per session, ${range}`} />
-        <Tile label={`${data.latest} season`} value={<>{latest.correct_per_10.toFixed(2)}<small> / 10</small></>} sub={`${latest.sessions} sessions so far`} />
+      <div className="tiles stagger">
+        <Tile label="Correct picks" value={null} countUp={o.correct_per_10} suffix=" / 10" sub={`average per session, ${range}`} />
+        <Tile label={`${data.latest} season`} value={null} countUp={latest.correct_per_10} suffix=" / 10" sub={`${latest.sessions} sessions so far`} />
         <Tile label="vs best simple rule" value={`+${(o.correct_per_10 - best[1].correct_per_10).toFixed(2)}`} sub={`over ${METHOD_NAMES[best[0]].toLowerCase()}`} />
-        <Tile label="Places off (Q3 drivers)" value={o.mae_top10.toFixed(2)} sub="mean absolute error" />
+        <Tile label="Places off (Q3 drivers)" value={null} countUp={o.mae_top10} sub="mean absolute error" />
         <Tile label="Perfect sessions" value={<>{o.perfect_sessions}<small> / {o.sessions}</small></>} sub={`worst: ${o.worst_session}/10`} />
       </div>
 
-      <div className="grid-2">
+      <div className="grid-2 stagger">
         <section className="panel">
           <div className="panel-head"><h2>Correct picks by season</h2></div>
           <div className="legend"><span><i style={{ background: "var(--series-model)" }} />This model</span><span><i style={{ background: "var(--series-base)" }} />Championship order</span></div>
-          <DotPlot rows={rows} aLabel="This model" bLabel="Championship order" lo={lo} hi={hi} />
-          <p className="note">Average number of the ten picked drivers who really reached Q3.</p>
+          <DotPlot rows={rows} aLabel="This model" bLabel="Championship order" lo={lo} hi={hi} onRow={(l) => /^\d{4}$/.test(l) && nav(`/sessions?season=${l}`)} />
+          <p className="note">Average number of the ten picked drivers who really reached Q3. Click a season to open its sessions.</p>
         </section>
         <section className="panel">
           <div className="panel-head"><h2>Model vs simple rules</h2></div>
@@ -86,24 +89,30 @@ export default function Overview() {
           <section className="panel">
             <div className="panel-head"><h2>What decides the prediction</h2><Link to="/what-if" className="note">Try a driver in another car →</Link></div>
             <div className="stack" style={{ height: 18 }}>
-              {GROUPS.map((g) => <span key={g} style={{ width: `${(gs[g] / gsTotal) * 100}%`, background: `var(--g-${g})` }} data-tip={`${GROUP_LABEL[g]}\nmoves a prediction by ${gs[g].toFixed(2)} places on average`} />)}
-            </div>
-            <div className="legend">{GROUPS.map((g) => <span key={g}><i style={{ background: `var(--g-${g})` }} />{GROUP_LABEL[g]} {Math.round((gs[g] / gsTotal) * 100)}%</span>)}</div>
-            <p className="note">Average size of each group's push on a prediction. <b>Car</b> = team form, tracked per team (it stays with the car when a driver leaves). <b>Driver</b> = the driver's own results and teammate battle; these follow the driver to a new team, but they also include the cars the driver had. <b>Practice</b> mixes both.</p>
+            {GROUPS.map((g) => <span key={g} className={focus === g ? "sel" : ""} onClick={() => setFocus(focus === g ? null : g)} style={{ width: `${(gs[g] / gsTotal) * 100}%`, background: `var(--g-${g})`, cursor: "pointer" }} data-tip={`${GROUP_LABEL[g]}\nmoves a prediction by ${gs[g].toFixed(2)} places on average\nClick to highlight its inputs`} />)}
+          </div>
+          <div className="legend" role="group" aria-label="Highlight a group">
+            {GROUPS.map((g) => (
+              <button key={g} type="button" aria-pressed={focus === g} onClick={() => setFocus(focus === g ? null : g)}>
+                <i style={{ background: `var(--g-${g})` }} />{GROUP_LABEL[g]} {Math.round((gs[g] / gsTotal) * 100)}%
+              </button>
+            ))}
+          </div>
+          <p className="note">Average size of each group's push on a prediction. <b>Car</b> = team form, tracked per team (it stays with the car when a driver leaves). <b>Driver</b> = the driver's own results and teammate battle; these follow the driver to a new team, but they also include the cars the driver had. <b>Practice</b> mixes both.</p>
           </section>
           <section className="panel">
             <div className="panel-head"><h2>How many picks were right</h2></div>
-            <Bars items={hist} total={o.sessions} />
-            <p className="note">{Math.round((eightPlus / o.sessions) * 100)}% of sessions had 8 or more of the 10 right.</p>
+            <Bars items={hist} total={o.sessions} onBar={(l) => nav(`/sessions?correct=${parseInt(l)}`)} />
+            <p className="note">{Math.round((eightPlus / o.sessions) * 100)}% of sessions had 8 or more of the 10 right. Click a bar to see those sessions.</p>
           </section>
         </div>
         <section className="panel">
           <div className="panel-head"><h2>Most useful single inputs</h2><span className="note">{meta.latest} season</span></div>
           <div className="scroll">
-            <table>
+            <table className={focus ? "dim-others" : undefined}>
               <tbody>
                 {imp.map(([k, v]) => (
-                  <tr key={k}>
+                  <tr key={k} className={`imp-row${group[k] === focus ? " on" : ""}`}>
                     <td><span className="swatch" style={{ background: `var(--g-${group[k]})`, marginRight: 8 }} />{FEATURE_LABELS[k] ?? k}</td>
                     <td style={{ width: "45%" }}><div className="cell-bar"><div className="bar"><span style={{ width: `${(v / impMax) * 100}%`, background: `var(--g-${group[k]})` }} /></div><b>{v.toFixed(2)}</b></div></td>
                   </tr>

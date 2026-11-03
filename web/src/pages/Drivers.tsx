@@ -12,7 +12,7 @@ function DriverCard({ d, latest }: { d: DriverMeta; latest: number }) {
   const team = useTeam(d.team);
   const spec = useHelmetSpec(d.id, d.last_season);
   return (
-    <Link to={`/drivers/${d.id}`} className="card">
+    <Link to={`/drivers/${d.id}`} className="card lift">
       <div className="dcard-media">
         <HelmetImage spec={spec} alt={`${d.name}'s helmet design`} />
         {d.number != null && <span className="num">#{d.number}</span>}
@@ -48,7 +48,7 @@ export function DriverList() {
           <input id="driver-search" type="search" placeholder="Search drivers" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search drivers" />
         </div>
       </div>
-      <div className="card-grid">{list.map((d) => <DriverCard key={d.id} d={d} latest={meta.latest} />)}</div>
+      <div className="card-grid stagger">{list.map((d) => <DriverCard key={d.id} d={d} latest={meta.latest} />)}</div>
       {!list.length && <div className="panel empty-state">No driver matches “{q}”.</div>}
     </>
   );
@@ -111,7 +111,7 @@ export function DriverPage() {
       {error && <ErrorBox error={error} />}
       {!data ? <Loading height={300} /> : (
         <>
-          <div className="tiles">
+          <div className="tiles stagger">
             <Tile label="Sessions" value={data.sessions} sub={`at ${data.tracks.length} tracks`} />
             <Tile label="Avg quali position" value={fmt(data.avg_pos)} sub={`best P${data.best ?? "–"}`} />
             <Tile label="Reached Q3" value={pct(data.q3_rate)} />

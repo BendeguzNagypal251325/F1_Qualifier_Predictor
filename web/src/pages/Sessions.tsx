@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApi, useMeta } from "../api";
 import { Avatar, ContribStack, ErrorBox, GroupLegend, Loading, PosChip, Swatch, Tile, TrackOutline } from "../components/ui";
 import type { SessionDetail, SessionSummary } from "../types";
@@ -8,7 +8,11 @@ export default function Sessions() {
   const nav = useNavigate();
   const all = useApi<SessionSummary[]>("/api/sessions");
   const { key } = useParams();
-  const current = key ?? all.data?.[all.data.length - 1]?.race_key ?? null;
+  const [params] = useSearchParams();
+  const wantSeason = Number(params.get("season")) || null;
+  const wantCorrect = params.get("correct") != null ? Number(params.get("correct")) : null;
+  const pool = all.data?.filter((x) => (!wantSeason || x.season === wantSeason) && (wantCorrect == null || x.correct === wantCorrect));
+  const current = key ?? pool?.[pool.length - 1]?.race_key ?? all.data?.[all.data.length - 1]?.race_key ?? null;
   const detail = useApi<SessionDetail>(current ? `/api/sessions/${current}` : null);
   const s = detail.data;
   const season = s?.season ?? meta.latest;
@@ -38,10 +42,26 @@ export default function Sessions() {
         </div>
         {s && <Link to={`/tracks/${s.circuit}`}><TrackOutline circuit={s.circuit} size={96} stroke={5} /></Link>}
       </div>
+      {all.data && (
+        <section className="panel reveal">
+          <div className="panel-head">
+            <h2>{wantCorrect != null ? `Every session with ${wantCorrect}/10 correct` : `${season} at a glance`}</h2>
+            <span className="note">{wantCorrect != null ? <Link to="/sessions">show all</Link> : "correct picks per race · click to open"}</span>
+          </div>
+          <div className="season-strip-lg">
+            {(wantCorrect != null ? pool ?? [] : inSeason).map((x) => (
+              <Link key={x.race_key} to={`/sessions/${x.race_key}`} className={`sess${x.race_key === current ? " on" : ""}`}
+                style={{ ["--k" as string]: String((x.correct - 4) / 6) }} data-tip={`${x.season} R${x.round} ${x.gp}\n${x.correct}/10 correct`}>
+                <span className="mono">{x.correct}</span><small>{wantCorrect != null ? `${String(x.season).slice(2)} R${x.round}` : `R${x.round}`}</small>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
       {(all.error || detail.error) && <ErrorBox error={(all.error || detail.error)!} />}
       {!s ? <Loading height={480} /> : (
         <>
-          <div className="tiles">
+          <div className="tiles stagger">
             <Tile label="Correct picks" value={<>{s.correct}<small> / 10</small></>} sub={avg != null ? `season average ${avg.toFixed(2)}` : undefined} />
             <Tile label="Places off" value={s.mae.toFixed(2)} sub="average, all drivers" />
             <Tile label="Weekend" value={s.date} small sub={s.sprint ? "sprint weekend (one practice)" : "standard weekend"} />

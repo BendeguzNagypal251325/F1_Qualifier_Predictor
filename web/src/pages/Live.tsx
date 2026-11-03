@@ -42,7 +42,7 @@ export default function LivePage() {
 
       {p && (
         <>
-          <div className="tiles">
+          <div className="tiles stagger">
             <Tile label="Sessions used" value={`${p.sessions_used.length} / 4`} sub={SESSIONS.map((s) => (p.sessions_used.includes(s) ? "●" : "○") + " " + s.replace("Practice ", "FP")).join("  ")} />
             <Tile label="Model" value={p.model.startsWith("full") ? "With practice" : "Pre-weekend"} small sub={p.model} />
             {p.qualifying_done

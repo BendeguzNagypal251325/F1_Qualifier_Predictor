@@ -9,7 +9,7 @@ const ticks = (lo: number, hi: number, step: number) => {
 export interface DotRow { label: string; a: number; b: number; strong?: boolean }
 
 /** Two series per row on a shared x scale (model vs a baseline). */
-export function DotPlot({ rows, aLabel, bLabel, lo, hi, step = 0.5 }: { rows: DotRow[]; aLabel: string; bLabel: string; lo: number; hi: number; step?: number }) {
+export function DotPlot({ rows, aLabel, bLabel, lo, hi, step = 0.5, onRow }: { rows: DotRow[]; aLabel: string; bLabel: string; lo: number; hi: number; step?: number; onRow?: (label: string) => void }) {
   const W = 560, rowH = 32, top = 8, left = 74, right = 58, H = top + rows.length * rowH + 26;
   const x = (v: number) => left + ((Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo)) * (W - left - right);
   const tk = ticks(lo, hi, step);
@@ -20,12 +20,13 @@ export function DotPlot({ rows, aLabel, bLabel, lo, hi, step = 0.5 }: { rows: Do
       {rows.map((r, i) => {
         const cy = top + i * rowH + rowH / 2;
         return (
-          <g key={r.label} data-tip={`${r.label}\n${aLabel}: ${r.a.toFixed(2)} / 10\n${bLabel}: ${r.b.toFixed(2)} / 10`}>
+          <g key={r.label} className={onRow ? "clickable" : undefined} onClick={onRow ? () => onRow(r.label) : undefined}
+            data-tip={`${r.label}\n${aLabel}: ${r.a.toFixed(2)} / 10\n${bLabel}: ${r.b.toFixed(2)} / 10${onRow ? "\nClick to open these sessions" : ""}`}>
             <rect x={0} y={cy - rowH / 2} width={W} height={rowH} fill="transparent" />
             <text className="lbl" x={0} y={cy + 4} style={{ fontWeight: r.strong ? 700 : 400 }}>{r.label}</text>
             <line x1={x(Math.min(r.a, r.b))} x2={x(Math.max(r.a, r.b))} y1={cy} y2={cy} stroke="var(--line)" strokeWidth={2} />
-            <circle cx={x(r.b)} cy={cy} r={6} fill="var(--series-base)" stroke="var(--surface)" strokeWidth={2} />
-            <circle cx={x(r.a)} cy={cy} r={7} fill="var(--series-model)" stroke="var(--surface)" strokeWidth={2} />
+            <circle className="pop" style={{ animationDelay: `${i * 50}ms` }} cx={x(r.b)} cy={cy} r={6} fill="var(--series-base)" stroke="var(--surface)" strokeWidth={2} />
+            <circle className="pop glow" style={{ animationDelay: `${i * 50 + 120}ms` }} cx={x(r.a)} cy={cy} r={7} fill="var(--series-model)" stroke="var(--surface)" strokeWidth={2} />
             <text x={W - right + 10} y={cy + 4}>{r.a.toFixed(2)}</text>
           </g>
         );
@@ -49,8 +50,8 @@ export function Lollipops({ items, lo, hi, step }: { items: { label: string; val
           <g key={it.label} data-tip={`${it.label}\n${it.value.toFixed(2)} correct / 10`}>
             <rect x={0} y={cy - rowH / 2} width={W} height={rowH} fill="transparent" />
             <text className="lbl" x={0} y={cy + 4} style={{ fontWeight: it.strong ? 700 : 400 }}>{it.label}</text>
-            <line x1={x(lo)} x2={x(it.value)} y1={cy} y2={cy} stroke={col} strokeWidth={2} />
-            <circle cx={x(it.value)} cy={cy} r={6} fill={col} stroke="var(--surface)" strokeWidth={2} />
+            <line className="draw" pathLength={1} style={{ animationDelay: `${i * 60}ms` }} x1={x(lo)} x2={x(it.value)} y1={cy} y2={cy} stroke={col} strokeWidth={2} />
+            <circle className={`pop${it.strong ? " glow" : ""}`} style={{ animationDelay: `${i * 60 + 200}ms` }} cx={x(it.value)} cy={cy} r={6} fill={col} stroke="var(--surface)" strokeWidth={2} />
             <text x={x(it.value) + 12} y={cy + 4}>{it.value.toFixed(2)}</text>
           </g>
         );
@@ -60,7 +61,7 @@ export function Lollipops({ items, lo, hi, step }: { items: { label: string; val
 }
 
 /** Vertical bars from zero. */
-export function Bars({ items, total }: { items: { label: string; value: number }[]; total: number }) {
+export function Bars({ items, total, onBar }: { items: { label: string; value: number }[]; total: number; onBar?: (label: string) => void }) {
   const W = 560, H = 210, left = 34, bottom = 30, top = 18, bw = (W - left - 10) / items.length;
   const max = Math.max(1, ...items.map((d) => d.value));
   const y = (v: number) => top + (1 - v / max) * (H - top - bottom);
@@ -73,9 +74,10 @@ export function Bars({ items, total }: { items: { label: string; value: number }
         const x0 = left + i * bw + 6, w = bw - 12, yt = y(d.value);
         const path = d.value ? `M${x0},${H - bottom} V${yt + 4} q0,-4 4,-4 h${w - 8} q4,0 4,4 V${H - bottom} Z` : "";
         return (
-          <g key={d.label} data-tip={`${d.label} correct\n${d.value} sessions (${Math.round((d.value / total) * 100)}%)`}>
+          <g key={d.label} className={onBar ? "clickable" : undefined} onClick={onBar ? () => onBar(d.label) : undefined}
+            data-tip={`${d.label} correct\n${d.value} sessions (${Math.round((d.value / total) * 100)}%)${onBar ? "\nClick to list them" : ""}`}>
             <rect x={x0 - 4} y={top} width={w + 8} height={H - bottom - top} fill="transparent" />
-            <path d={path} fill="var(--series-model)" />
+            <path className="grow glow" style={{ animationDelay: `${i * 60}ms` }} d={path} fill="var(--series-model)" />
             {d.value > 0 && <text x={x0 + w / 2} y={yt - 5} textAnchor="middle">{d.value}</text>}
             <text className="lbl" x={x0 + w / 2} y={H - 10} textAnchor="middle">{d.label}</text>
           </g>
@@ -115,7 +117,7 @@ export function RaceLine({ points, yLabel, invert = true, fmt = (v: number) => v
       {tk.map((t, i) => <text key={i} x={left - 6} y={y(t) + 4} textAnchor="end">{fmt(t)}</text>)}
       <text x={left} y={H - 4}>{points[0].label}</text>
       <text x={W - right} y={H - 4} textAnchor="end">{points[n - 1].label}</text>
-      <path d={d} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <path className="draw glow" pathLength={1} d={d} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
       {points.map((p, i) => p.value != null && (
         <g key={i} data-tip={p.tip ?? `${p.label}\n${fmt(p.value)}`}>
           <rect x={x(i) - (W / n) / 2} y={top} width={W / n} height={H - top - bottom} fill="transparent" />

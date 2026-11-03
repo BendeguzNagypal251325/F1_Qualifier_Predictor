@@ -60,11 +60,37 @@ export function ErrorBox({ error }: { error: string }) {
   return <div className="error" role="alert">Could not load this data: {error}</div>;
 }
 
-export function Tile({ label, value, sub, small }: { label: string; value: ReactNode; sub?: ReactNode; small?: boolean }) {
+const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** Animate a number from 0 to ``target`` (ease-out, ~0.8 s). Returns the value to show. */
+export function useCountUp(target: number | null | undefined, ms = 800): number | null {
+  const [v, setV] = useState<number | null>(target ?? null);
+  useEffect(() => {
+    if (target == null || Number.isNaN(target)) return setV(target ?? null);
+    if (reducedMotion()) return setV(target);
+    let raf = 0;
+    const t0 = performance.now();
+    const step = (now: number) => {
+      const k = Math.min(1, (now - t0) / ms);
+      setV(target * (1 - (1 - k) ** 3));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return v;
+}
+
+export function Tile({ label, value, sub, small, countUp, decimals = 2, suffix = "", prefix = "" }: {
+  label: string; value: ReactNode; sub?: ReactNode; small?: boolean;
+  countUp?: number | null; decimals?: number; suffix?: string; prefix?: string;
+}) {
+  const n = useCountUp(countUp);
+  const shown = countUp != null && n != null ? <>{prefix}{n.toFixed(decimals)}{suffix && (suffix.trim().startsWith("/") ? <small>{suffix}</small> : suffix)}</> : value;
   return (
     <div className="tile">
       <span className="eyebrow">{label}</span>
-      <span className="v" style={small ? { fontSize: "1.15rem" } : undefined}>{value}</span>
+      <span className="v" style={small ? { fontSize: "1.15rem" } : undefined}>{shown}</span>
       {sub != null && <span className="s">{sub}</span>}
     </div>
   );
@@ -184,6 +210,9 @@ export function useHelmetSpec(driver: string, season?: number, teamOverride?: st
     colors: ref ? [...ref.colors].filter(Boolean) as string[] : [...teamColors],
     motif: ref?.motif ?? fallbackMotifs[hash % fallbackMotifs.length],
     crown: ref?.crown ?? "stripe",
+    brow: ref?.brow,
+    chin: ref?.chin,
+    crownStripes: ref?.crownStripes,
     team,
     year,
     source: ref ? ("reference" as const) : ("team" as const),

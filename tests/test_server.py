@@ -123,7 +123,7 @@ def test_driver_track_and_car_pages(client):
     assert len(cars) == 11 and [c["pace_gap"] for c in cars] == sorted(c["pace_gap"] for c in cars)
     car = client.get("/api/cars/2026/mclaren").json()
     assert car["chassis"] == "MCL40" and car["engine"] == "mercedes" and car["trend"]
-    assert [l["team"] for l in car["lineage"] if l["season"] == 2020] == ["mclaren"]
+    assert [x["team"] for x in car["lineage"] if x["season"] == 2020] == ["mclaren"]
 
 
 def test_swap_endpoint(client):
@@ -153,3 +153,17 @@ def test_live_service_reports_errors(artifact, tmp_path):
         live = app.state.live
         asyncio.run(live.refresh())
         assert live.snapshot is None and "No upcoming race" in live.error
+
+
+def test_teams(client):
+    teams = client.get("/api/teams").json()
+    rb = next(t for t in teams if t["id"] == "racing-bulls")
+    assert rb["names"][-1] == "Racing Bulls" and "AlphaTauri" in rb["names"]
+    t = client.get("/api/teams/racing-bulls").json()
+    assert [s["season"] for s in t["seasons"]] == sorted(s["season"] for s in t["seasons"])
+    for s in t["seasons"]:
+        assert 1 <= s["pace_rank"] <= s["teams_in_season"]
+        wins = sum(d["h2h_wins"] for d in s["drivers"])
+        assert wins <= s["races"]
+    assert t["best_tracks"] and t["best_tracks"][0]["avg_pos"] <= t["worst_tracks"][0]["avg_pos"]
+    assert client.get("/api/teams/nobody").status_code == 404

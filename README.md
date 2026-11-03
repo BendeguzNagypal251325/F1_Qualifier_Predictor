@@ -5,7 +5,8 @@ information available **before** qualifying starts. It can also run live during 
 every practice session and after qualifying (see [Live weekend predictions](#live-weekend-predictions)).
 
 The results are served as a **web app** (FastAPI back end + React front end, one Docker image) in a
-dark red-and-black theme: driver pages with 3D helmets, interactive 3D cars for every team and season,
+dark red-and-black theme: driver pages with 3D helmets, team breakdowns, interactive 3D cars for every
+team and season,
 track outlines, a
 "what if this driver drove that car" tool, and a live page for the current weekend. See
 [Web app](#web-app) and [Deployment](#deployment).
@@ -119,13 +120,25 @@ Correct top-10 picks: 8/10
 | **Overview** | correct picks per season vs the simple rules, how much car / driver / practice decide a prediction, most useful inputs |
 | **Live** | this weekend's predicted qualifying order, rebuilt after every finished session; after qualifying, the real result next to it |
 | **Drivers** | every driver as initials in their team colour; each profile has the driver's record at every track, team history, and the driver-vs-car split |
+| **Teams** | one page per team across renames (Toro Rosso → AlphaTauri → RB → Racing Bulls…): pace rank per season and race by race, every car with its engine, teammate head-to-heads per season, strongest and weakest tracks |
 | **Cars** | every car of a season ranked by pace; each car has an interactive 3D model, pace through the season, its drivers, and a power-unit comparison |
 | **Tracks** | track outlines and maps; every driver's record at that track, and the model's score at each session there |
 | **What if** | put any driver in any car at any race and see the predicted grid slot |
-| **Sessions** | predicted order vs result for any race, with the reason behind each prediction |
+| **Sessions** | a season strip (one cell per race, shaded by correct picks) and the predicted order vs result for any race, with the reason behind each prediction |
 | **Heatmap** | average qualifying position per driver × track |
 
 All of it comes from the walk-forward run, so every prediction shown is out-of-sample.
+
+Charts link to the detail behind them: click a season on the overview to open its sessions, a
+histogram bar to list the sessions with that score, or a group (driver / car / practice) to highlight
+its inputs. Numbers count up, sections and charts animate in, and cards respond to hover; all motion is
+switched off for visitors who ask their system for reduced motion.
+
+Colours: a dark carbon background with neon accents. The three contribution groups use electric blue
+(driver), neon red (car) and violet (practice), checked with a colour-vision-deficiency validator on
+the dark background (blue and violet are never placed next to each other). Red also marks the model's
+own numbers, against grey for the simple rules. Position chips keep the F1 timing colours (purple
+pole, green Q3, yellow Q2).
 
 ### Car and driver features
 
@@ -172,15 +185,18 @@ loaded only on pages that show 3D.
 
 ### Helmets and names
 
-Every driver has a 3D helmet (`web/src/three/helmet.ts`). The shell is lofted front to back through
-cross-sections: round dome, chin bar, flat base. The eye port has a visor and a rubber seal fitted to
-its edge, plus side pivots, chin vents, top ducts, a rear gurney and the car number on both sides.
+Every driver has a 3D helmet (`web/src/three/helmet.ts`), always shown from the front. The shell is
+lofted front to back through cross-sections: round dome, chin bar, flat base. The eye port has a visor
+and rubber seal fitted to its edge, plus side pivots, chin vents, top ducts and a rear gurney. On a
+driver's profile the helmet turns a little toward the pointer and sways gently when idle.
 
 Paint comes from published descriptions of each driver's 2026 race helmet
 (`web/src/three/helmetRefs.ts`): PlanetF1's 2026 helmet round-up, Sky Sport Italia, Motorsport.com's
 2026 guide, auto motor und sport, Red Bull, and official replica listings. Only the colours and the
 kind of motif come from those sources, for example "red upper half, white lower half" or
-"Argentinian flag wrap with triangles on top". The artwork itself is our own simplified version, not a
+"Argentinian flag wrap with triangles on top". The parts you see from the front carry the details:
+stripes over the crown, a brow band above the visor, and flag colours across the chin bar (Italy for
+Antonelli, Spain for Sainz and Alonso, Argentina for Colapinto, Brazil for Bortoleto). The artwork itself is our own simplified version, not a
 copy. The profile page shows each description. Drivers with no description found (Hülkenberg,
 Bottas, Pérez, Tsunoda, anyone not on the 2026 grid) are painted in their team's colours, and the page
 says so. To refine a helmet, edit its entry in `helmetRefs.ts`.
@@ -288,11 +304,11 @@ f1qp/train.py       walk-forward evaluation report
 f1qp/predict.py     predict any past GP vs. the actual result (terminal)
 f1qp/live.py        live predictions for the next race (F1DB + OpenF1)
 f1qp/build.py       precompute everything the web app serves -> artifacts/state.pkl
-f1qp/server.py      FastAPI app: JSON API, live background service, serves web/dist
+f1qp/server.py      FastAPI app: JSON API (drivers, teams, cars, tracks, sessions, what-if, live), serves web/dist
 f1qp/cars.py        chassis names, liveries and regulation eras per team and season
 f1qp/tracks.py      track outlines as SVG paths (MIT GeoJSON in f1qp/assets/)
 f1qp/names.py       display names and team colours
-web/                React + TypeScript front end (Vite)
+web/                React + TypeScript front end (Vite); 3D in web/src/three (cars, helmets, references)
 data/               F1DB entries table, data/live/ weekends
 Dockerfile, docker-compose.yml, .github/workflows/ci.yml
 tests/              data sanity, leakage, live (fake OpenF1), API and explanation tests

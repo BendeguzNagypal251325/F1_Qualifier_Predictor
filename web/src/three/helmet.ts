@@ -13,24 +13,27 @@ export interface HelmetSpec {
   colors: string[];
   motif: Motif;
   crown?: "stripe" | "triangles" | "wings" | "plain";
+  brow?: string[];   // stripes just above the visor, bottom to top
+  chin?: string[];   // colour sectors across the chin bar, left to right as seen from the front
+  crownStripes?: string[]; // stripes over the top, centre outwards
 }
 
 // ---------------------------------------------------------------- shape
 
 // x along the head (back -> front), c = centre height, h = half height, w = half width, n = roundness
 const SECTIONS: [number, number, number, number, number][] = [
-  [-1.02, 0.1, 0.12, 0.13, 2.2],
-  [-0.95, 0.07, 0.5, 0.465, 2.2],
-  [-0.8, 0.04, 0.75, 0.67, 2.25],
-  [-0.55, 0.02, 0.9, 0.781, 2.25],
-  [-0.2, 0.0, 0.98, 0.837, 2.25],
-  [0.15, -0.03, 0.99, 0.837, 2.25],
-  [0.45, -0.08, 0.95, 0.8, 2.25],
-  [0.7, -0.15, 0.86, 0.735, 2.25],
-  [0.88, -0.24, 0.7, 0.623, 2.25],
-  [1.0, -0.35, 0.5, 0.484, 2.25],
-  [1.08, -0.47, 0.28, 0.307, 2.25],
-  [1.12, -0.56, 0.08, 0.121, 2.25],
+  [-1.02, 0.1, 0.12, 0.138, 2.2],
+  [-0.95, 0.07, 0.5, 0.493, 2.2],
+  [-0.8, 0.04, 0.75, 0.71, 2.25],
+  [-0.55, 0.02, 0.9, 0.828, 2.25],
+  [-0.2, 0.0, 0.98, 0.887, 2.25],
+  [0.15, -0.03, 0.99, 0.887, 2.25],
+  [0.45, -0.08, 0.95, 0.848, 2.25],
+  [0.7, -0.15, 0.86, 0.779, 2.25],
+  [0.88, -0.24, 0.7, 0.66, 2.25],
+  [1.0, -0.35, 0.5, 0.513, 2.25],
+  [1.08, -0.47, 0.28, 0.325, 2.25],
+  [1.12, -0.56, 0.08, 0.128, 2.25],
 ];
 const RING = 120, SUB = 10;
 const CENTRE = new THREE.Vector3(0.1, -0.08, 0);
@@ -38,7 +41,7 @@ const CENTRE = new THREE.Vector3(0.1, -0.08, 0);
 const cr = (a: number, b: number, c: number, d: number, t: number) =>
   0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (-a + 3 * b - 3 * c + d) * t * t * t);
 
-function shellGeometry(scale = 1): THREE.BufferGeometry {
+function shellGeometry(): THREE.BufferGeometry {
   const S = SECTIONS;
   const rings: number[][] = [];
   for (let i = 0; i < S.length - 1; i++) {
@@ -55,7 +58,7 @@ function shellGeometry(scale = 1): THREE.BufferGeometry {
       let y = c + h * Math.sign(sn) * Math.abs(sn) ** e;
       const z = w * Math.sign(cs) * Math.abs(cs) ** e;
       y = Math.max(y, -0.9 + 0.12 * Math.max(0, x)); // flat base rising toward the chin
-      pos.push(x * scale, y * scale, z * scale);
+      pos.push(x, y, z);
       uv.push(j / RING, ri / (rings.length - 1));
     }
   });
@@ -69,7 +72,7 @@ function shellGeometry(scale = 1): THREE.BufferGeometry {
   for (const [ri, flip] of [[0, true], [rings.length - 1, false]] as const) {
     const centre = pos.length / 3;
     const r = rings[ri];
-    pos.push(r[0] * scale, r[1] * scale, 0);
+    pos.push(r[0], r[1], 0);
     uv.push(0.25, ri === 0 ? 0 : 1);
     for (let j = 0; j < RING; j++) {
       const a = ri * W + j, b = a + 1;
@@ -85,7 +88,7 @@ function shellGeometry(scale = 1): THREE.BufferGeometry {
 }
 
 interface Shared {
-  shell: THREE.BufferGeometry; liner: THREE.BufferGeometry; visor: THREE.BufferGeometry; seal: THREE.BufferGeometry;
+  shell: THREE.BufferGeometry; visor: THREE.BufferGeometry; seal: THREE.BufferGeometry;
   hit: (az: number, el: number) => { p: THREE.Vector3; n: THREE.Vector3 };
 }
 let shared: Shared | null = null;
@@ -115,7 +118,7 @@ function geometries(): Shared {
     const narrow = 1 - 0.12 * Math.max(0, s); // top edge slightly narrower
     return [az * narrow, midEl + halfEl * Math.sign(s) * Math.abs(s) ** e];
   };
-  const surface = (rows: number, cols: number, at: (i: number, j: number) => [number, number], offset: number, closedCols = false) => {
+  const surface = (rows: number, cols: number, at: (i: number, j: number) => [number, number], offset: number) => {
     const P: number[] = [], Uv: number[] = [], I: number[] = [];
     for (let i = 0; i <= rows; i++) for (let j = 0; j <= cols; j++) {
       const [az, el] = at(i / rows, j / cols);
@@ -128,7 +131,6 @@ function geometries(): Shared {
       const a = i * W + j, b = a + 1, c = a + W, d = c + 1;
       I.push(a, b, c, b, d, c);
     }
-    void closedCols;
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3));
     g.setAttribute("uv", new THREE.Float32BufferAttribute(Uv, 2));
@@ -141,9 +143,8 @@ function geometries(): Shared {
   // Seal: strip around the port edge.
   const seal = surface(3, 160, (r, t) => edge(t, 0.012 + r * 0.05), 0.014);
   fixOrientation(visor); fixOrientation(seal);
-  const liner = shellGeometry(0.95);
-  [shell, visor, seal, liner].forEach((g) => (g.userData.shared = true));
-  shared = { shell, liner, visor, seal, hit };
+  [shell, visor, seal].forEach((g) => (g.userData.shared = true));
+  shared = { shell, visor, seal, hit };
   return shared;
 }
 
@@ -272,6 +273,35 @@ function paintTextures(spec: HelmetSpec, res = 1): { map: THREE.CanvasTexture; m
       g.quadraticCurveTo((0.25 + s * 0.05) * U, 0.55 * V, 0.25 * U, 0.62 * V);
       g.closePath(); g.fill();
     }
+  }
+  // Front details (texture map measured with a debug grid: crown v .50-.65 at u .25, brow v .66-.76,
+  // visor .76-.82, chin v .84-1 across the lower half u .5-1, cheeks at u 0 and .5).
+  if (spec.crownStripes?.length) {
+    const w = 0.012;
+    spec.crownStripes.forEach((col, k) => {
+      g.fillStyle = col;
+      for (const sgn of k ? [-1, 1] : [0]) g.fillRect((0.25 + sgn * k * w * 2 - w) * U, 0.05 * V, w * 2 * U, 0.72 * V);
+    });
+  }
+  if (spec.brow?.length) {
+    const h = 0.028;
+    spec.brow.forEach((col, k) => {
+      g.fillStyle = col;
+      const v1 = 0.765 - k * h;
+      g.beginPath();
+      g.moveTo(0.06 * U, (v1 - h) * V);
+      g.quadraticCurveTo(0.25 * U, (v1 - h - 0.05) * V, 0.44 * U, (v1 - h) * V);
+      g.lineTo(0.44 * U, v1 * V);
+      g.quadraticCurveTo(0.25 * U, (v1 - 0.05) * V, 0.06 * U, v1 * V);
+      g.closePath(); g.fill();
+    });
+  }
+  if (spec.chin?.length) {
+    const n = spec.chin.length, u0 = 0.58, u1 = 0.92;
+    spec.chin.forEach((col, k) => {
+      g.fillStyle = col;
+      g.fillRect((u0 + ((u1 - u0) * k) / n) * U, 0.84 * V, ((u1 - u0) / n) * U + 1, 0.16 * V);
+    });
   }
   // Car number on both sides, behind the eye port, upright and reading front-to-back.
   if (spec.number != null) {
