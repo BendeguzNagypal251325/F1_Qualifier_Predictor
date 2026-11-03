@@ -209,7 +209,7 @@ export function Car3D({ era, livery, selected, onSelect, helmet, label }: {
 
 export function Helmet3D({ spec, label }: { spec: HelmetSpec; label: string }) {
   const box = useRef<HTMLDivElement>(null);
-  const { api, ready } = useViewer(box, { autoRotate: true, floor: false, fov: 26, fit: 2.7 });
+  const { api, ready } = useViewer(box, { autoRotate: true, floor: false, fov: 26, fit: 2.0 });
   useEffect(() => {
     if (!ready || !api.current) return;
     const h = buildHelmet(spec);

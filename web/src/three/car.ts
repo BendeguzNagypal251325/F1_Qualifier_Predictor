@@ -138,7 +138,7 @@ export function buildCar(era: string, livery: [string, string, string], helmet?:
   const fwX = tip + 0.08;
   for (let k = 0; k < E.fwEls; k++) {
     const chord = 0.17 - k * 0.02, span = E.fwSpan - (k === 0 ? 0 : 0.12 + k * 0.03);
-    const g = airfoil(chord, 0.05, span, 0.07);
+    const g = airfoil(chord, 0.035, span, 0.08);
     g.rotateZ(-(0.04 + k * 0.17));
     g.translate(fwX - k * 0.115, 0.085 + k * 0.05, 0);
     add("front-wing", g, k < E.fwEls - 2 ? carbon() : paint(k === E.fwEls - 1 ? S : P));
@@ -150,11 +150,11 @@ export function buildCar(era: string, livery: [string, string, string], helmet?:
 
   // ---- rear wing: mainplane, flap, beam wing, endplates, pylon
   const rwX = -0.4;
-  const main = airfoil(0.26, 0.09, E.rwSpan, 0.06); main.rotateZ(-0.12); main.translate(rwX, E.rwY, 0);
+  const main = airfoil(0.26, 0.055, E.rwSpan, 0.08); main.rotateZ(-0.12); main.translate(rwX, E.rwY, 0);
   add("rear-wing", main, carbon());
-  const flap = airfoil(0.17, 0.08, E.rwSpan, 0.05); flap.rotateZ(E.active ? -0.35 : -0.55); flap.translate(rwX - 0.22, E.rwY + 0.09, 0);
+  const flap = airfoil(0.17, 0.05, E.rwSpan, 0.07); flap.rotateZ(E.active ? -0.35 : -0.55); flap.translate(rwX - 0.22, E.rwY + 0.09, 0);
   add("rear-wing", flap, paint(S));
-  const beam = airfoil(0.14, 0.08, E.rwSpan * 0.8, 0.04); beam.rotateZ(-0.25); beam.translate(rwX - 0.05, 0.46, 0);
+  const beam = airfoil(0.14, 0.05, E.rwSpan * 0.8, 0.05); beam.rotateZ(-0.25); beam.translate(rwX - 0.05, 0.46, 0);
   add("rear-wing", beam, carbon());
   for (const z of [-1, 1]) {
     add("rear-wing", roundedBox(0.5, 0.44, 0.012, 0.06).translate(rwX - 0.18, E.rwY - 0.04, (z * E.rwSpan) / 2), paint(P));

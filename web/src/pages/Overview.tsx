@@ -73,7 +73,7 @@ export default function Overview() {
       <div className="grid-2">
         <section className="panel">
           <div className="panel-head"><h2>Correct picks by season</h2></div>
-          <div className="legend"><span><i style={{ background: "var(--g-driver)" }} />This model</span><span><i style={{ background: "var(--g-car)" }} />Championship order</span></div>
+          <div className="legend"><span><i style={{ background: "var(--series-model)" }} />This model</span><span><i style={{ background: "var(--series-base)" }} />Championship order</span></div>
           <DotPlot rows={rows} aLabel="This model" bLabel="Championship order" lo={lo} hi={hi} />
           <p className="note">Average number of the ten picked drivers who really reached Q3.</p>
         </section>

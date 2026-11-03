@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { glass, paint } from "./geom";
+import { paint } from "./geom";
 
 // Original helmet designs. Each driver gets a fixed personal pattern (seeded by their id, so it
 // stays the same every season) painted in that season's team colours, with their car number.
@@ -148,48 +148,121 @@ function paintTexture(spec: HelmetSpec): THREE.CanvasTexture {
   return tex;
 }
 
-/** Shape a unit sphere into a helmet: taller crown, chin bar pushed forward and down, flatter sides. */
-function deform(g: THREE.BufferGeometry): THREE.BufferGeometry {
+// ---------------------------------------------------------------- shape
+
+const PORT = { phi: 0.8, top: 0.405 * Math.PI, bottom: 0.548 * Math.PI }; // eye port around the front (phi = pi)
+
+/** Move a point of the unit sphere onto the helmet surface. */
+function shapePoint(x: number, y: number, z: number, r = 1): [number, number, number] {
+  x /= r; y /= r; z /= r;
+  const front = Math.max(0, x), back = Math.max(0, -x), low = Math.max(0, -y), high = Math.max(0, y);
+  let X = x, Y = y, Z = z;
+  Y -= 0.06 * high * high;                       // slightly flatter crown
+  Z *= 0.88 + 0.05 * low;                        // narrow head, fuller cheeks
+  X += 0.26 * front * low * low;                 // chin bar juts forward
+  Y -= 0.12 * front * low;                       // and drops a little
+  X -= 0.1 * back * low;                         // tucked-in nape
+  if (Y < -0.78) Y = -0.78 + (Y + 0.78) * 0.35;  // flat base
+  return [X * 1.07 * r, Y * r, Z * r];
+}
+
+function shaped(g: THREE.BufferGeometry, r = 1): THREE.BufferGeometry {
   const p = g.attributes.position as THREE.BufferAttribute;
-  for (let i = 0; i < p.count; i++) {
-    let x = p.getX(i), y = p.getY(i);
-    const z = p.getZ(i);
-    const front = Math.max(0, x), low = Math.max(0, -y);
-    x += 0.22 * front * low;          // chin bar forward
-    y -= 0.16 * front * low;          // and down
-    y += 0.06 * Math.max(0, y);       // taller crown
-    x -= 0.08 * Math.max(0, -x) * Math.max(0, y); // sloped back
-    p.setXYZ(i, x * 1.06, y * 1.04, z * 0.9);
-  }
+  for (let i = 0; i < p.count; i++) p.setXYZ(i, ...shapePoint(p.getX(i), p.getY(i), p.getZ(i), r));
   p.needsUpdate = true;
   g.computeVertexNormals();
   return g;
 }
 
+/** Spherical angles of a unit-sphere point, in three.js SphereGeometry convention (front = phi pi). */
+function angles(x: number, y: number, z: number) {
+  const theta = Math.acos(Math.max(-1, Math.min(1, y)));
+  let phi = Math.atan2(z, -x);
+  if (phi < 0) phi += Math.PI * 2;
+  return { phi, theta };
+}
+
+/** Drop the triangles of an indexed sphere whose centre lies inside the eye port. */
+function cutPort(g: THREE.SphereGeometry, margin = 0): THREE.BufferGeometry {
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  const idx = g.index!.array;
+  const keep: number[] = [];
+  for (let i = 0; i < idx.length; i += 3) {
+    const [a, b, c] = [idx[i], idx[i + 1], idx[i + 2]];
+    const x = (pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3, y = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3, z = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3;
+    const len = Math.hypot(x, y, z) || 1;
+    const { phi, theta } = angles(x / len, y / len, z / len);
+    const inPort = Math.abs(phi - Math.PI) < PORT.phi + margin && theta > PORT.top - margin && theta < PORT.bottom + margin;
+    if (!inPort) keep.push(a, b, c);
+  }
+  g.setIndex(keep);
+  return g;
+}
+
+const band = (r: number, phiHalf: number, t0: number, t1: number, seg = 64) =>
+  shaped(new THREE.SphereGeometry(r, seg, 3, Math.PI - phiHalf, phiHalf * 2, t0, t1 - t0), r);
+
 /** Helmet facing +x, about 2 units tall, centred near the origin. */
 export function buildHelmet(spec: HelmetSpec): THREE.Group {
   const grp = new THREE.Group();
-  const shellMat = paint("#ffffff", { map: paintTexture(spec), metalness: 0.15, roughness: 0.28 });
-  grp.add(new THREE.Mesh(deform(new THREE.SphereGeometry(1, 96, 64, 0, Math.PI * 2, 0, Math.PI * 0.82)), shellMat));
-  // Visor (eye port), its seal, and the chin vent.
-  grp.add(new THREE.Mesh(deform(new THREE.SphereGeometry(1.016, 64, 16, Math.PI - 0.82, 1.64, Math.PI * 0.42, Math.PI * 0.12)), glass()));
-  grp.add(new THREE.Mesh(deform(new THREE.SphereGeometry(1.022, 64, 3, Math.PI - 0.86, 1.72, Math.PI * 0.413, Math.PI * 0.012)), paint(spec.colors[2])));
-  grp.add(new THREE.Mesh(deform(new THREE.SphereGeometry(1.012, 24, 4, Math.PI - 0.3, 0.6, Math.PI * 0.64, Math.PI * 0.05)), new THREE.MeshStandardMaterial({ color: "#111", roughness: 0.6 })));
-  // Rear spoiler (gurney) and top intake.
-  const spoiler = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.05, 0.62), paint(spec.colors[2]));
-  spoiler.position.set(-0.8, 0.52, 0);
-  spoiler.rotation.z = -0.95;
-  grp.add(spoiler);
-  const intake = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.2, 4, 12), new THREE.MeshStandardMaterial({ color: "#151515", roughness: 0.5 }));
-  intake.rotation.z = Math.PI / 2;
-  intake.position.set(0.32, 1.0, 0);
-  grp.add(intake);
-  // Neck opening.
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(Math.sin(Math.PI * 0.82) * 0.95, 0.045, 12, 64), new THREE.MeshStandardMaterial({ color: "#0d0d0d", roughness: 0.8 }));
-  ring.rotation.x = Math.PI / 2;
-  ring.position.set(0.06, Math.cos(Math.PI * 0.82) * 1.04, 0);
-  ring.scale.set(1.06, 0.9, 1);
-  grp.add(ring);
+  const accent = spec.colors[2];
+  const black = new THREE.MeshStandardMaterial({ color: "#0c0c0e", roughness: 0.55, metalness: 0.2 });
+  // Painted shell with the eye port cut out.
+  const shellGeo = cutPort(new THREE.SphereGeometry(1, 128, 96, 0, Math.PI * 2, 0, Math.PI * 0.86));
+  grp.add(new THREE.Mesh(shaped(shellGeo), paint("#ffffff", { map: paintTexture(spec), metalness: 0.15, roughness: 0.26, side: THREE.DoubleSide })));
+  // Padded liner seen through the port.
+  grp.add(new THREE.Mesh(shaped(new THREE.SphereGeometry(0.94, 48, 32, Math.PI - 1.0, 2.0, Math.PI * 0.36, Math.PI * 0.26), 0.94),
+    new THREE.MeshStandardMaterial({ color: "#1a1a1f", roughness: 0.95, side: THREE.DoubleSide })));
+  // Visor: tinted, standing slightly proud of the shell, with an iridium hint of the accent colour.
+  const visorMat = new THREE.MeshPhysicalMaterial({ color: "#0b0b10", metalness: 0.55, roughness: 0.06, clearcoat: 1, transparent: true, opacity: 0.9,
+    sheen: 1, sheenColor: new THREE.Color(accent), sheenRoughness: 0.35, iridescence: 0.6, iridescenceIOR: 1.6 });
+  grp.add(new THREE.Mesh(band(1.035, PORT.phi + 0.06, PORT.top - 0.012 * Math.PI, PORT.bottom + 0.012 * Math.PI), visorMat));
+  // Rubber seals above and below the port, and the visor pivots.
+  grp.add(new THREE.Mesh(band(1.045, PORT.phi + 0.1, PORT.top - 0.026 * Math.PI, PORT.top - 0.01 * Math.PI), black));
+  grp.add(new THREE.Mesh(band(1.04, PORT.phi + 0.06, PORT.bottom + 0.008 * Math.PI, PORT.bottom + 0.022 * Math.PI), black));
+  for (const s of [-1, 1]) {
+    const piv = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.05, 28), paint(accent, { metalness: 0.6 }));
+    const phi = Math.PI + s * (PORT.phi + 0.18), th = (PORT.top + PORT.bottom) / 2;
+    const [px, py, pz] = shapePoint(-Math.cos(phi) * Math.sin(th), Math.cos(th), Math.sin(phi) * Math.sin(th), 1.0);
+    piv.position.set(px, py, pz);
+    piv.lookAt(px * 2, py * 2, pz * 2);
+    piv.rotateX(Math.PI / 2);
+    grp.add(piv);
+  }
+  // Chin vents.
+  for (let k = -1; k <= 1; k++) {
+    const th = 0.69 * Math.PI, phi = Math.PI + k * 0.17;
+    const [vx, vy, vz] = shapePoint(-Math.cos(phi) * Math.sin(th), Math.cos(th), Math.sin(phi) * Math.sin(th), 1.01);
+    const vent = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.13, 4, 8), black);
+    vent.position.set(vx, vy, vz);
+    vent.lookAt(vx * 2, vy * 2 - 0.4, vz * 2);
+    vent.rotateX(Math.PI / 2);
+    grp.add(vent);
+  }
+  // Flush top vents and the rear gurney.
+  for (const k of [-1, 1]) {
+    const th = 0.16 * Math.PI, phi = Math.PI + k * 0.28;
+    const [vx, vy, vz] = shapePoint(-Math.cos(phi) * Math.sin(th), Math.cos(th), Math.sin(phi) * Math.sin(th), 1.0);
+    const vent = new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 0.16, 4, 8), black);
+    vent.position.set(vx, vy, vz);
+    vent.lookAt(vx * 2, vy * 2, vz * 2);
+    vent.rotateY(Math.PI / 2);
+    vent.scale.set(1, 1, 0.5);
+    grp.add(vent);
+  }
+  const gurneyShape = new THREE.Shape();
+  gurneyShape.moveTo(0, 0); gurneyShape.lineTo(0.26, 0.02); gurneyShape.lineTo(0.3, 0.1); gurneyShape.lineTo(0.02, 0.06); gurneyShape.closePath();
+  const gurney = new THREE.Mesh(new THREE.ExtrudeGeometry(gurneyShape, { depth: 0.7, bevelEnabled: true, bevelSize: 0.01, bevelThickness: 0.01, bevelSegments: 2 }), paint(accent));
+  gurney.geometry.translate(0, 0, -0.35);
+  gurney.position.set(-0.98, 0.42, 0);
+  gurney.rotation.z = 2.3;
+  grp.add(gurney);
+  // Neck roll.
+  const neck = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.07, 14, 72), black);
+  neck.rotation.x = Math.PI / 2;
+  neck.scale.set(1.12, 0.9, 1);
+  neck.position.set(0.02, -0.8, 0);
+  grp.add(neck);
   grp.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return grp;
 }

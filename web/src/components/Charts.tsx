@@ -24,8 +24,8 @@ export function DotPlot({ rows, aLabel, bLabel, lo, hi, step = 0.5 }: { rows: Do
             <rect x={0} y={cy - rowH / 2} width={W} height={rowH} fill="transparent" />
             <text className="lbl" x={0} y={cy + 4} style={{ fontWeight: r.strong ? 700 : 400 }}>{r.label}</text>
             <line x1={x(Math.min(r.a, r.b))} x2={x(Math.max(r.a, r.b))} y1={cy} y2={cy} stroke="var(--line)" strokeWidth={2} />
-            <circle cx={x(r.b)} cy={cy} r={6} fill="var(--g-car)" stroke="var(--surface)" strokeWidth={2} />
-            <circle cx={x(r.a)} cy={cy} r={7} fill="var(--g-driver)" stroke="var(--surface)" strokeWidth={2} />
+            <circle cx={x(r.b)} cy={cy} r={6} fill="var(--series-base)" stroke="var(--surface)" strokeWidth={2} />
+            <circle cx={x(r.a)} cy={cy} r={7} fill="var(--series-model)" stroke="var(--surface)" strokeWidth={2} />
             <text x={W - right + 10} y={cy + 4}>{r.a.toFixed(2)}</text>
           </g>
         );
@@ -44,7 +44,7 @@ export function Lollipops({ items, lo, hi, step }: { items: { label: string; val
       <g className="grid">{tk.map((t) => <line key={t} x1={x(t)} x2={x(t)} y1={top} y2={H - 20} />)}</g>
       {tk.map((t) => <text key={t} x={x(t)} y={H - 5} textAnchor="middle">{t.toFixed(1)}</text>)}
       {items.map((it, i) => {
-        const cy = top + i * rowH + rowH / 2, col = it.strong ? "var(--g-driver)" : "var(--out)";
+        const cy = top + i * rowH + rowH / 2, col = it.strong ? "var(--series-model)" : "var(--series-base)";
         return (
           <g key={it.label} data-tip={`${it.label}\n${it.value.toFixed(2)} correct / 10`}>
             <rect x={0} y={cy - rowH / 2} width={W} height={rowH} fill="transparent" />
@@ -75,7 +75,7 @@ export function Bars({ items, total }: { items: { label: string; value: number }
         return (
           <g key={d.label} data-tip={`${d.label} correct\n${d.value} sessions (${Math.round((d.value / total) * 100)}%)`}>
             <rect x={x0 - 4} y={top} width={w + 8} height={H - bottom - top} fill="transparent" />
-            <path d={path} fill="var(--g-driver)" />
+            <path d={path} fill="var(--series-model)" />
             {d.value > 0 && <text x={x0 + w / 2} y={yt - 5} textAnchor="middle">{d.value}</text>}
             <text className="lbl" x={x0 + w / 2} y={H - 10} textAnchor="middle">{d.label}</text>
           </g>
@@ -86,16 +86,18 @@ export function Bars({ items, total }: { items: { label: string; value: number }
 }
 
 /** Line over races (lower = better is drawn higher when ``invert``). */
-export function RaceLine({ points, yLabel, invert = true, fmt = (v: number) => v.toFixed(2), color = "var(--g-car)" }: {
+export function RaceLine({ points, yLabel, invert = true, fmt = (v: number) => v.toFixed(2), color = "var(--series-model)", width = 640, height = 220 }: {
   points: { label: string; value: number | null; tip?: string }[];
   yLabel: string;
   invert?: boolean;
   fmt?: (v: number) => string;
   color?: string;
+  width?: number;
+  height?: number;
 }) {
   const vals = points.map((p) => p.value).filter((v): v is number => v != null);
   if (!vals.length) return null;
-  const W = 640, H = 220, left = 46, right = 14, top = 14, bottom = 34;
+  const W = width, H = height, left = 46, right = 14, top = 14, bottom = 34;
   let lo = Math.min(...vals), hi = Math.max(...vals);
   if (hi - lo < 1e-6) { lo -= 0.5; hi += 0.5; }
   const pad = (hi - lo) * 0.08; lo = Math.max(0, lo - pad); hi += pad;

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApi, useMeta } from "../api";
-import { Car3D, CarImage } from "../components/lazy3d";
+import { Car3D, CarImage, HelmetImage } from "../components/lazy3d";
 import { ERA_SPECS, PART_LABEL, PART_ORDER, type PartId } from "../three/parts";
 import { RaceLine } from "../components/Charts";
 import { Avatar, ContribBars, ErrorBox, fmt, Loading, pct, signed, Swatch, Tile, useHelmetSpec } from "../components/ui";
@@ -162,6 +162,11 @@ function EraSpecs({ era, label }: { era: string; label: string }) {
   );
 }
 
+function DriverHelmet({ driver, season, team }: { driver: string; season: number; team: string }) {
+  const spec = useHelmetSpec(driver, season, team);
+  return <HelmetImage spec={spec} alt="" />;
+}
+
 function CarViewer({ car, part, onSelect }: { car: CarDetail; part: PartId | null; onSelect: (p: PartId) => void }) {
   const helmet = useHelmetSpec(car.drivers[0]?.driver ?? "", car.season, car.team);
   return <Car3D era={car.era} livery={car.livery} selected={part} onSelect={onSelect} helmet={car.drivers.length ? helmet : undefined} label={`${car.name} ${car.chassis ?? ""}`} />;
@@ -198,6 +203,7 @@ export function CarPage() {
       </div>
 
       <div className="car-wrap">
+        <div className="stackcol">
         <section className="panel">
           <CarViewer car={car} part={part} onSelect={(p) => setPart((cur) => (cur === p ? null : p))} />
           <div className="part-list" role="group" aria-label="Car parts">
@@ -205,34 +211,37 @@ export function CarPage() {
           </div>
           <p className="credit">3D model built from the {car.era_label.toLowerCase()} regulation dimensions (wheelbase, width, wheels, wing spans) in {car.name}'s {car.season} colours. Simplified shapes, no sponsor logos; not a replica of the real car.</p>
         </section>
-        <PartPanel part={part} car={car} cars={cars} />
+        <div className="tiles car-tiles">
+          <Tile label="Avg quali position" value={fmt(car.avg_pos)} sub={`${car.sessions} entries (2 per race)`} />
+          <Tile label="Gap to pole" value={`+${fmt(car.pace_gap, 2)}%`} sub="best lap of the two cars" />
+          <Tile label="Pace rank" value={fmt(car.pace_rank, 1)} sub={`average of ${car.teams_in_season} teams`} />
+          <Tile label="Reached Q3" value={pct(car.q3_rate)} />
+          <Tile label="Model right" value={pct(car.right / Math.max(1, car.sessions))} sub="for this car's drivers" />
+        </div>
+        </div>
+        <div className="stackcol">
+          <PartPanel part={part} car={car} cars={cars} />
+          <section className="panel">
+            <div className="panel-head"><h2>Who drove it</h2><span className="note">average push on the prediction</span></div>
+            {car.drivers.map((d) => (
+              <div key={d.driver} style={{ display: "grid", gap: 8 }}>
+                <Link className="cell-name" to={`/drivers/${d.driver}`}><span className="mini-helmet"><DriverHelmet driver={d.driver} season={car.season} team={car.team} /></span><span><b>{d.name}</b> · {d.sessions} sessions · avg P{fmt(d.avg_pos)}</span></Link>
+                <ContribBars contrib={{ driver: d.contrib_driver ?? 0, car: d.contrib_car ?? 0, weekend: d.contrib_weekend ?? 0, context: d.contrib_context ?? 0 }} />
+              </div>
+            ))}
+          </section>
+        </div>
       </div>
 
-      <div className="tiles">
-        <Tile label="Avg quali position" value={fmt(car.avg_pos)} sub={`${car.sessions} entries (2 per race)`} />
-        <Tile label="Gap to pole" value={`+${fmt(car.pace_gap, 2)}%`} sub="best lap of the two cars" />
-        <Tile label="Pace rank" value={fmt(car.pace_rank, 1)} sub={`average of ${car.teams_in_season} teams`} />
-        <Tile label="Reached Q3" value={pct(car.q3_rate)} />
-        <Tile label="Model right" value={pct(car.right / Math.max(1, car.sessions))} sub="for this car's drivers" />
-      </div>
 
-      <div className="grid-2">
+      <div>
         <section className="panel">
           <div className="panel-head"><h2>Pace through the season</h2><span className="note">gap to pole, % (lower is faster)</span></div>
           <RaceLine
             points={car.trend.map((t) => ({ label: `R${t.round}`, value: t.gap, tip: `R${t.round} ${t.gp}\n+${t.gap?.toFixed(3)}% to pole · pace rank ${t.rank}\nbest grid slot P${t.best_pos}` }))}
-            yLabel="Gap to pole by race" fmt={(v) => `${v.toFixed(1)}%`}
+            yLabel="Gap to pole by race" fmt={(v) => `${v.toFixed(1)}%`} width={1120} height={240}
           />
           <p className="note">The team's fastest qualifying lap at each race, as a percentage slower than pole. Upgrades and regressions show up here.</p>
-        </section>
-        <section className="panel">
-          <div className="panel-head"><h2>Who drove it</h2><span className="note">average push on the prediction</span></div>
-          {car.drivers.map((d) => (
-            <div key={d.driver} style={{ display: "grid", gap: 8 }}>
-              <Link className="cell-name" to={`/drivers/${d.driver}`}><Avatar driver={d.driver} team={car.team} size={36} /><span><b>{d.name}</b> · {d.sessions} sessions · avg P{fmt(d.avg_pos)}</span></Link>
-              <ContribBars contrib={{ driver: d.contrib_driver ?? 0, car: d.contrib_car ?? 0, weekend: d.contrib_weekend ?? 0, context: d.contrib_context ?? 0 }} />
-            </div>
-          ))}
         </section>
       </div>
 

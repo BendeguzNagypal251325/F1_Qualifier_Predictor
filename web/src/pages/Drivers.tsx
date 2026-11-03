@@ -54,6 +54,19 @@ export function DriverList() {
   );
 }
 
+/** Consecutive seasons with the same team, merged into one spell. */
+function spells(teams: { team: string; season: number; sessions: number }[]) {
+  const out: { team: string; seasons: number[]; sessions: number }[] = [];
+  [...teams].sort((x, y) => x.season - y.season).forEach((t) => {
+    const last = out[out.length - 1];
+    if (last && last.team === t.team && t.season - last.seasons[last.seasons.length - 1] <= 1) {
+      if (!last.seasons.includes(t.season)) last.seasons.push(t.season);
+      last.sessions += t.sessions;
+    } else out.push({ team: t.team, seasons: [t.season], sessions: t.sessions });
+  });
+  return out;
+}
+
 export function DriverPage() {
   const { id = "" } = useParams();
   const meta = useMeta();
@@ -75,6 +88,7 @@ export function DriverPage() {
         <div className="hero-text">
           <span className="eyebrow">{team.name}{d.number ? ` · #${d.number}` : ""}</span>
           <h1>{d.name}</h1>
+          <span className="script-name" aria-hidden>{d.name}</span>
           <SeasonStrip driver={d.id} labels />
           <p className="note">Helmet: our own design for {d.name.split(" ")[0]}, in the {heroTeam.name} colours of {helmet.year}. Pick one season below to repaint it. Not the real helmet.</p>
           <div className="controls"><SeasonFilter value={seasons} onChange={setSeasons} /></div>
@@ -86,10 +100,9 @@ export function DriverPage() {
             ))}
           </div>
         </div>
-        <div className="hero-img" style={{ background: `radial-gradient(80% 80% at 50% 45%, color-mix(in oklab, ${heroTeam.color} 50%, #15151e), #0b0b0f 75%)` }}>
+        <div className="hero-img helmet-stage" style={{ background: `radial-gradient(70% 75% at 50% 50%, color-mix(in oklab, ${heroTeam.color} 55%, #15151e), #0b0b0f 78%)` }}>
           <Helmet3D spec={helmet} label={`${d.name}'s helmet in ${heroTeam.name} colours, ${helmet.year}`} />
-          <span className="script-name" style={{ position: "absolute", left: 18, bottom: 10, pointerEvents: "none" }} aria-hidden>{d.name}</span>
-          {d.number != null && <span className="dcard-media" style={{ position: "absolute", right: 16, top: 10, background: "none", aspectRatio: "auto", overflow: "visible" }}><span className="num" style={{ position: "static", fontSize: "2.2rem" }}>{d.number}</span></span>}
+          {d.number != null && <span className="hero-num" aria-hidden>{d.number}</span>}
         </div>
       </section>
 
@@ -110,15 +123,15 @@ export function DriverPage() {
               <p className="note">Negative = the model moved {d.name.split(" ")[0]} up the grid, compared with an average entry. Car = the form of the team's car; driver = {d.name.split(" ")[0]}'s own record, which also reflects the cars driven before.</p>
             </section>
             <section className="panel">
-              <div className="panel-head"><h2>Teams</h2></div>
-              <table>
-                <thead><tr><th>Season</th><th>Team</th><th className="num">Sessions</th></tr></thead>
+              <div className="panel-head"><h2>Teams</h2><span className="note">click a year to open that car</span></div>
+              <table className="wrap">
+                <thead><tr><th>Team</th><th>Cars</th><th className="num">Sessions</th></tr></thead>
                 <tbody>
-                  {data.teams.map((t) => (
-                    <tr key={`${t.team}-${t.season}`}>
-                      <td className="mono">{t.season}</td>
-                      <td><Link to={`/cars/${t.season}/${t.team}`}><Swatch team={t.team} /> {meta.teams.find((x) => x.id === t.team)?.name}</Link></td>
-                      <td className="num">{t.sessions}</td>
+                  {spells(data.teams).map((sp) => (
+                    <tr key={`${sp.team}-${sp.seasons[0]}`}>
+                      <td><Swatch team={sp.team} /> {meta.teams.find((x) => x.id === sp.team)?.name} <span className="note">{sp.seasons[0]}{sp.seasons.length > 1 ? `–${String(sp.seasons[sp.seasons.length - 1]).slice(2)}` : ""}</span></td>
+                      <td><div className="legend">{sp.seasons.map((y) => <Link key={y} to={`/cars/${y}/${sp.team}`} className="badge">{meta.cars[String(y)]?.[sp.team]?.chassis ?? y}</Link>)}</div></td>
+                      <td className="num">{sp.sessions}</td>
                     </tr>
                   ))}
                 </tbody>
