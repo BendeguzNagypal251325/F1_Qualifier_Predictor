@@ -6,7 +6,6 @@
 Configuration (environment variables):
     F1QP_LIVE_INTERVAL   seconds between live refreshes (default 900; 0 turns live updates off)
     F1QP_LIVE_UPDATE     1 = also re-download F1DB on each live refresh (default 1)
-    F1QP_MEDIA           on/off: show the upstream driver/car/track pictures (default on)
     F1QP_ADMIN_TOKEN     token for POST /api/live/refresh (no token = endpoint disabled)
     F1QP_STATIC_DIR      built front end (default web/dist)
     F1QP_CORS_ORIGINS    comma-separated origins for a separately hosted front end
@@ -37,7 +36,6 @@ from . import model as M
 from . import names as N
 from .build import GROUPS, State, compute_state, data_mtime, load_state, save_state, ARTIFACT
 from .data import ROOT
-from .media import load_manifest
 from .tracks import outlines
 
 log = logging.getLogger("f1qp")
@@ -50,7 +48,6 @@ log = logging.getLogger("f1qp")
 class Settings:
     live_interval: int = int(os.environ.get("F1QP_LIVE_INTERVAL", "900"))
     live_update_f1db: bool = os.environ.get("F1QP_LIVE_UPDATE", "1") == "1"
-    media: bool = os.environ.get("F1QP_MEDIA", "on").lower() not in ("off", "0", "false")
     admin_token: str = os.environ.get("F1QP_ADMIN_TOKEN", "")
     static_dir: Path = Path(os.environ.get("F1QP_STATIC_DIR", str(ROOT / "web" / "dist")))
     cors_origins: tuple[str, ...] = tuple(o for o in os.environ.get("F1QP_CORS_ORIGINS", "").split(",") if o)
@@ -231,9 +228,6 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
             raise HTTPException(503, "Data is still loading")
         return app_state.state
 
-    def media() -> dict:
-        return load_manifest() if settings.media else {"drivers": {}, "cars": {}, "tracks": {}, "credit": "", "source": ""}
-
     # ---------------------------------------------------------------- meta
 
     @app.get("/api/health", tags=["meta"])
@@ -245,13 +239,16 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
     @app.get("/api/meta", tags=["meta"])
     def meta():
         st = S()
-        wf, m = st.wf, media()
+        wf = st.wf
         last = wf.sort_values("date").groupby("driver_id").tail(1).set_index("driver_id")
         counts = wf.groupby("driver_id").size()
+        # Team per season (the last team of that season), so initials can take that season's colour.
+        by_season = wf.sort_values("date").groupby(["driver_id", "season"])["constructor_id"].last()
         drivers = [
             {"id": d, "name": N.driver_name(d), "team": last.loc[d, "constructor_id"], "last_season": int(last.loc[d, "season"]),
              "number": None if pd.isna(last.loc[d, "driver_number"]) else int(last.loc[d, "driver_number"]),
-             "sessions": int(counts[d]), "photos": m["drivers"].get(d, {})}
+             "sessions": int(counts[d]),
+             "teams": {str(y): t for y, t in by_season.loc[d].items()}}
             for d in sorted(counts.index, key=lambda d: (-counts[d], d))
         ]
         teams = sorted(wf["constructor_id"].unique())
@@ -263,8 +260,7 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
             "drivers": drivers,
             "teams": [{"id": t, "name": N.team_name(t), "color": N.team_color(t)} for t in teams],
             "circuits": [{"id": c, "name": N.circuit_name(c), "outline": outl.get(c, {}).get("path"),
-                          "length_m": outl.get(c, {}).get("length_m"), "map": m["tracks"].get(c)} for c in circuits],
-            "media": {"enabled": settings.media, "credit": m.get("credit"), "source": m.get("source"), "commit": m.get("commit")},
+                          "length_m": outl.get(c, {}).get("length_m")} for c in circuits],
             "groups": st.overview["feature_groups"],
             "live": live.status(),
         }
@@ -373,12 +369,11 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
         rows = st.wf[st.wf["season"] == season]
         if rows.empty:
             raise HTTPException(404, f"No data for {season}")
-        m = media()
         out = []
         for t, g in rows.groupby("constructor_id"):
             team_best = g.groupby("race_key")["pace_gap"].min()
             out.append({"team": t, "name": N.team_name(t), "engine": g["engine"].mode().iloc[0], **C.car_info(season, t),
-                        "photo": m["cars"].get(t, {}).get(str(season)), "avg_pos": _f(g["quali_pos"].mean()),
+                        "avg_pos": _f(g["quali_pos"].mean()),
                         "pace_gap": _f(team_best.mean(), 3), "car_contrib": _f(g["contrib_car"].mean()),
                         "q3_rate": _f(g["top10"].mean(), 3), "drivers": sorted(g["driver_id"].unique())})
         out.sort(key=lambda c: c["pace_gap"] if c["pace_gap"] is not None else 9)
@@ -402,12 +397,11 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
         for d, g in rows.groupby("driver_id"):
             drivers.append({"driver": d, "name": N.driver_name(d), **_stats(g), "vs_teammate": _f(g["vs_teammate"].mean())})
         drivers.sort(key=lambda x: -x["sessions"])
-        m = media()
         lineage_id = rows["team_id"].iloc[0]
         lineage = (st.wf[st.wf["team_id"] == lineage_id].drop_duplicates("season")[["season", "constructor_id"]].sort_values("season"))
         return {"season": season, "team": team, "name": N.team_name(team), "engine": rows["engine"].mode().iloc[0],
                 "lineage": [{"season": int(r.season), "team": r.constructor_id, "name": N.team_name(r.constructor_id)} for r in lineage.itertuples()],
-                **C.car_info(season, team), "photo": m["cars"].get(team, {}).get(str(season)), "parts": C.PARTS,
+                **C.car_info(season, team), "parts": C.PARTS,
                 **_stats(rows), "pace_gap": _f(team_best[team].mean(), 3),
                 "pace_rank": _f(rank[team].mean(), 1), "teams_in_season": int(team_best.shape[1]),
                 "trend": trend, "drivers": drivers}

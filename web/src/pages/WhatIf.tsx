@@ -64,7 +64,7 @@ export default function WhatIf() {
         <div className="grid-2" style={{ opacity: swap.loading ? 0.6 : 1 }}>
           <section className="panel">
             <span className="eyebrow">Real car</span>
-            <div className="cell-name"><Avatar driver={s.driver} season={season} size={48} /><div><h2>{name(s.driver)}</h2><span className="note"><Swatch team={s.from_team} /> {tname(s.from_team)}</span></div></div>
+            <div className="cell-name"><Avatar driver={s.driver} team={s.from_team} size={48} /><div><h2>{name(s.driver)}</h2><span className="note"><Swatch team={s.from_team} /> {tname(s.from_team)}</span></div></div>
             <div className="tiles">
               <div className="tile"><span className="eyebrow">Predicted</span><span className="v">P{s.own_grid}</span><span className="s">model score {s.own_score.toFixed(1)}</span></div>
               <div className="tile"><span className="eyebrow">Actual</span><span className="v">{s.actual ? <PosChip pos={s.actual} /> : "–"}</span></div>
@@ -73,7 +73,7 @@ export default function WhatIf() {
           </section>
           <section className="panel" style={{ borderColor: "var(--focus)" }}>
             <span className="eyebrow">What if</span>
-            <div className="cell-name"><Avatar driver={s.driver} season={season} size={48} /><div><h2>{name(s.driver)}</h2><span className="note"><Swatch team={s.team} /> in the {tname(s.team)}</span></div></div>
+            <div className="cell-name"><Avatar driver={s.driver} team={s.team} size={48} /><div><h2>{name(s.driver)}</h2><span className="note"><Swatch team={s.team} /> in the {tname(s.team)}</span></div></div>
             <div className="tiles">
               <div className="tile"><span className="eyebrow">Predicted</span><span className="v">P{s.grid}</span><span className="s">model score {s.score.toFixed(1)}</span></div>
               <div className="tile"><span className="eyebrow">Change</span><span className="v" style={{ color: s.grid < s.own_grid ? "var(--good)" : s.grid > s.own_grid ? "var(--bad)" : undefined }}>{s.grid === s.own_grid ? "±0" : `${s.grid < s.own_grid ? "▲" : "▼"} ${Math.abs(s.grid - s.own_grid)}`}</span><span className="s">grid places</span></div>

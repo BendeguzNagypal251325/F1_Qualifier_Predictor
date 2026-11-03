@@ -20,7 +20,6 @@ f1qp-train = "f1qp.train:main"
 f1qp-predict = "f1qp.predict:main"
 f1qp-build = "f1qp.build:main"
 f1qp-serve = "f1qp.server:main"
-f1qp-media = "f1qp.media:main"
 f1qp-live = "f1qp.live:main"
 
 [dependency-groups]

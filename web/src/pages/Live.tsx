@@ -59,7 +59,7 @@ export default function LivePage() {
                   {p.rows.map((r) => (
                     <tr key={r.driver_id} className={r.pred_pos === 10 ? "cut" : ""}>
                       <td className="num">{r.pred_pos}</td>
-                      <td><Link className="cell-name" to={`/drivers/${r.driver_id}`}><Avatar driver={r.driver_id} season={p.season} size={30} /><span>{name(r.driver_id)}</span></Link></td>
+                      <td><Link className="cell-name" to={`/drivers/${r.driver_id}`}><Avatar driver={r.driver_id} team={r.constructor_id} size={30} /><span>{name(r.driver_id)}</span></Link></td>
                       <td><Swatch team={r.constructor_id} /> {team(r.constructor_id)}</td>
                       <td className="num">{r.fp_last_pos ? `P${r.fp_last_pos}` : "–"}</td>
                       <td style={{ minWidth: 160 }}><ContribStack contrib={r.contrib} /></td>

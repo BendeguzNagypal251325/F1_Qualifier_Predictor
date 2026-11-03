@@ -31,7 +31,7 @@ COPY pyproject.toml uv.lock README.md ./
 RUN --mount=type=secret,id=ca_cert,required=false \
     if [ -f /run/secrets/ca_cert ]; then export SSL_CERT_FILE=/run/secrets/ca_cert; fi; uv sync --frozen --no-dev --no-install-project
 COPY f1qp/ f1qp/
-COPY data/qualifying_entries.csv data/media_manifest.json data/
+COPY data/qualifying_entries.csv data/
 RUN uv sync --frozen --no-dev && f1qp-build
 COPY --from=web /web/dist web/dist
 RUN useradd --create-home --uid 10001 f1qp && chown -R f1qp /app

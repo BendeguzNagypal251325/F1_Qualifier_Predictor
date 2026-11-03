@@ -55,7 +55,7 @@ export default function Sessions() {
                   {s.rows.map((r) => (
                     <tr key={r.driver} className={r.pred_rank === 10 ? "cut" : ""}>
                       <td className="num">{r.pred_rank}</td>
-                      <td><Link className="cell-name" to={`/drivers/${r.driver}`}><Avatar driver={r.driver} season={s.season} size={30} /><span>{name(r.driver)}</span></Link></td>
+                      <td><Link className="cell-name" to={`/drivers/${r.driver}`}><Avatar driver={r.driver} team={r.team} size={30} /><span>{name(r.driver)}</span></Link></td>
                       <td><Link to={`/cars/${s.season}/${r.team}`}><Swatch team={r.team} /> {tname(r.team)}</Link></td>
                       <td className="num">{r.fp_last_pos ? `P${r.fp_last_pos}` : "–"}</td>
                       <td style={{ minWidth: 150 }}><ContribStack contrib={r.contrib} /></td>

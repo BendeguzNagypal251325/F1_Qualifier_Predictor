@@ -11,10 +11,11 @@ export interface DriverMeta {
   last_season: number;
   number: number | null;
   sessions: number;
-  photos: Record<string, string>;
+  /** season -> team id that season (last team if they changed mid-season) */
+  teams: Record<string, string>;
 }
 export interface TeamMeta { id: string; name: string; color: string }
-export interface CircuitMeta { id: string; name: string; outline: string | null; length_m: number | null; map: string | null }
+export interface CircuitMeta { id: string; name: string; outline: string | null; length_m: number | null }
 export interface LiveStatus { enabled: boolean; interval_s: number; last_run: string | null; running: boolean; error: string | null }
 
 export interface Meta {
@@ -25,7 +26,6 @@ export interface Meta {
   drivers: DriverMeta[];
   teams: TeamMeta[];
   circuits: CircuitMeta[];
-  media: { enabled: boolean; credit: string; source: string; commit: string };
   groups: Record<Group, string[]>;
   live: LiveStatus;
 }
@@ -110,7 +110,6 @@ export interface CarSummary {
   era: string;
   era_label: string;
   era_summary: string;
-  photo: string | null;
   avg_pos: number;
   pace_gap: number;
   car_contrib: number;
@@ -129,7 +128,6 @@ export interface CarDetail extends Stats {
   era: string;
   era_label: string;
   era_summary: string;
-  photo: string | null;
   parts: Record<string, string>;
   pace_gap: number;
   pace_rank: number;

@@ -85,7 +85,6 @@ function EngineTable({ data }: { data: CarListData }) {
 }
 
 function PartPanel({ part, car, cars }: { part: PartId | null; car: CarDetail; cars?: CarListData | null }) {
-  const first = car.name.split(" ")[0];
   if (!part) {
     return (
       <div className="panel">
@@ -110,7 +109,7 @@ function PartPanel({ part, car, cars }: { part: PartId | null; car: CarDetail; c
         <thead><tr><th>Driver</th><th className="num">Avg</th><th className="num">vs teammate</th><th className="num">Driver push</th></tr></thead>
         <tbody>{car.drivers.map((d) => (
           <tr key={d.driver}>
-            <td><Link className="cell-name" to={`/drivers/${d.driver}`}><Avatar driver={d.driver} season={car.season} size={26} /><span>{d.name}</span></Link></td>
+            <td><Link className="cell-name" to={`/drivers/${d.driver}`}><Avatar driver={d.driver} team={car.team} size={26} /><span>{d.name}</span></Link></td>
             <td className="num">{fmt(d.avg_pos)}</td>
             <td className="num" data-tip="Average places ahead (−) or behind (+) the teammate">{signed(d.vs_teammate)}</td>
             <td className="num">{signed(d.contrib_driver)}</td>
@@ -136,7 +135,7 @@ function PartPanel({ part, car, cars }: { part: PartId | null; car: CarDetail; c
   }
   return (
     <div className="panel">
-      <span className="eyebrow">{car.chassis} · {first}</span>
+      <span className="eyebrow">{car.name} {car.chassis} · {car.season}</span>
       <h2>{PART_LABEL[part]}</h2>
       <p className="note" style={{ color: "var(--ink-2)" }}>{car.parts[part]}</p>
       {body}
@@ -164,7 +163,6 @@ function EraSpecs({ era, label }: { era: string; label: string }) {
 
 export function CarPage() {
   const { season = "", team = "" } = useParams();
-  const meta = useMeta();
   const nav = useNavigate();
   const [part, setPart] = useState<PartId | null>(null);
   const { data: car, error } = useApi<CarDetail>(`/api/cars/${season}/${team}`);
@@ -225,19 +223,13 @@ export function CarPage() {
           <div className="panel-head"><h2>Who drove it</h2><span className="note">average push on the prediction</span></div>
           {car.drivers.map((d) => (
             <div key={d.driver} style={{ display: "grid", gap: 8 }}>
-              <Link className="cell-name" to={`/drivers/${d.driver}`}><Avatar driver={d.driver} season={car.season} size={36} /><span><b>{d.name}</b> · {d.sessions} sessions · avg P{fmt(d.avg_pos)}</span></Link>
+              <Link className="cell-name" to={`/drivers/${d.driver}`}><Avatar driver={d.driver} team={car.team} size={36} /><span><b>{d.name}</b> · {d.sessions} sessions · avg P{fmt(d.avg_pos)}</span></Link>
               <ContribBars contrib={{ driver: d.contrib_driver ?? 0, car: d.contrib_car ?? 0, weekend: d.contrib_weekend ?? 0, context: d.contrib_context ?? 0 }} />
             </div>
           ))}
         </section>
       </div>
 
-      {car.photo && (
-        <section className="panel">
-          <img src={car.photo} alt={`${car.name} ${car.chassis}`} loading="lazy" style={{ borderRadius: 8, width: "100%", maxHeight: 520, objectFit: "contain", background: "#0b0b0c" }} />
-          <p className="credit">Photo: {meta.media.credit}</p>
-        </section>
-      )}
     </>
   );
 }

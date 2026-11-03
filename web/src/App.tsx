@@ -72,7 +72,6 @@ export default function App() {
         <footer className="foot">
           <span>Every prediction is out-of-sample: before each session the model is retrained on earlier sessions only. Data up to {meta.data.data_version}.</span>
           <span>Results: <a href="https://github.com/f1db/f1db">F1DB</a> (CC BY 4.0) · Live sessions: <a href="https://openf1.org">OpenF1</a> · Track outlines: <a href="https://github.com/bacinger/f1-circuits">bacinger/f1-circuits</a> (MIT)
-            {meta.data.media.enabled && meta.data.media.credit && <> · {meta.data.media.credit} (<a href={meta.data.media.source}>source</a>)</>}
             {" "}· Car schematics are our own drawings. Not affiliated with Formula 1.</span>
         </footer>
       )}

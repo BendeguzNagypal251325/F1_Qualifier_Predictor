@@ -2,22 +2,23 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { seasonsParam, useApi, useMeta } from "../api";
 import {
-  Bar, ContribBars, photoStyle, ErrorBox, fmt, Loading, pct, pickPhoto, PosLegend, SeasonFilter, Sortable, Swatch, Tile,
+  Bar, ContribBars, ErrorBox, fmt, initials, inkOn, Loading, pct, PosLegend, SeasonFilter, SeasonStrip, Sortable, Swatch, Tile,
   TrackOutline, useSeasons, useTeam, YearChips,
 } from "../components/ui";
 import type { DriverDetail, DriverMeta } from "../types";
 
 function DriverCard({ d, latest }: { d: DriverMeta; latest: number }) {
   const team = useTeam(d.team);
-  const photo = pickPhoto(d.photos);
+  const ink = inkOn(team.color);
   return (
     <Link to={`/drivers/${d.id}`} className="card" style={{ ["--stripe" as string]: team.color }}>
-      <div className="media" style={photo ? photoStyle(photo[0], photo[1], 16 / 9, 0.45) : { background: `linear-gradient(135deg, ${team.color}, var(--surface-2))` }}>
-        {!photo && <span style={{ position: "absolute", right: 12, bottom: 4, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 48, color: "rgb(255 255 255 / 0.85)" }}>{d.number ?? ""}</span>}
+      <div className="media" style={{ background: team.color, color: ink }}>
+        <div className="monogram" style={{ fontSize: 64 }}>{initials(d.name)}{d.number != null && <span className="num">#{d.number}</span>}</div>
       </div>
       <div className="body">
         <h3>{d.name}</h3>
         <div className="meta"><span><Swatch team={d.team} /> {team.name}</span><span>{d.sessions} sessions{d.last_season !== latest ? ` · until ${d.last_season}` : ""}</span></div>
+        <SeasonStrip driver={d.id} />
       </div>
     </Link>
   );
@@ -46,7 +47,6 @@ export function DriverList() {
       </div>
       <div className="card-grid">{list.map((d) => <DriverCard key={d.id} d={d} latest={meta.latest} />)}</div>
       {!list.length && <div className="panel empty-state">No driver matches “{q}”.</div>}
-      {meta.media.enabled && <p className="credit">{meta.media.credit}</p>}
     </>
   );
 }
@@ -60,7 +60,6 @@ export function DriverPage() {
   const d = meta.drivers.find((x) => x.id === id);
   const team = useTeam(d?.team ?? "");
   if (!d) return <ErrorBox error={`Unknown driver “${id}”`} />;
-  const photo = pickPhoto(d.photos);
   const stints = new Map<string, number[]>();
   data?.teams.forEach((t) => stints.set(t.team, [...(stints.get(t.team) ?? []), t.season]));
 
@@ -70,6 +69,7 @@ export function DriverPage() {
         <div className="hero-text">
           <span className="eyebrow">{team.name}{d.number ? ` · #${d.number}` : ""}</span>
           <h1>{d.name}</h1>
+          <SeasonStrip driver={d.id} labels />
           <div className="controls"><SeasonFilter value={seasons} onChange={setSeasons} /></div>
           <div className="legend">
             {[...stints.entries()].map(([t, ys]) => (
@@ -79,7 +79,9 @@ export function DriverPage() {
             ))}
           </div>
         </div>
-        <div className="hero-img" style={photo ? { ...photoStyle(photo[0], photo[1], 1.6, 0.4), backgroundColor: "#111" } : { background: `linear-gradient(135deg, ${team.color}, var(--surface-2))` }} role="img" aria-label={photo ? `${d.name}, ${photo[0]} season photo` : undefined} />
+        <div className="hero-img" style={{ background: team.color, color: inkOn(team.color) }}>
+          <div className="monogram" style={{ fontSize: 112 }} aria-hidden>{initials(d.name)}{d.number != null && <span className="num" style={{ fontSize: "1.3rem" }}>#{d.number}</span>}</div>
+        </div>
       </section>
 
       {error && <ErrorBox error={error} />}
@@ -142,7 +144,6 @@ export function DriverPage() {
             </div>
             <p className="note">Hover a result for the model's prediction that weekend. A red dot means the model put the driver on the wrong side of the Q3 cut.</p>
           </section>
-          {photo && <p className="credit">Photo: {meta.media.credit}</p>}
         </>
       )}
     </>

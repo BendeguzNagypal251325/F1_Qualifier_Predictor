@@ -68,10 +68,8 @@ export function TrackPage() {
       </div>
       <div className="split">
         <section className="panel">
-          {c.map
-            ? <img src={c.map} alt={`${c.name} track map`} loading="lazy" style={{ borderRadius: 8, width: "100%", background: "#f4f2ef" }} />
-            : <div style={{ display: "grid", placeItems: "center", padding: 12 }}><TrackOutline circuit={c.id} size={280} stroke={6} /></div>}
-          <p className="credit">{c.map ? `Track map: ${meta.media.credit}` : "Track outline: bacinger/f1-circuits (MIT)"}</p>
+          <div style={{ display: "grid", placeItems: "center", padding: 12 }}><TrackOutline circuit={c.id} size={300} stroke={6} /></div>
+          <p className="credit">Track outline: bacinger/f1-circuits (MIT)</p>
         </section>
         <div style={{ display: "grid", gap: 12, alignContent: "start" }}>
           {!data ? <Loading /> : (
@@ -107,7 +105,7 @@ export function TrackPage() {
                   <tbody>
                     {rows.map((t) => (
                       <tr key={t.driver}>
-                        <td><Link className="cell-name" to={`/drivers/${t.driver}`}><Avatar driver={t.driver} size={30} /><Swatch team={t.team} /><span>{t.name}</span></Link></td>
+                        <td><Link className="cell-name" to={`/drivers/${t.driver}`}><Avatar driver={t.driver} team={t.team} size={30} /><Swatch team={t.team} /><span>{t.name}</span></Link></td>
                         <td className="num">{t.sessions}</td>
                         <td className="num">{fmt(t.avg_pos)}</td>
                         <td className="num">P{t.best}</td>

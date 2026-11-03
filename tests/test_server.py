@@ -11,7 +11,6 @@ from f1qp.build import compute_state, save_state
 from f1qp.cars import CARS, car_info, era_for
 from f1qp.data import load_entries
 from f1qp.features import FEATURE_GROUP, FEATURES, build_features
-from f1qp.media import build_manifest, match_car, match_driver
 from f1qp.server import Settings, create_app
 from f1qp.tracks import outlines
 
@@ -38,7 +37,7 @@ def client(artifact, tmp_path_factory):
         live_calls.append(1)
         return {"race_key": KEY, "rows": []}
 
-    settings = Settings(live_interval=0, media=True, admin_token="secret", artifact=artifact,
+    settings = Settings(live_interval=0, admin_token="secret", artifact=artifact,
                         static_dir=tmp_path_factory.mktemp("nostatic"))
     with TestClient(create_app(settings, live_fetch=fake_live)) as c:
         c.live_calls = live_calls
@@ -73,27 +72,6 @@ def test_swap_takes_car_features_from_new_team(feat):
 # ---------------------------------------------------------------- pictures, cars, tracks
 
 
-def test_manifest_matches_file_names():
-    entries = load_entries(include_live=False)
-    files = [
-        "F1 2026 Season Drivers/Carlos_Sainz_55.png",
-        "F1 2025 Season Drivers/Liam_Lawson_30(2).png",
-        "F1 2025 Season Drivers/Liam_Lawson_30.png",
-        "F1 2024 Season Cars/RB_VCARB_01.png",
-        "F1 2026 Season Cars/Mercedes-AMG_W17.png",
-        "F1 Race Tracks/Monaco_Circuit_de_Monaco.png",
-        "README.md",
-    ]
-    m = build_manifest("abc123", files, entries)
-    assert m["drivers"]["carlos-sainz-jr"]["2026"].endswith("Carlos_Sainz_55.png")
-    assert "%282%29" not in m["drivers"]["liam-lawson"]["2025"]  # prefers the file without "(2)"
-    assert "abc123" in m["cars"]["rb"]["2024"] and "mercedes" in m["cars"]
-    assert m["tracks"]["monaco"].startswith("https://raw.githubusercontent.com/")
-    assert m["unmatched"] == []
-    assert match_driver("Guanyu_Zhou_24", ["zhou-guanyu"]) == "zhou-guanyu"
-    assert match_car("Racing_Bulls_VCARB03") == "racing-bulls"
-
-
 def test_every_car_and_circuit_in_the_data_is_covered(feat):
     rows = feat[feat["season"] >= 2020].drop_duplicates(["season", "constructor_id"])
     missing = [(r.season, r.constructor_id) for r in rows.itertuples() if (r.season, r.constructor_id) not in CARS]
@@ -111,9 +89,11 @@ def test_health_and_meta(client):
     meta = client.get("/api/meta").json()
     assert 2020 in meta["seasons"] and meta["latest"] >= 2026
     ver = next(d for d in meta["drivers"] if d["id"] == "max-verstappen")
-    assert ver["photos"] and ver["name"] == "Max Verstappen"
+    assert ver["name"] == "Max Verstappen"
+    ham = next(d for d in meta["drivers"] if d["id"] == "lewis-hamilton")
+    assert ham["teams"]["2024"] == "mercedes" and ham["teams"]["2025"] == "ferrari"  # colour follows the season
     monaco = next(c for c in meta["circuits"] if c["id"] == "monaco")
-    assert monaco["outline"].startswith("M") and monaco["map"]
+    assert monaco["outline"].startswith("M") and "map" not in monaco
 
 
 def test_overview_matches_walk_forward(client):

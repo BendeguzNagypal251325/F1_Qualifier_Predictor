@@ -5,7 +5,7 @@ information available **before** qualifying starts. It can also run live during 
 every practice session and after qualifying (see [Live weekend predictions](#live-weekend-predictions)).
 
 The results are served as a **web app** (FastAPI back end + React front end, one Docker image): driver
-and car pages with photos, track maps, interactive car schematics for every team and season, a
+and car pages, track outlines, interactive car schematics for every team and season, a
 "what if this driver drove that car" tool, and a live page for the current weekend. See
 [Web app](#web-app) and [Deployment](#deployment).
 
@@ -117,7 +117,7 @@ Correct top-10 picks: 8/10
 |---|---|
 | **Overview** | correct picks per season vs the simple rules, how much car / driver / practice decide a prediction, most useful inputs |
 | **Live** | this weekend's predicted qualifying order, rebuilt after every finished session; after qualifying, the real result next to it |
-| **Drivers** | grid of driver photos; each profile has the driver's record at every track, team history, and the driver-vs-car split |
+| **Drivers** | every driver as initials in their team colour; each profile has the driver's record at every track, team history, and the driver-vs-car split |
 | **Cars** | every car of a season ranked by pace; each car has an interactive schematic, pace through the season, its drivers, and a power-unit comparison |
 | **Tracks** | track outlines and maps; every driver's record at that track, and the model's score at each session there |
 | **What if** | put any driver in any car at any race and see the predicted grid slot |
@@ -158,19 +158,13 @@ the public regulation dimensions of each era: 2017–2021 (wide cars with bargeb
 clickable and shows what it does, plus the car-level numbers the model uses. The data has no
 measurements of individual parts, and the app says so.
 
-### Pictures
+### Driver and track graphics
 
-Driver photos (2023–2026), car photos (2023–2026) and track maps come from
-[toUpperCase78/formula1-datasets](https://github.com/toUpperCase78/formula1-datasets). That repository
-says they come from formula1.com, so **they are Formula 1's copyright**. We do not copy them into this
-repository: `data/media_manifest.json` only links to the files there, pinned to one commit, and the
-browser loads them from GitHub. `uv run f1qp-media` rebuilds the manifest from the latest commit; it
-downloads file names only, not the images.
-
-Before a public deployment, check that you may show these pictures, or set `F1QP_MEDIA=off`. The app
-then shows only its own graphics: track outlines from
-[bacinger/f1-circuits](https://github.com/bacinger/f1-circuits) (MIT, bundled in `f1qp/assets/`) and
-team-coloured initials. Drivers who have no photo (most of 2020–2022) always get initials.
+The app uses no photos. Drivers are shown as their initials on their team's colour. The colour follows
+the season (`/api/meta` gives each driver's team per season), so Hamilton is Mercedes teal up to 2024
+and Ferrari red from 2025. Each driver card and profile has a season strip in those colours. Tracks are
+drawn from the outlines in [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits) (MIT,
+bundled in `f1qp/assets/`). All graphics are our own or openly licensed.
 
 ## Deployment
 
@@ -191,7 +185,6 @@ docker run -p 8000:8000 f1qp
 |---|---|---|
 | `F1QP_LIVE_INTERVAL` | `900` | seconds between live refreshes; `0` turns live updates off |
 | `F1QP_LIVE_UPDATE` | `1` | also pull the latest F1DB results on each refresh |
-| `F1QP_MEDIA` | `on` | show the upstream driver/car/track pictures |
 | `F1QP_ADMIN_TOKEN` | empty | enables `POST /api/live/refresh` with `Authorization: Bearer <token>` |
 | `F1QP_CORS_ORIGINS` | empty | comma-separated origins, if the front end is hosted elsewhere |
 | `PORT` / `HOST` | `8000` / `0.0.0.0` | where the server listens |
@@ -264,11 +257,10 @@ f1qp/live.py        live predictions for the next race (F1DB + OpenF1)
 f1qp/build.py       precompute everything the web app serves -> artifacts/state.pkl
 f1qp/server.py      FastAPI app: JSON API, live background service, serves web/dist
 f1qp/cars.py        chassis names, liveries and regulation eras per team and season
-f1qp/media.py       picture manifest (links to the upstream photos, not copies)
 f1qp/tracks.py      track outlines as SVG paths (MIT GeoJSON in f1qp/assets/)
 f1qp/names.py       display names and team colours
 web/                React + TypeScript front end (Vite)
-data/               F1DB entries table, media manifest, data/live/ weekends
+data/               F1DB entries table, data/live/ weekends
 Dockerfile, docker-compose.yml, .github/workflows/ci.yml
 tests/              data sanity, leakage, live (fake OpenF1), API and explanation tests
 ```

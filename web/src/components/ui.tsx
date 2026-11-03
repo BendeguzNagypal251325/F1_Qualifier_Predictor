@@ -156,42 +156,62 @@ export function Swatch({ team }: { team: string }) {
   return <span className="swatch" style={{ background: t.color }} />;
 }
 
-// Where the face is in each season's photo set (fraction of width/height), and how far to zoom.
-const CROPS: Record<string, { s: number; fx: number; fy: number }> = {
-  "2023": { s: 2.1, fx: 0.5, fy: 0.38 },
-  "2024": { s: 2.3, fx: 0.64, fy: 0.32 },
-  "2025": { s: 3.6, fx: 0.51, fy: 0.2 },
-  "2026": { s: 3.4, fx: 0.5, fy: 0.26 },
-};
-const ASPECT = 1.78; // all photo sets are ~16:9
-
-export function pickPhoto(photos: Record<string, string>, season?: number): [string, string] | null {
-  const years = Object.keys(photos).sort();
-  if (!years.length) return null;
-  const want = season ? String(season) : years[years.length - 1];
-  const y = years.includes(want) ? want : [...years].reverse().find((s) => s <= want) ?? years[0];
-  return [y, photos[y]];
-}
-
-/** Background style that centres the driver's face in a box of ``boxAspect`` (width / height). */
-export function photoStyle(year: string, url: string, boxAspect = 1, zoom = 1): React.CSSProperties {
-  const c = CROPS[year] ?? { s: 2, fx: 0.5, fy: 0.3 };
-  const s = Math.max(c.s * zoom, 1, ASPECT / boxAspect); // zoom, but always cover the box
-  const w = s, h = (s / ASPECT) * boxAspect; // image size relative to the box
-  const pos = (f: number, img: number) => (Math.abs(1 - img) < 1e-3 ? 50 : Math.max(0, Math.min(100, ((0.5 - f * img) / (1 - img)) * 100)));
-  return { backgroundImage: `url("${url}")`, backgroundSize: `${w * 100}% auto`, backgroundPosition: `${pos(c.fx, w)}% ${pos(c.fy, h)}%`, backgroundRepeat: "no-repeat" };
-}
-
-export function Avatar({ driver, season, size = 36 }: { driver: string; season?: number; size?: number }) {
+/** Team of ``driver`` in ``season`` (or their latest team). */
+export function useDriverTeam(driver: string, season?: number): string {
   const meta = useMeta();
   const d = meta.drivers.find((x) => x.id === driver);
-  const team = useTeam(d?.team ?? "");
-  const photo = d ? pickPhoto(d.photos, season) : null;
+  if (!d) return "";
+  return (season && d.teams[String(season)]) || d.team;
+}
+
+/** Readable text colour on a team colour. */
+export function inkOn(hex: string): string {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return lum > 0.32 ? "#111418" : "#ffffff";
+}
+
+export function initials(name: string) {
+  return name.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+/** Driver initials on their team colour. ``team`` overrides; else the team of ``season``. */
+export function Avatar({ driver, season, team, size = 36 }: { driver: string; season?: number; team?: string; size?: number }) {
+  const meta = useMeta();
+  const d = meta.drivers.find((x) => x.id === driver);
+  const seasonTeam = useDriverTeam(driver, season);
+  const t = useTeam(team ?? seasonTeam);
   const name = d?.name ?? driver;
-  const initials = name.split(" ").map((w) => w[0]).slice(0, 2).join("");
-  const style: React.CSSProperties = { width: size, height: size, fontSize: size * 0.38, ["--ring" as string]: team.color };
-  Object.assign(style, photo ? photoStyle(photo[0], photo[1], 1) : { background: team.color });
-  return <span className="avatar" style={style} role="img" aria-label={name}>{photo ? null : initials}</span>;
+  return (
+    <span className="avatar" role="img" aria-label={`${name}, ${t.name}`}
+      style={{ width: size, height: size, fontSize: size * 0.4, background: t.color, color: inkOn(t.color) }}>
+      {initials(name)}
+    </span>
+  );
+}
+
+/** One segment per season, coloured by the driver's team that season. */
+export function SeasonStrip({ driver, labels = false }: { driver: string; labels?: boolean }) {
+  const meta = useMeta();
+  const d = meta.drivers.find((x) => x.id === driver);
+  return (
+    <div className="season-strip" aria-label="Team by season">
+      {meta.seasons.map((y) => {
+        const tid = d?.teams[String(y)];
+        const t = meta.teams.find((x) => x.id === tid);
+        return (
+          <span key={y} className={t ? "" : "none"} style={t ? { background: t.color, color: inkOn(t.color) } : undefined}
+            data-tip={t ? `${y}\n${t.name}` : `${y}\nNot on the grid`}>
+            {labels ? String(y).slice(2) : null}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------- track outline
