@@ -54,6 +54,9 @@ export default function App() {
   // Fetch the 3D code in the background once the first page is up, so 3D pages open quickly.
   useEffect(() => {
     if (!meta.data) return;
+    // not on connections where the visitor asked to save data, or that are very slow
+    const conn = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    if (conn?.saveData || /(^|-)2g$/.test(conn?.effectiveType ?? "")) return;
     const idle = (window as unknown as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 1500));
     idle(() => {
       void import("./components/ThreeViews");

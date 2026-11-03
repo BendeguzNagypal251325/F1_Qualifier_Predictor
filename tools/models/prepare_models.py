@@ -414,6 +414,18 @@ def retro_2017(pieces: list[Piece], meta: dict, cfg: dict) -> None:
     print(f"retro: wheelbase {wb:.3f} -> {meta['wheelbase']}, front wing half-span {half:.3f} -> {half * f:.3f}")
 
 
+def helmet_seat(pieces: list[Piece], meta: dict, wheel_mats: set[str]) -> list[float]:
+    """Where the driver's helmet goes: in front of the roll hoop, its centre just above the cockpit rim."""
+    wb = meta["wheelbase"]
+    body = np.vstack([p.V for p in pieces if p.mat not in wheel_mats])
+    core = body[(np.abs(body[:, 2]) < 0.2) & (body[:, 0] > 0.8) & (body[:, 0] < wb - 1.0)]
+    hoop_x = core[core[:, 1].argmax(), 0]
+    hx = hoop_x + 0.36
+    rim = body[(np.abs(body[:, 0] - hx) < 0.12) & (np.abs(body[:, 2]) > 0.2) & (np.abs(body[:, 2]) < 0.32)]
+    hy = float(rim[:, 1].max()) + 0.02
+    return [round(float(hx), 4), round(hy, 4), 0.0]
+
+
 def build_car(pieces, cfg, era, width, out_dir: Path):
     pieces = [p for p in pieces if p.mat in cfg["slots"]]
     meta = to_car_frame(pieces, cfg["tyres"], width, cfg["steer"])
@@ -436,6 +448,8 @@ def build_car(pieces, cfg, era, width, out_dir: Path):
             masks[p.mat] = livery_mask(p.tex, cfg["palette"], 1024, 11)
             masks[p.mat].save(out_dir / f"{era}-{p.mat}-mask.png")
     meta["era"] = era
+    meta["helmetSeat"] = helmet_seat([p for p in keep if cfg["slots"].get(p.mat) != "drop"], meta, cfg["wheels"])
+    print(f"{era}: helmet seat {meta['helmetSeat']}")
     tris = export(keep, cfg["slots"], meta, out_dir / f"car-{era}.glb", masks, cfg["wheels"])
     meta["sourceTriangles"] = tris
     (out_dir / f"car-{era}.json").write_text(json.dumps(meta, indent=1))

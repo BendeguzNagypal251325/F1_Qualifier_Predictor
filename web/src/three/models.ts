@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { bakedMeshes, loadGLB, modelUrl } from "./assets";
+import { bakedMeshes, loadGLB } from "./assets";
+import { CAR_MODEL_FILE as MODEL_FILE, fetchModel } from "./modelFiles";
 import { buildCar, type BuiltCar } from "./car";
 import { carbon, metal, paint, rubber } from "./geom";
 import { buildHelmet, helmetModelReady, type HelmetSpec } from "./helmet";
@@ -10,19 +11,17 @@ import type { PartId } from "./parts";
 // "livery" slot carries a colour-zone mask (red = primary, green = secondary, blue = accent,
 // black = carbon) that is turned into a texture in the team's colours. No logos are in the files.
 
-interface CarMeta { wheelbase: number; tyreRadius: number; width: number; steeringWheel: [number, number, number]; head?: [number, number, number] }
+interface CarMeta { wheelbase: number; tyreRadius: number; width: number; steeringWheel: [number, number, number]; head?: [number, number, number]; helmetSeat?: [number, number, number] }
 interface Template { meshes: { part: PartId; slot: string; geometry: THREE.BufferGeometry; mask?: CanvasImageSource }[]; meta: CarMeta }
 
-const MODEL_FILE: Record<string, string> = { "2017-2021": "car-2017-2021", "2022-2025": "car-2022-2025", "2026-": "car-2026" };
 
 const templates = new Map<string, Promise<Template>>();
-const HEAD_OFFSET: [number, number] = [0, 0];
 
 function loadTemplate(era: string): Promise<Template> {
   let t = templates.get(era);
   if (!t) {
     const file = MODEL_FILE[era];
-    t = Promise.all([loadGLB(`${file}.glb`), fetch(modelUrl(`${file}.json`)).then((r) => r.json() as Promise<CarMeta>)]).then(([gltf, meta]) => ({
+    t = Promise.all([loadGLB(`${file}.glb`), fetchModel(`${file}.json`).then((b) => JSON.parse(new TextDecoder().decode(b)) as CarMeta)]).then(([gltf, meta]) => ({
       meta,
       meshes: bakedMeshes(gltf.scene).map(({ name, geometry, material }) => {
         const [part, slot] = name.split("|") as [PartId, string];
@@ -48,8 +47,13 @@ const liveryTextures = new Map<string, THREE.Texture>();
 const CARBON_RGB: [number, number, number] = [16, 16, 20];
 
 /** Paint the colour-zone mask in the team's colours (cached per mask and livery). */
-function liveryTexture(mask: CanvasImageSource, key: string, livery: [string, string, string]): THREE.Texture {
-  const id = `${key}|${livery.join(",")}`;
+const maskIds = new WeakMap<object, number>();
+let nextMaskId = 0;
+function liveryTexture(mask: CanvasImageSource, livery: [string, string, string]): THREE.Texture {
+  // one texture per mask image and livery: several parts share a mask, so key by the image itself
+  let mid = maskIds.get(mask);
+  if (mid === undefined) { mid = nextMaskId++; maskIds.set(mask, mid); }
+  const id = `${mid}|${livery.join(",")}`;
   const hit = liveryTextures.get(id);
   if (hit) return hit;
   const w = (mask as { width: number }).width, h = (mask as { height: number }).height;
@@ -103,7 +107,7 @@ export async function loadCar(era: string, livery: [string, string, string], hel
   const group = new THREE.Group();
   const parts = new Map<PartId, THREE.Mesh[]>();
   for (const m of tpl.meshes) {
-    const map = m.slot === "livery" && m.mask ? liveryTexture(m.mask, `${era}:${m.part}`, livery) : undefined;
+    const map = m.slot === "livery" && m.mask ? liveryTexture(m.mask, livery) : undefined;
     const mesh = new THREE.Mesh(m.geometry, slotMaterial(m.slot, livery, map));
     mesh.castShadow = true; mesh.receiveShadow = true;
     mesh.userData.part = m.part;
@@ -115,8 +119,8 @@ export async function loadCar(era: string, livery: [string, string, string], hel
     const [sx, sy] = tpl.meta.steeringWheel;
     const h = buildHelmet(helmet);
     h.scale.multiplyScalar(0.125);
-    // the model's own driver position when it had one, else behind the steering wheel
-    if (tpl.meta.head) h.position.set(tpl.meta.head[0] + HEAD_OFFSET[0], tpl.meta.head[1] + HEAD_OFFSET[1], 0);
+    // seat from the model (tools/models: in front of the roll hoop, just above the cockpit rim)
+    if (tpl.meta.helmetSeat) h.position.set(tpl.meta.helmetSeat[0], tpl.meta.helmetSeat[1], 0);
     else h.position.set(sx - 0.6, sy + 0.2, 0);
     h.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.userData.part = "cockpit"; parts.get("cockpit")?.push(o as THREE.Mesh); } });
     group.add(h);

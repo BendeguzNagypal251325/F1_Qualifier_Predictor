@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { prefetchCar } from "../three/modelFiles";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApi, useMeta } from "../api";
 import { Car3D, CarImage, HelmetImage } from "../components/lazy3d";
@@ -18,6 +19,7 @@ export function CarList() {
   const meta = useMeta();
   const [params, setParams] = useSearchParams();
   const season = Number(params.get("season")) || meta.latest;
+  useEffect(() => prefetchCar(season), [season]);
   const { data, error } = useApi<CarListData>(`/api/cars?season=${season}`);
   return (
     <>
@@ -173,6 +175,7 @@ function CarViewer({ car, part, onSelect }: { car: CarDetail; part: PartId | nul
 
 export function CarPage() {
   const { season = "", team = "" } = useParams();
+  useEffect(() => prefetchCar(Number(season)), [season]);
   const nav = useNavigate();
   const [part, setPart] = useState<PartId | null>(null);
   const { data: car, error } = useApi<CarDetail>(`/api/cars/${season}/${team}`);
