@@ -210,11 +210,11 @@ export function CarPage() {
           <p className="credit">3D model built from the {car.era_label.toLowerCase()} regulation dimensions (wheelbase, width, wheels, wing spans) in {car.name}'s {car.season} colours. Simplified shapes, no sponsor logos; not a replica of the real car.</p>
         </section>
         <div className="tiles car-tiles">
-          <Tile label="Avg quali position" value={fmt(car.avg_pos)} sub={`${car.sessions} entries (2 per race)`} />
-          <Tile label="Gap to pole" value={`+${fmt(car.pace_gap, 2)}%`} sub="best lap of the two cars" />
-          <Tile label="Pace rank" value={fmt(car.pace_rank, 1)} sub={`average of ${car.teams_in_season} teams`} />
-          <Tile label="Reached Q3" value={pct(car.q3_rate)} />
-          <Tile label="Model right" value={pct(car.right / Math.max(1, car.sessions))} sub="for this car's drivers" />
+          <Tile label="Avg quali" value={fmt(car.avg_pos)} sub={`${car.sessions} entries`} />
+          <Tile label="Gap to pole" value={`+${fmt(car.pace_gap, 2)}%`} sub="faster car" />
+          <Tile label="Pace rank" value={fmt(car.pace_rank, 1)} sub={`of ${car.teams_in_season} teams`} />
+          <Tile label="Reached Q3" value={pct(car.q3_rate)} sub="of entries" />
+          <Tile label="Model right" value={pct(car.right / Math.max(1, car.sessions))} sub="Q3 calls" />
         </div>
         </div>
         <div className="stackcol">

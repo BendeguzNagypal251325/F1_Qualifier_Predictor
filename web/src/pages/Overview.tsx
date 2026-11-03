@@ -79,11 +79,11 @@ export default function Overview() {
           <div className="legend"><span><i style={{ background: "var(--series-model)" }} />This model</span><span><i style={{ background: "var(--series-base)" }} />Championship order</span></div>
           <DotPlot rows={rows} aLabel="This model" bLabel="Championship order" lo={lo} hi={hi} onRow={(l) => /^\d{4}$/.test(l) && nav(`/sessions?season=${l}`)} />
         </section>
-        <section className="panel">
-          <div className="panel-head"><h2>Model vs simple rules <Info>Each rule ranks drivers by one number. The top six or seven cars are easy to call; the fight is over P8 to P12.</Info></h2></div>
-          <Lollipops items={methods} lo={mlo} hi={mhi} step={0.2} />
-        </section>
         <div className="stackcol">
+          <section className="panel">
+            <div className="panel-head"><h2>Model vs simple rules <Info>Each rule ranks drivers by one number. The top six or seven cars are easy to call; the fight is over P8 to P12.</Info></h2></div>
+            <Lollipops items={methods} lo={mlo} hi={mhi} step={0.2} />
+          </section>
           <section className="panel">
             <div className="panel-head"><h2>What decides the prediction <Info>Average size of each group's push on a prediction. <b>Car</b> = team form, tracked per team (it stays with the car when a driver leaves). <b>Driver</b> = the driver's own results and teammate battle; these follow the driver to a new team, but they also include the cars the driver had. <b>Practice</b> mixes both.</Info></h2><Link to="/what-if" className="link">Try a driver in another car →</Link></div>
             <div className="stack" style={{ height: 18 }}>
@@ -97,11 +97,11 @@ export default function Overview() {
             ))}
           </div>
           </section>
-          <section className="panel">
-            <div className="panel-head"><h2>How many picks were right <Info>{Math.round((eightPlus / o.sessions) * 100)}% of sessions had 8 or more of the 10 right. Click a bar to see those sessions.</Info></h2></div>
-            <Bars items={hist} total={o.sessions} onBar={(l) => nav(`/sessions?correct=${parseInt(l)}`)} />
-          </section>
         </div>
+        <section className="panel">
+          <div className="panel-head"><h2>How many picks were right <Info>{Math.round((eightPlus / o.sessions) * 100)}% of sessions had 8 or more of the 10 right. Click a bar to see those sessions.</Info></h2></div>
+          <Bars items={hist} total={o.sessions} height={360} onBar={(l) => nav(`/sessions?correct=${parseInt(l)}`)} />
+        </section>
         <section className="panel">
           <div className="panel-head"><h2>Most useful single inputs<Info>{meta.latest} season Drop in correct picks per session when the input is shuffled (model trained on seasons before {data.latest}).</Info></h2></div>
           <div className="scroll">

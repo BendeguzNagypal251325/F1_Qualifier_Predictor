@@ -61,8 +61,8 @@ export function Lollipops({ items, lo, hi, step }: { items: { label: string; val
 }
 
 /** Vertical bars from zero. */
-export function Bars({ items, total, onBar }: { items: { label: string; value: number }[]; total: number; onBar?: (label: string) => void }) {
-  const W = 560, H = 210, left = 34, bottom = 30, top = 18, bw = (W - left - 10) / items.length;
+export function Bars({ items, total, onBar, height = 210 }: { items: { label: string; value: number }[]; total: number; onBar?: (label: string) => void; height?: number }) {
+  const W = 560, H = height, left = 34, bottom = 30, top = 18, bw = (W - left - 10) / items.length;
   const max = Math.max(1, ...items.map((d) => d.value));
   const y = (v: number) => top + (1 - v / max) * (H - top - bottom);
   const tk = ticks(0, max, max > 40 ? 20 : 10);
