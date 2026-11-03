@@ -29,11 +29,15 @@ const NAV = [
 ] as const;
 
 /** "Lights out": fade the boot screen from index.html once the first data is in. */
+/** Fade out the boot screen from index.html, after the first-visit start sequence if one is playing. */
 function dismissBoot() {
-  const boot = document.getElementById("boot");
-  if (!boot || boot.classList.contains("out")) return;
-  boot.classList.add("out");
-  window.setTimeout(() => boot.remove(), 600);
+  const hold = (window as unknown as { __bootHold?: Promise<void> }).__bootHold;
+  void Promise.resolve(hold).then(() => {
+    const boot = document.getElementById("boot");
+    if (!boot || boot.classList.contains("out")) return;
+    boot.classList.add("out");
+    window.setTimeout(() => boot.remove(), 600);
+  });
 }
 
 export default function App() {

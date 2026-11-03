@@ -158,12 +158,15 @@ histogram bar to list the sessions with that score, or a group (driver / car / p
 its inputs. Numbers count up, sections and charts animate in, and cards respond to hover; all motion is
 switched off for visitors who ask their system for reduced motion.
 
-Look and feel: the app opens on a start-lights loading screen (five red lights come on while the data
-loads; it is plain HTML and CSS in `index.html`, so it shows before any JavaScript arrives). Behind the
-pages, neon red speed streaks alternate bright and dim and drift slowly (`SpeedLines.tsx`); the top bar
-ends in a red-and-white kerb stripe and the footer carries a chequered flag. Explanations of how a chart
-was made sit behind small **i** buttons next to each title (hover or focus), so the pages are not
-cluttered with small print.
+Look and feel: on a visitor's first visit the app opens with the full start sequence (five red lights
+come on one by one, hold, then "lights out"); after that the start lights only show for as long as the
+data takes to load, usually a split second. It is plain HTML and CSS in `index.html`, so it shows before
+any JavaScript arrives, and it is skipped for visitors who ask their system for reduced motion. Behind
+the pages, faint red speed streaks glide slowly and continuously across the screen (`SpeedLines.tsx`); a
+red line runs under the top bar and the footer carries a chequered flag. The logo mark is also the
+favicon (`public/favicon.svg`, with PNG versions for older browsers and phone home screens).
+Explanations of how a chart was made sit behind small **i** buttons next to each title (hover or
+focus), so the pages are not cluttered with small print.
 
 Fonts, all self-hosted through `@fontsource` (no Google Fonts request at runtime): **Saira Condensed**
 for headings, the wordmark and labels (a squared, condensed face in the style of motorsport timing

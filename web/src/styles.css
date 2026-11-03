@@ -307,18 +307,21 @@ th { font-size: 0.78rem; letter-spacing: 0.08em; }
 .link:hover { color: var(--ink); }
 
 /* ---------- race elements ---------- */
-/* kerb stripe under the top bar */
+/* red line under the top bar */
 .topbar { border-bottom: 0; box-shadow: none; }
-.topbar::after { content: ""; display: block; height: 4px; background: repeating-linear-gradient(90deg, var(--accent) 0 28px, #f2f2f2 28px 56px); box-shadow: 0 2px 14px -4px var(--glow-accent); }
+.topbar::after { content: ""; display: block; height: 3px; background: var(--accent); box-shadow: 0 2px 14px -4px var(--glow-accent); }
 /* neon speed streaks behind everything */
 .speedlines { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-.speedlines span { position: absolute; height: 2px; border-radius: 2px; transform: rotate(-16deg); transform-origin: left center; }
-.speedlines .bright { background: linear-gradient(90deg, transparent, rgb(255 42 58 / 0.85) 70%, rgb(255 120 128 / 0.95)); box-shadow: 0 0 12px rgb(255 42 58 / 0.6); opacity: 0.9; height: 3px; }
-.speedlines .dim { background: linear-gradient(90deg, transparent, rgb(255 42 58 / 0.55)); opacity: 0.6; height: 1px; }
+/* A lane is wider than the screen; a streak enters off the left edge and leaves off the right one. */
+.speedlines .lane { position: absolute; left: -30vw; width: 160vw; height: 2px; transform: rotate(-16deg); }
+.speedlines span { position: absolute; left: 0; top: 0; height: 2px; border-radius: 2px; translate: -100% 0; will-change: translate; }
+.speedlines .bright { background: linear-gradient(90deg, transparent, rgb(255 42 58 / 0.5) 70%, rgb(255 110 120 / 0.6)); box-shadow: 0 0 8px rgb(255 42 58 / 0.25); opacity: 0.45; }
+.speedlines .dim { background: linear-gradient(90deg, transparent, rgb(255 42 58 / 0.35)); opacity: 0.35; height: 1px; }
 @media (prefers-reduced-motion: no-preference) {
-  .speedlines span { animation: drift linear infinite; }
-  @keyframes drift { from { translate: -14vw 4vw; } to { translate: 14vw -4vw; } }
+  .speedlines span { animation: glide linear infinite; }
+  @keyframes glide { from { translate: -100% 0; } to { translate: 160vw 0; } }
 }
+@media (prefers-reduced-motion: reduce) { .speedlines span { translate: 60vw 0; } }
 /* The page colour lives on <html> so the fixed streak layer (z-index -1) paints above it. */
 html { background: radial-gradient(1400px 700px at 85% -10%, rgb(255 42 58 / 0.07), transparent 60%), var(--bg); background-attachment: fixed; }
 /* chequered flag strip */
