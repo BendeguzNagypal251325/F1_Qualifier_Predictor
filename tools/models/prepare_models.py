@@ -154,7 +154,9 @@ def to_car_frame(pieces: list[Piece], tyre_mats: set[str], width: float, steer_m
     # the mapping (la, up, wa) -> (x, y, z) must be a rotation, not a mirror, or every triangle turns
     # inside out; the car is symmetric, so fix a mirror by flipping z
     M = np.zeros((3, 3))
-    M[0, la] = sign; M[1, up] = 1; M[2, wa] = sign
+    M[0, la] = sign
+    M[1, up] = 1
+    M[2, wa] = sign
     zs = sign * (1 if np.linalg.det(M) > 0 else -1)
 
     def tf(V):
@@ -269,7 +271,8 @@ def export(pieces: list[Piece], slot_of: dict[str, str], meta: dict, out: Path, 
             used = np.unique(F)
             remap = np.full(len(p.V), -1)
             remap[used] = np.arange(len(used))
-            Vs.append(p.V[used]); Fs.append(remap[F] + off)
+            Vs.append(p.V[used])
+            Fs.append(remap[F] + off)
             Ns.append(p.N[used] if p.N is not None else None)
             if use_uv:
                 UVs.append(p.UV[used])
@@ -451,7 +454,9 @@ def build_helmet(pieces: list[Piece], out_dir: Path):
     front = 1 if visor.V.mean(0)[la] > mid[la] else -1
     s = 2.0 / ext[wa]   # unit-ish size: width 2 (the procedural shell is about 1.8 wide)
     M = np.zeros((3, 3))
-    M[0, la] = front; M[1, 1] = 1; M[2, wa] = front
+    M[0, la] = front
+    M[1, 1] = 1
+    M[2, wa] = front
     zs = front * (1 if np.linalg.det(M) > 0 else -1)  # rotation, never a mirror (see to_car_frame)
     for p in (shell, visor, trim):
         V = p.V - mid
