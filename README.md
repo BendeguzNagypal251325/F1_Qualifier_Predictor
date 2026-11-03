@@ -238,6 +238,11 @@ team's own design. If a model cannot be loaded, a simplified car built in code
 (`web/src/three/car.ts`) is shown instead. The car list shows still renders of the same models, made by one
 hidden renderer, because browsers allow only about 16 live 3D views per page; renders are kept in the
 browser's Cache Storage. three.js and the models load only on pages that show 3D.
+Those pages start downloading their model as soon as they open, in parallel with the 3D code (one
+download, shared with the 3D loader), and each team livery is painted once per car model. The 3D code
+is also fetched in the background after the first page, except on connections where the visitor asked
+to save data or that are very slow. The driver's helmet is seated from each model's own geometry: in
+front of the roll hoop, its centre just above the cockpit rim.
 
 ### Helmets and names
 
