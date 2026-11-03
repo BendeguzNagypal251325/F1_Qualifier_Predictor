@@ -5,7 +5,7 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 // Loader for the prepared 3D models in /models (see tools/models): meshopt-compressed glTF.
 
 /** Bump when the files in /models change: the server lets browsers cache versioned model URLs for a year. */
-export const MODELS_VERSION = "1";
+export const MODELS_VERSION = "2";
 export const modelUrl = (file: string) => `/models/${file}?v=${MODELS_VERSION}`;
 
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);

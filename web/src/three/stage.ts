@@ -69,7 +69,7 @@ export interface SnapJob {
 }
 
 // Bump when the car or helmet models change, so stored thumbnails are re-rendered.
-const SNAP_VERSION = "gridcast-v4";
+const SNAP_VERSION = "gridcast-v5";
 const STORE = "gridcast-snapshots";
 const storeUrl = (key: string) => `/__snapshot/${SNAP_VERSION}/${encodeURIComponent(key)}`;
 

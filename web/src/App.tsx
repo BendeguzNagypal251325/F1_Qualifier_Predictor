@@ -113,7 +113,8 @@ export default function App() {
             Results: <a href="https://github.com/f1db/f1db">F1DB</a> (CC BY 4.0). Live sessions: <a href="https://openf1.org">OpenF1</a>.
             Track outlines: <a href="https://github.com/bacinger/f1-circuits">bacinger/f1-circuits</a> (MIT). 3D models adapted from CC BY 4.0 Sketchfab models (repainted, sponsor logos removed):{" "}
             <a href="https://skfb.ly/pOvxI">2026 Redbull RB22</a> by Dave Love SketchFab, <a href="https://skfb.ly/pHXyZ">2025 alpine A525</a> by Abu Saif,{" "}
-            <a href="https://skfb.ly/pEDBZ">Helmet Redbull - Max Verstappen</a> by Maubian; 2020–21 cars are our own models.
+            <a href="https://skfb.ly/owxuQ">Formula 1 2022 Car</a> by Luis Adrian V. (reshaped for 2020–21) and{" "}
+            <a href="https://skfb.ly/pEDBZ">Helmet Redbull - Max Verstappen</a> by Maubian.
             Not affiliated with Formula 1.
           </Info>
         </footer>

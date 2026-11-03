@@ -10,12 +10,13 @@ import type { PartId } from "./parts";
 // "livery" slot carries a colour-zone mask (red = primary, green = secondary, blue = accent,
 // black = carbon) that is turned into a texture in the team's colours. No logos are in the files.
 
-interface CarMeta { wheelbase: number; tyreRadius: number; width: number; steeringWheel: [number, number, number] }
+interface CarMeta { wheelbase: number; tyreRadius: number; width: number; steeringWheel: [number, number, number]; head?: [number, number, number] }
 interface Template { meshes: { part: PartId; slot: string; geometry: THREE.BufferGeometry; mask?: CanvasImageSource }[]; meta: CarMeta }
 
-const MODEL_FILE: Record<string, string> = { "2022-2025": "car-2022-2025", "2026-": "car-2026" };
+const MODEL_FILE: Record<string, string> = { "2017-2021": "car-2017-2021", "2022-2025": "car-2022-2025", "2026-": "car-2026" };
 
 const templates = new Map<string, Promise<Template>>();
+const HEAD_OFFSET: [number, number] = [0, 0];
 
 function loadTemplate(era: string): Promise<Template> {
   let t = templates.get(era);
@@ -114,7 +115,9 @@ export async function loadCar(era: string, livery: [string, string, string], hel
     const [sx, sy] = tpl.meta.steeringWheel;
     const h = buildHelmet(helmet);
     h.scale.multiplyScalar(0.125);
-    h.position.set(sx - 0.6, sy + 0.2, 0);
+    // the model's own driver position when it had one, else behind the steering wheel
+    if (tpl.meta.head) h.position.set(tpl.meta.head[0] + HEAD_OFFSET[0], tpl.meta.head[1] + HEAD_OFFSET[1], 0);
+    else h.position.set(sx - 0.6, sy + 0.2, 0);
     h.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.userData.part = "cockpit"; parts.get("cockpit")?.push(o as THREE.Mesh); } });
     group.add(h);
   }
