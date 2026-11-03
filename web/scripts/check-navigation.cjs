@@ -12,9 +12,12 @@ const { chromium } = require("playwright");
   const errs = [];
   p.on("pageerror", (e) => errs.push("PAGEERROR " + e.message));
   p.on("console", (m) => m.type() === "error" && errs.push("CONSOLE " + m.text()));
+  const state = () => p.evaluate(() => ({ path: location.pathname + location.search, topbar: !!document.querySelector(".topbar"), crashed: !!document.querySelector('[role="alert"]'), h1: document.querySelector("main h1, main h2")?.textContent?.slice(0, 50) }));
+  // Wait (up to 15 s, CI runners render 3D in software) for the page heading; a crash fails at once.
   const check = async (what) => {
-    await p.waitForTimeout(1200);
-    const st = await p.evaluate(() => ({ path: location.pathname + location.search, topbar: !!document.querySelector(".topbar"), crashed: !!document.querySelector('[role="alert"]'), h1: document.querySelector("main h1, main h2")?.textContent?.slice(0, 50) }));
+    await p.waitForTimeout(300);
+    let st = await state();
+    for (const t0 = Date.now(); !st.crashed && !(st.topbar && st.h1) && Date.now() - t0 < 15000; st = await state()) await p.waitForTimeout(250);
     const ok = st.topbar && !st.crashed && st.h1;
     console.log((ok ? "ok  " : "FAIL") + " " + what.padEnd(26) + JSON.stringify(st));
     if (!ok) failed++;

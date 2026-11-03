@@ -47,6 +47,18 @@ const stages: Record<string, ReturnType<typeof makeStage>> = {};
 const cache = new Map<string, Promise<string>>();
 let queue: Promise<unknown> = Promise.resolve();
 
+// How many mounted images are waiting for each key. A queued render whose images have all gone
+// (the visitor left the page) is skipped, so it does not hold up the page they moved to.
+const wanted = new Map<string, number>();
+/** Mark ``key`` as wanted while an image is on screen; call the returned function on unmount. */
+export function want(key: string): () => void {
+  wanted.set(key, (wanted.get(key) ?? 0) + 1);
+  return () => {
+    const n = (wanted.get(key) ?? 1) - 1;
+    if (n > 0) wanted.set(key, n); else wanted.delete(key);
+  };
+}
+
 export interface SnapJob {
   key: string;
   width: number;
@@ -100,6 +112,10 @@ export function snapshot(job: SnapJob): Promise<string> {
   void pruneStore();
   const p = fromStore(job.key).then((stored) => stored ?? (queue = queue.then(() => new Promise<string>((resolve) => {
     const run = () => {
+      if (!wanted.has(job.key)) {
+        cache.delete(job.key); // nobody is waiting any more; render again if asked later
+        return resolve("");
+      }
       try {
         if (!snapRenderer) snapRenderer = makeRenderer(document.createElement("canvas"), true);
         const r = snapRenderer;
