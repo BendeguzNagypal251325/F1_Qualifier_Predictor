@@ -18,7 +18,7 @@ export function TeamList() {
         <div>
           <span className="eyebrow">Teams</span>
           <h1>Every team since {meta.seasons[0]}</h1>
-          <p className="lede">One page per team, across renames (Toro Rosso → AlphaTauri → RB → Racing Bulls, and so on): how the car ranked each season, who beat whom inside the garage, and where the team is strongest.</p>
+          <p className="lede">One page per team, across renames (AlphaTauri → RB → Racing Bulls, Alfa Romeo → Kick Sauber → Audi, and so on): how the car ranked each season, who beat whom inside the garage, and where the team is strongest.</p>
         </div>
       </div>
       {!data ? <Loading height={420} /> : (
@@ -39,8 +39,8 @@ function TeamCard({ t }: { t: TeamSummary }) {
       <div className="media"><CarImage era={t.era} livery={t.livery} alt={`${t.name} ${t.last_season} car`} /></div>
       <div className="body">
         <h3><Swatch team={t.constructor} /> {t.name}</h3>
-        <div className="meta"><span>avg pace rank {fmt(t.pace_rank)}</span><span>{t.poles} poles</span></div>
-        <div className="meta"><span>{t.names.length > 1 ? `was ${t.names.slice(0, -1).join(", ")}` : `${t.seasons[0]}–${String(t.last_season).slice(2)}`}</span></div>
+        <div className="meta"><span>avg pace rank {fmt(t.pace_rank)}</span><span>{t.poles} pole{t.poles === 1 ? "" : "s"}</span></div>
+        <div className="meta"><span>{t.names.length > 1 ? `was ${t.names.slice(0, -1).join(", ")}` : t.seasons[0] === t.last_season ? `since ${t.seasons[0]}` : `${t.seasons[0]}–${String(t.last_season).slice(2)}`}</span></div>
       </div>
     </Link>
   );
