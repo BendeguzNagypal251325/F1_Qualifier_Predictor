@@ -261,8 +261,9 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
         path = request.url.path
         if request.method != "GET" or not path.startswith("/api/") or path.startswith(uncached) or app_state.state is None:
             response = await call_next(request)
-            if path.startswith("/assets/") and response.status_code == 200:
-                response.headers["Cache-Control"] = "public, max-age=31536000, immutable"  # file names are content hashes
+            if response.status_code == 200 and (path.startswith("/assets/") or (path.startswith("/models/") and request.url.query.startswith("v="))):
+                # /assets: file names are content hashes; /models: the app adds a version (?v=) it bumps when they change
+                response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
             return response
         key = (app_state.state.built_at, str(request.url.path) + "?" + str(request.url.query))
         hit = cache.get(key)

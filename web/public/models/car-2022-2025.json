@@ -1,0 +1,12 @@
+{
+ "wheelbase": 3.5752,
+ "tyreRadius": 0.3593,
+ "width": 2.0,
+ "steeringWheel": [
+  2.5026,
+  0.6279,
+  0.0001
+ ],
+ "era": "2022-2025",
+ "sourceTriangles": 435475
+}

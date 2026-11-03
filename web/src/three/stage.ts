@@ -63,13 +63,13 @@ export interface SnapJob {
   key: string;
   width: number;
   height: number;
-  build: () => THREE.Object3D;
+  build: () => THREE.Object3D | Promise<THREE.Object3D>;
   camera: (obj: THREE.Object3D) => THREE.PerspectiveCamera;
   floor?: boolean;
 }
 
 // Bump when the car or helmet models change, so stored thumbnails are re-rendered.
-const SNAP_VERSION = "gridcast-v2";
+const SNAP_VERSION = "gridcast-v4";
 const STORE = "gridcast-snapshots";
 const storeUrl = (key: string) => `/__snapshot/${SNAP_VERSION}/${encodeURIComponent(key)}`;
 
@@ -111,7 +111,7 @@ export function snapshot(job: SnapJob): Promise<string> {
   if (hit) return hit;
   void pruneStore();
   const p = fromStore(job.key).then((stored) => stored ?? (queue = queue.then(() => new Promise<string>((resolve) => {
-    const run = () => {
+    const run = async () => {
       if (!wanted.has(job.key)) {
         cache.delete(job.key); // nobody is waiting any more; render again if asked later
         return resolve("");
@@ -123,7 +123,7 @@ export function snapshot(job: SnapJob): Promise<string> {
         r.setSize(job.width, job.height, false);
         const k = job.floor === false ? "nofloor" : "floor";
         const stage = (stages[k] ??= makeStage(r, { floor: job.floor }));
-        const obj = job.build();
+        const obj = await job.build();
         stage.scene.add(obj);
         r.setClearColor(0x000000, 0);
         r.shadowMap.enabled = job.floor !== false; // no floor, no shadow pass

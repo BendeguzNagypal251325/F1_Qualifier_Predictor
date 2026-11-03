@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { bakedMeshes, loadGLB } from "./assets";
 import { paint } from "./geom";
 import type { Motif } from "./helmetRefs";
 
@@ -392,7 +393,101 @@ function paintTextures(spec: HelmetSpec, res = 1): { map: THREE.CanvasTexture; m
 // ---------------------------------------------------------------- assembly
 
 /** Helmet facing +x, about 1.9 units tall, centred near the origin. */
+// ---------------------------------------------------------------- reference helmet model
+// The shell, visor and trim of a scanned race-helmet model (tools/models; CC BY 4.0, credited in the
+// README). Its shell gets texture coordinates in the same layout as the lofted shell above, so every
+// driver's paint design from paintTextures() fits it unchanged.
+
+interface HelmetModel { shell: THREE.BufferGeometry; visor: THREE.BufferGeometry; trim: THREE.BufferGeometry }
+let model: HelmetModel | null = null;
+let modelLoad: Promise<void> | null = null;
+
+/** Resolves once the helmet model is loaded (or failed to load; then the lofted helmet is used). */
+export function helmetModelReady(): Promise<void> {
+  return (modelLoad ??= loadGLB("helmet.glb").then((gltf) => { model = prepareModel(gltf.scene); }).catch(() => {}));
+}
+
+/** v (front-to-back texture coordinate) of the lofted shell at each ring, and the rings' x. */
+function ringTable(): { xs: number[]; vs: number[] } {
+  const S = SECTIONS, xs: number[] = [];
+  for (let i = 0; i < S.length - 1; i++) {
+    for (let k = 0; k < SUB; k++) {
+      const g = (j: number) => S[Math.max(0, Math.min(S.length - 1, j))];
+      xs.push(cr(g(i - 1)[0], g(i)[0], g(i + 1)[0], g(i + 2)[0], k / SUB));
+    }
+  }
+  xs.push(S[S.length - 1][0]);
+  return { xs, vs: xs.map((_, i) => i / (xs.length - 1)) };
+}
+
+function prepareModel(root: THREE.Object3D): HelmetModel {
+  const parts = Object.fromEntries(bakedMeshes(root).map((m) => [m.name, m.geometry])) as Record<string, THREE.BufferGeometry>;
+  // fit to the lofted shell: same width, same centre
+  const ref = geometries().shell;
+  ref.computeBoundingBox();
+  const rb = ref.boundingBox!, mb = new THREE.Box3();
+  for (const g of Object.values(parts)) { g.computeBoundingBox(); mb.union(g.boundingBox!); }
+  const s = (rb.max.z - rb.min.z) / (mb.max.z - mb.min.z);
+  const rc = rb.getCenter(new THREE.Vector3()), mc = mb.getCenter(new THREE.Vector3());
+  const fit = new THREE.Matrix4().makeTranslation(rc.x, rc.y, rc.z).multiply(new THREE.Matrix4().makeScale(s, s, s)).multiply(new THREE.Matrix4().makeTranslation(-mc.x, -mc.y, -mc.z));
+  for (const g of Object.values(parts)) g.applyMatrix4(fit);
+
+  // texture coordinates for the shell: u = angle around the length axis, v = position along it
+  const shell = parts.shell.index ? parts.shell.toNonIndexed() : parts.shell;
+  const pos = shell.attributes.position as THREE.BufferAttribute;
+  shell.computeBoundingBox();
+  const b = shell.boundingBox!;
+  const BINS = 48, lo = new Float32Array(BINS).fill(1e9), hi = new Float32Array(BINS).fill(-1e9), wz = new Float32Array(BINS);
+  const bin = (x: number) => Math.min(BINS - 1, Math.max(0, Math.floor(((x - b.min.x) / (b.max.x - b.min.x)) * BINS)));
+  for (let i = 0; i < pos.count; i++) {
+    const k = bin(pos.getX(i)), y = pos.getY(i);
+    lo[k] = Math.min(lo[k], y); hi[k] = Math.max(hi[k], y); wz[k] = Math.max(wz[k], Math.abs(pos.getZ(i)));
+  }
+  const { xs, vs } = ringTable();
+  const vAt = (f: number) => {
+    const x = xs[0] + f * (xs[xs.length - 1] - xs[0]);
+    let j = 0;
+    while (j < xs.length - 2 && xs[j + 1] < x) j++;
+    const t = Math.min(1, Math.max(0, (x - xs[j]) / (xs[j + 1] - xs[j] || 1)));
+    return vs[j] + (vs[j + 1] - vs[j]) * t;
+  };
+  const n = 2.25, uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), k = bin(x);
+    const cy = (lo[k] + hi[k]) / 2, hy = Math.max(1e-3, (hi[k] - lo[k]) / 2), w = Math.max(1e-3, wz[k]);
+    const Y = Math.max(-1, Math.min(1, (pos.getY(i) - cy) / hy)), Z = Math.max(-1, Math.min(1, pos.getZ(i) / w));
+    const a = Math.atan2(Math.sign(Y) * Math.abs(Y) ** (n / 2), Math.sign(Z) * Math.abs(Z) ** (n / 2));
+    uv[i * 2] = ((a / (Math.PI * 2)) % 1 + 1) % 1;
+    uv[i * 2 + 1] = vAt((x - b.min.x) / (b.max.x - b.min.x));
+  }
+  // triangles across the u = 0 / 1 seam: move their low side past 1 (the texture repeats in u)
+  for (let i = 0; i < pos.count; i += 3) {
+    const u = [uv[i * 2], uv[i * 2 + 2], uv[i * 2 + 4]];
+    if (Math.max(...u) - Math.min(...u) > 0.5) for (let j = 0; j < 3; j++) if (u[j] < 0.5) uv[(i + j) * 2] += 1;
+  }
+  shell.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  const out = { shell, visor: parts.visor, trim: parts.trim };
+  Object.values(out).forEach((g) => (g.userData.shared = true));
+  return out;
+}
+
+function buildModelHelmet(M: HelmetModel, spec: HelmetSpec, res: number): THREE.Group {
+  const grp = new THREE.Group();
+  const { map, metal } = paintTextures(spec, res);
+  map.wrapS = THREE.RepeatWrapping;
+  if (metal) metal.wrapS = THREE.RepeatWrapping;
+  const shellMat = paint("#ffffff", { map, metalness: metal ? 1 : 0.12, roughness: 0.24, clearcoat: 1, clearcoatRoughness: 0.06, ...(metal ? { metalnessMap: metal } : {}) });
+  const tint = new THREE.Color(spec.colors[1] ?? "#333333").lerp(new THREE.Color("#050507"), 0.985);
+  const visorMat = new THREE.MeshPhysicalMaterial({ color: tint, metalness: 0.4, roughness: 0.03, clearcoat: 1, clearcoatRoughness: 0.02, iridescence: 0.12, iridescenceIOR: 1.5 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: "#0b0b0d", roughness: 0.55, metalness: 0.2 });
+  grp.add(new THREE.Mesh(M.shell, shellMat), new THREE.Mesh(M.visor, visorMat), new THREE.Mesh(M.trim, trimMat));
+  grp.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  return grp;
+}
+
+/** A driver's helmet: the reference model once helmetModelReady() has resolved, else the lofted one. */
 export function buildHelmet(spec: HelmetSpec, res = 1): THREE.Group {
+  if (model) return buildModelHelmet(model, spec, res);
   const G = geometries();
   const grp = new THREE.Group();
   const { map, metal } = paintTextures(spec, res);
