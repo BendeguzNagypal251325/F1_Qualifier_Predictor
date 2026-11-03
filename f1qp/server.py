@@ -1,0 +1,498 @@
+"""Web server: JSON API + the built web app (web/dist).
+
+    uv run f1qp-serve                    # http://localhost:8000  (API docs at /api/docs)
+    uv run f1qp-serve --reload           # development
+
+Configuration (environment variables):
+    F1QP_LIVE_INTERVAL   seconds between live refreshes (default 900; 0 turns live updates off)
+    F1QP_LIVE_UPDATE     1 = also re-download F1DB on each live refresh (default 1)
+    F1QP_MEDIA           on/off: show the upstream driver/car/track pictures (default on)
+    F1QP_ADMIN_TOKEN     token for POST /api/live/refresh (no token = endpoint disabled)
+    F1QP_STATIC_DIR      built front end (default web/dist)
+    F1QP_CORS_ORIGINS    comma-separated origins for a separately hosted front end
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import logging
+import os
+import secrets
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from fastapi import FastAPI, Header, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+from . import cars as C
+from . import model as M
+from . import names as N
+from .build import GROUPS, State, compute_state, data_mtime, load_state, save_state, ARTIFACT
+from .data import ROOT
+from .media import load_manifest
+from .tracks import outlines
+
+log = logging.getLogger("f1qp")
+
+
+# ---------------------------------------------------------------- settings ----------------------------------------------
+
+
+@dataclass
+class Settings:
+    live_interval: int = int(os.environ.get("F1QP_LIVE_INTERVAL", "900"))
+    live_update_f1db: bool = os.environ.get("F1QP_LIVE_UPDATE", "1") == "1"
+    media: bool = os.environ.get("F1QP_MEDIA", "on").lower() not in ("off", "0", "false")
+    admin_token: str = os.environ.get("F1QP_ADMIN_TOKEN", "")
+    static_dir: Path = Path(os.environ.get("F1QP_STATIC_DIR", str(ROOT / "web" / "dist")))
+    cors_origins: tuple[str, ...] = tuple(o for o in os.environ.get("F1QP_CORS_ORIGINS", "").split(",") if o)
+    artifact: Path = ARTIFACT
+
+
+# ---------------------------------------------------------------- live service ------------------------------------------
+
+
+class LiveService:
+    """Refreshes the live prediction in the background and reloads the data when it changes."""
+
+    def __init__(self, app_state: "AppState", settings: Settings, fetch=None):
+        self.app_state, self.settings = app_state, settings
+        self.fetch = fetch  # injectable for tests: () -> snapshot dict
+        self.snapshot: dict | None = None
+        self.error: str | None = None
+        self.last_run: str | None = None
+        self.running = False
+        self._task: asyncio.Task | None = None
+        self._lock = asyncio.Lock()
+
+    def status(self) -> dict:
+        return {
+            "enabled": self.settings.live_interval > 0,
+            "interval_s": self.settings.live_interval,
+            "last_run": self.last_run,
+            "running": self.running,
+            "error": self.error,
+        }
+
+    def _fetch(self) -> dict:
+        if self.fetch:
+            return self.fetch()
+        from .live import live_snapshot  # imported lazily: network code
+
+        return live_snapshot(update=self.settings.live_update_f1db)
+
+    async def refresh(self) -> None:
+        async with self._lock:
+            self.running = True
+            try:
+                self.snapshot = await asyncio.to_thread(self._fetch)
+                self.error = None
+            except BaseException as e:  # noqa: BLE001 - SystemExit from the CLI code means "no race"
+                if isinstance(e, asyncio.CancelledError):
+                    raise
+                self.error = f"{type(e).__name__}: {e}"
+                log.warning("live refresh failed: %s", self.error)
+            finally:
+                self.last_run = datetime.now(timezone.utc).isoformat(timespec="seconds")
+                self.running = False
+            await self.app_state.reload_if_stale()
+
+    async def _loop(self) -> None:
+        while True:
+            await self.refresh()
+            await asyncio.sleep(self.settings.live_interval)
+
+    def start(self) -> None:
+        if self.settings.live_interval > 0 and self._task is None:
+            self._task = asyncio.create_task(self._loop())
+
+    async def stop(self) -> None:
+        if self._task:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+            self._task = None
+
+
+class AppState:
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self.state: State | None = None
+        self._models: dict[str, object] = {}
+
+    def model_before(self, race_key: str):
+        """Model trained on every session before ``race_key`` (the same one the walk-forward used)."""
+        if race_key not in self._models:
+            feat = self.state.feat
+            date = feat.loc[feat["race_key"] == race_key, "date"].iloc[0]
+            if len(self._models) > 64:
+                self._models.clear()
+            self._models[race_key] = M.fit(feat[feat["date"] < date])
+        return self._models[race_key]
+
+    async def load(self) -> None:
+        self.state = await asyncio.to_thread(load_state, self.settings.artifact)
+
+    async def reload_if_stale(self) -> None:
+        """Rebuild after new data arrived (F1DB update or a finished live qualifying)."""
+        if self.settings.artifact.exists() and self.settings.artifact.stat().st_mtime >= data_mtime():
+            return
+        state = await asyncio.to_thread(compute_state)
+        await asyncio.to_thread(save_state, state, self.settings.artifact)
+        self.state = state
+        self._models.clear()
+
+
+# ---------------------------------------------------------------- helpers -----------------------------------------------
+
+
+def _f(x, nd: int = 2):
+    """JSON-safe float."""
+    if x is None or (isinstance(x, float) and np.isnan(x)) or pd.isna(x):
+        return None
+    return round(float(x), nd)
+
+
+def _seasons(arg: str | None, available: list[int]) -> list[int]:
+    if not arg:
+        return available
+    try:
+        picked = [int(s) for s in arg.split(",") if s.strip()]
+    except ValueError:
+        raise HTTPException(400, "seasons must be a comma-separated list of years, e.g. 2024,2025")
+    return [s for s in picked if s in available] or available
+
+
+def _result(r) -> dict:
+    return {
+        "season": int(r.season), "round": int(r.round), "race_key": r.race_key, "gp": N.gp_name(r.grand_prix),
+        "circuit": r.circuit, "team": r.constructor_id, "pos": int(r.quali_pos),
+        "status": r.quali_status if not str(r.quali_status).isdigit() else None,
+        "pred": _f(r.pred), "pred_rank": int(r.pred_rank), "picked": bool(r.picked), "right": bool(r.right),
+    }
+
+
+def _stats(df: pd.DataFrame) -> dict:
+    n = len(df)
+    return {
+        "sessions": n,
+        "avg_pos": _f(df["quali_pos"].mean()),
+        "best": int(df["quali_pos"].min()) if n else None,
+        "q3_rate": _f(df["top10"].mean(), 3),
+        "poles": int((df["quali_pos"] == 1).sum()),
+        "avg_pred": _f(df["pred"].mean()),
+        "right": int(df["right"].sum()),
+        **{f"contrib_{g}": _f(df[f"contrib_{g}"].mean()) for g in GROUPS},
+    }
+
+
+# ---------------------------------------------------------------- app ---------------------------------------------------
+
+
+def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
+    settings = settings or Settings()
+    app_state = AppState(settings)
+    live = LiveService(app_state, settings, fetch=live_fetch)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        await app_state.load()
+        live.start()
+        yield
+        await live.stop()
+
+    app = FastAPI(
+        title="F1 Q3 Predictor API",
+        version="1.0.0",
+        description="Out-of-sample F1 qualifying predictions (2020 to now), car/driver split, live weekend updates.",
+        lifespan=lifespan,
+        docs_url="/api/docs",
+        openapi_url="/api/openapi.json",
+        redoc_url=None,
+    )
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
+    if settings.cors_origins:
+        app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins), allow_methods=["GET", "POST"])
+    app.state.live = live
+    app.state.app_state = app_state
+
+    def S() -> State:
+        if app_state.state is None:
+            raise HTTPException(503, "Data is still loading")
+        return app_state.state
+
+    def media() -> dict:
+        return load_manifest() if settings.media else {"drivers": {}, "cars": {}, "tracks": {}, "credit": "", "source": ""}
+
+    # ---------------------------------------------------------------- meta
+
+    @app.get("/api/health", tags=["meta"])
+    def health():
+        st = app_state.state
+        return {"status": "ok" if st else "loading", "data_version": st.data_version if st else None,
+                "built_at": st.built_at if st else None, "live": live.status()}
+
+    @app.get("/api/meta", tags=["meta"])
+    def meta():
+        st = S()
+        wf, m = st.wf, media()
+        last = wf.sort_values("date").groupby("driver_id").tail(1).set_index("driver_id")
+        counts = wf.groupby("driver_id").size()
+        drivers = [
+            {"id": d, "name": N.driver_name(d), "team": last.loc[d, "constructor_id"], "last_season": int(last.loc[d, "season"]),
+             "number": None if pd.isna(last.loc[d, "driver_number"]) else int(last.loc[d, "driver_number"]),
+             "sessions": int(counts[d]), "photos": m["drivers"].get(d, {})}
+            for d in sorted(counts.index, key=lambda d: (-counts[d], d))
+        ]
+        teams = sorted(wf["constructor_id"].unique())
+        circuits = sorted(wf["circuit"].unique())
+        outl = outlines()
+        return {
+            "seasons": st.overview["seasons"], "latest": st.overview["latest"], "data_version": st.data_version,
+            "built_at": st.built_at,
+            "drivers": drivers,
+            "teams": [{"id": t, "name": N.team_name(t), "color": N.team_color(t)} for t in teams],
+            "circuits": [{"id": c, "name": N.circuit_name(c), "outline": outl.get(c, {}).get("path"),
+                          "length_m": outl.get(c, {}).get("length_m"), "map": m["tracks"].get(c)} for c in circuits],
+            "media": {"enabled": settings.media, "credit": m.get("credit"), "source": m.get("source"), "commit": m.get("commit")},
+            "groups": st.overview["feature_groups"],
+            "live": live.status(),
+        }
+
+    @app.get("/api/overview", tags=["results"])
+    def overview():
+        return S().overview
+
+    # ---------------------------------------------------------------- drivers
+
+    @app.get("/api/drivers/{driver_id}", tags=["drivers"])
+    def driver(driver_id: str, seasons: str | None = Query(None, description="e.g. 2024,2025")):
+        st = S()
+        rows = st.wf[st.wf["driver_id"] == driver_id]
+        if rows.empty:
+            raise HTTPException(404, f"Unknown driver '{driver_id}'")
+        rows = rows[rows["season"].isin(_seasons(seasons, st.overview["seasons"]))]
+        tracks = []
+        for c, g in rows.groupby("circuit"):
+            g = g.sort_values(["season", "round"])
+            tracks.append({"circuit": c, "name": N.circuit_name(c), **_stats(g), "results": [_result(r) for r in g.itertuples()]})
+        tracks.sort(key=lambda t: (t["avg_pos"] is None, t["avg_pos"]))
+        stints = (rows.groupby(["constructor_id", "season"]).size().reset_index(name="n").sort_values("season"))
+        return {
+            "id": driver_id, "name": N.driver_name(driver_id), **_stats(rows),
+            "teams": [{"team": t.constructor_id, "season": int(t.season), "sessions": int(t.n)} for t in stints.itertuples()],
+            "tracks": tracks,
+        }
+
+    # ---------------------------------------------------------------- tracks
+
+    @app.get("/api/tracks/{circuit_id}", tags=["tracks"])
+    def track(circuit_id: str, seasons: str | None = None):
+        st = S()
+        rows = st.wf[st.wf["circuit"] == circuit_id]
+        if rows.empty:
+            raise HTTPException(404, f"Unknown track '{circuit_id}'")
+        rows = rows[rows["season"].isin(_seasons(seasons, st.overview["seasons"]))]
+        drivers = []
+        for d, g in rows.groupby("driver_id"):
+            g = g.sort_values(["season", "round"])
+            drivers.append({"driver": d, "name": N.driver_name(d), "team": g["constructor_id"].iloc[-1], **_stats(g),
+                            "results": [_result(r) for r in g.itertuples()]})
+        drivers.sort(key=lambda t: t["avg_pos"])
+        sess = M.session_scores(rows, rows["picked"])
+        sessions = [{"race_key": k, "season": int(k[:4]), "correct": int(v),
+                     "pole": N.driver_name(rows.loc[(rows["race_key"] == k) & (rows["quali_pos"] == 1), "driver_id"].iloc[0])}
+                    for k, v in sess.sort_index().items()]
+        return {"id": circuit_id, "name": N.circuit_name(circuit_id), "sessions": sessions,
+                "model_correct": _f(sess.mean()) if len(sess) else None, "drivers": drivers}
+
+    # ---------------------------------------------------------------- heatmap
+
+    @app.get("/api/heatmap", tags=["results"])
+    def heatmap(seasons: str | None = None, min_sessions: int = Query(20, ge=1)):
+        st = S()
+        rows = st.wf[st.wf["season"].isin(_seasons(seasons, st.overview["seasons"]))]
+        counts = rows.groupby("driver_id").size()
+        keep = counts[counts >= min_sessions].index
+        rows = rows[rows["driver_id"].isin(keep)]
+        avg = rows.groupby("driver_id")["quali_pos"].mean().sort_values()
+        cells = rows.groupby(["driver_id", "circuit"]).agg(avg=("quali_pos", "mean"), n=("quali_pos", "size"),
+                                                           best=("quali_pos", "min"), right=("right", "sum"))
+        circuits = sorted(rows["circuit"].unique(), key=N.circuit_name)
+        return {
+            "circuits": circuits,
+            "drivers": [{"driver": d, "avg": _f(a), "team": rows.loc[rows["driver_id"] == d, "constructor_id"].iloc[-1]} for d, a in avg.items()],
+            "cells": [{"driver": d, "circuit": c, "avg": _f(r.avg), "n": int(r.n), "best": int(r.best), "right": int(r.right)}
+                      for (d, c), r in cells.iterrows()],
+        }
+
+    # ---------------------------------------------------------------- sessions
+
+    @app.get("/api/sessions", tags=["sessions"])
+    def sessions(season: int | None = None):
+        st = S()
+        rows = st.wf if season is None else st.wf[st.wf["season"] == season]
+        sc = M.session_scores(rows, rows["picked"])
+        first = rows.drop_duplicates("race_key").sort_values(["season", "round"])
+        return [{"race_key": r.race_key, "season": int(r.season), "round": int(r.round), "gp": N.gp_name(r.grand_prix),
+                 "circuit": r.circuit, "date": str(r.date)[:10], "sprint": bool(r.sprint_weekend), "correct": int(sc[r.race_key])}
+                for r in first.itertuples()]
+
+    @app.get("/api/sessions/{race_key}", tags=["sessions"])
+    def session(race_key: str):
+        st = S()
+        rows = st.wf[st.wf["race_key"] == race_key].sort_values("pred_rank")
+        if rows.empty:
+            raise HTTPException(404, f"Unknown session '{race_key}'")
+        r0 = rows.iloc[0]
+        return {
+            "race_key": race_key, "season": int(r0.season), "round": int(r0["round"]), "gp": N.gp_name(r0.grand_prix),
+            "circuit": r0.circuit, "date": str(r0.date)[:10], "sprint": bool(r0.sprint_weekend),
+            "correct": int((rows["picked"] & (rows["top10"] == 1)).sum()),
+            "mae": _f((rows["pred_rank"] - rows["quali_pos"]).abs().mean()),
+            "rows": [{**_result(r), "driver": r.driver_id, "fp_last_pos": _f(r.fp_last_pos, 0),
+                      "contrib": {g: _f(getattr(r, f"contrib_{g}")) for g in GROUPS}, "baseline": _f(r.contrib_baseline)}
+                     for r in rows.itertuples()],
+        }
+
+    # ---------------------------------------------------------------- cars
+
+    @app.get("/api/cars", tags=["cars"])
+    def cars(season: int):
+        st = S()
+        rows = st.wf[st.wf["season"] == season]
+        if rows.empty:
+            raise HTTPException(404, f"No data for {season}")
+        m = media()
+        out = []
+        for t, g in rows.groupby("constructor_id"):
+            team_best = g.groupby("race_key")["pace_gap"].min()
+            out.append({"team": t, "name": N.team_name(t), "engine": g["engine"].mode().iloc[0], **C.car_info(season, t),
+                        "photo": m["cars"].get(t, {}).get(str(season)), "avg_pos": _f(g["quali_pos"].mean()),
+                        "pace_gap": _f(team_best.mean(), 3), "car_contrib": _f(g["contrib_car"].mean()),
+                        "q3_rate": _f(g["top10"].mean(), 3), "drivers": sorted(g["driver_id"].unique())})
+        out.sort(key=lambda c: c["pace_gap"] if c["pace_gap"] is not None else 9)
+        return {"season": season, "era": C.era_for(season), "cars": out, "parts": C.PARTS}
+
+    @app.get("/api/cars/{season}/{team}", tags=["cars"])
+    def car(season: int, team: str):
+        st = S()
+        rows = st.wf[(st.wf["season"] == season) & (st.wf["constructor_id"] == team)]
+        if rows.empty:
+            raise HTTPException(404, f"No {team} car in {season}")
+        field_ = st.wf[st.wf["season"] == season]
+        team_best = field_.groupby(["race_key", "constructor_id"])["pace_gap"].min().unstack()
+        rank = team_best.rank(axis=1)
+        races = rows.drop_duplicates("race_key").sort_values("round")
+        trend = [{"race_key": r.race_key, "round": int(r.round), "gp": N.gp_name(r.grand_prix),
+                  "gap": _f(team_best.loc[r.race_key, team], 3), "rank": _f(rank.loc[r.race_key, team], 0),
+                  "best_pos": int(rows.loc[rows["race_key"] == r.race_key, "quali_pos"].min()),
+                  "car_contrib": _f(rows.loc[rows["race_key"] == r.race_key, "contrib_car"].mean())} for r in races.itertuples()]
+        drivers = []
+        for d, g in rows.groupby("driver_id"):
+            drivers.append({"driver": d, "name": N.driver_name(d), **_stats(g), "vs_teammate": _f(g["vs_teammate"].mean())})
+        drivers.sort(key=lambda x: -x["sessions"])
+        m = media()
+        lineage_id = rows["team_id"].iloc[0]
+        lineage = (st.wf[st.wf["team_id"] == lineage_id].drop_duplicates("season")[["season", "constructor_id"]].sort_values("season"))
+        return {"season": season, "team": team, "name": N.team_name(team), "engine": rows["engine"].mode().iloc[0],
+                "lineage": [{"season": int(r.season), "team": r.constructor_id, "name": N.team_name(r.constructor_id)} for r in lineage.itertuples()],
+                **C.car_info(season, team), "photo": m["cars"].get(team, {}).get(str(season)), "parts": C.PARTS,
+                **_stats(rows), "pace_gap": _f(team_best[team].mean(), 3),
+                "pace_rank": _f(rank[team].mean(), 1), "teams_in_season": int(team_best.shape[1]),
+                "trend": trend, "drivers": drivers}
+
+    # ---------------------------------------------------------------- what-if
+
+    @app.get("/api/swap", tags=["what-if"])
+    def swap(race_key: str, driver: str, team: str):
+        """Predict ``driver`` in ``team``'s car at ``race_key`` (team = F1DB constructor id)."""
+        st = S()
+        session_rows = st.feat[st.feat["race_key"] == race_key]
+        if session_rows.empty:
+            raise HTTPException(404, f"Unknown session '{race_key}'")
+        team_rows = session_rows[session_rows["constructor_id"] == team]
+        if team_rows.empty:
+            raise HTTPException(404, f"{team} did not take part in {race_key}")
+        try:
+            row = M.swap_rows(session_rows, driver, team_rows["team_id"].iloc[0])
+        except KeyError:
+            raise HTTPException(404, f"{driver} did not take part in {race_key}")
+        model = app_state.model_before(race_key)
+        score = float(M.predict_position(model, row)[0])
+        contrib = M.contributions(model, row).iloc[0]
+        others = session_rows[session_rows["driver_id"] != driver]
+        other_scores = M.predict_position(model, others)
+        own = session_rows[session_rows["driver_id"] == driver]
+        own_score = float(M.predict_position(model, own)[0])
+        own_contrib = M.contributions(model, own).iloc[0]
+        return {
+            "race_key": race_key, "driver": driver, "team": team,
+            "from_team": own["constructor_id"].iloc[0],
+            "score": round(score, 2), "grid": int((other_scores < score).sum() + 1),
+            "own_score": round(own_score, 2), "own_grid": int((other_scores < own_score).sum() + 1),
+            "actual": None if pd.isna(own["quali_pos"].iloc[0]) else int(own["quali_pos"].iloc[0]),
+            "contrib": {g: round(float(contrib[g]), 2) for g in GROUPS},
+            "own_contrib": {g: round(float(own_contrib[g]), 2) for g in GROUPS},
+            "baseline": round(float(contrib["baseline"]), 2),
+        }
+
+    # ---------------------------------------------------------------- live
+
+    @app.get("/api/live", tags=["live"])
+    def live_get():
+        return {"status": live.status(), "prediction": live.snapshot}
+
+    @app.post("/api/live/refresh", tags=["live"])
+    async def live_refresh(authorization: str = Header("")):
+        if not settings.admin_token:
+            raise HTTPException(403, "Set F1QP_ADMIN_TOKEN to enable manual refreshes")
+        if not secrets.compare_digest(authorization.removeprefix("Bearer "), settings.admin_token):
+            raise HTTPException(401, "Bad token")
+        if live.running:
+            return JSONResponse({"status": live.status()}, status_code=202)
+        asyncio.create_task(live.refresh())
+        return JSONResponse({"status": "started"}, status_code=202)
+
+    # ---------------------------------------------------------------- front end
+
+    static = settings.static_dir
+    if (static / "index.html").exists():
+        app.mount("/assets", StaticFiles(directory=static / "assets"), name="assets")
+
+        @app.get("/{path:path}", include_in_schema=False)
+        def spa(path: str, request: Request):
+            if path.startswith("api/"):
+                raise HTTPException(404)
+            f = (static / path).resolve()
+            if path and f.is_file() and static.resolve() in f.parents:
+                return FileResponse(f)
+            return FileResponse(static / "index.html", headers={"Cache-Control": "no-cache"})
+
+    return app
+
+
+def main() -> None:
+    import uvicorn
+
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
+    parser.add_argument("--reload", action="store_true")
+    args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO)
+    uvicorn.run("f1qp.server:create_app", factory=True, host=args.host, port=args.port, reload=args.reload)
+
+
+if __name__ == "__main__":
+    main()

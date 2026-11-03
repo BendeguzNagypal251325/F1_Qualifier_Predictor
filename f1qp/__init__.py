@@ -3,7 +3,7 @@
 from datetime import date
 
 CURRENT_SEASON = date.today().year
-# Seasons the walk-forward evaluation and dashboard cover (seasons without data are skipped).
+# Seasons the walk-forward evaluation and web app cover (seasons without data are skipped).
 SEASONS = list(range(2020, CURRENT_SEASON + 1))
 # Training rows start here (tested 2007-2024 as start years; 2016-2020 were equally good, 2019 best on 2026).
 TRAIN_FROM = 2019

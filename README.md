@@ -4,6 +4,11 @@ Predicts which 10 drivers reach Q3 (qualify in the top 10) for every Formula 1 G
 information available **before** qualifying starts. It can also run live during a race weekend: after
 every practice session and after qualifying (see [Live weekend predictions](#live-weekend-predictions)).
 
+The results are served as a **web app** (FastAPI back end + React front end, one Docker image): driver
+and car pages with photos, track maps, interactive car schematics for every team and season, a
+"what if this driver drove that car" tool, and a live page for the current weekend. See
+[Web app](#web-app) and [Deployment](#deployment).
+
 ## Results
 
 Ridge regression predicts each driver's qualifying position. The 10 best predicted drivers are the
@@ -69,38 +74,28 @@ OpenF1 team names are mapped in `TEAM_IDS` in `live.py`. New teams or name chang
 
 ## Quick start (uv)
 
-The project is managed with [uv](https://docs.astral.sh/uv/). `uv sync` creates `.venv/` with the
-pinned dependencies from `uv.lock`, including the dev group (pytest).
+The project is managed with [uv](https://docs.astral.sh/uv/) (Python) and npm (front end).
 
 ```bash
-uv sync
-uv run f1qp-train                  # walk-forward evaluation, write reports/evaluation.md, save the model
-uv run f1qp-dashboard              # build reports/dashboard.html (interactive results)
-uv run f1qp-predict 2024 monaco    # one race, predicted vs actual
-uv run f1qp-predict 2026 19        # by round number
-uv run f1qp-data                   # re-download F1DB and rebuild data/qualifying_entries.csv (2010-now)
-uv run f1qp-live                   # live prediction for the next race (see below)
+uv sync                            # Python env from uv.lock (incl. pytest)
+uv run f1qp-train                  # walk-forward evaluation -> reports/evaluation.md
+uv run f1qp-predict 2024 monaco    # one race, predicted vs actual (terminal)
+uv run f1qp-live                   # live prediction for the next race (terminal)
 uv run pytest
 ```
 
-To add a dependency, run `uv add <package>` (or `uv add --dev <package>`) and commit
-`pyproject.toml` and `uv.lock`.
+Run the web app locally:
 
-## Dashboard
+```bash
+cd web && npm ci && npm run build && cd ..   # build the front end into web/dist
+uv run f1qp-build                            # precompute predictions -> artifacts/state.pkl
+uv run f1qp-serve                            # http://127.0.0.1:8000   (API docs: /api/docs)
+```
 
-`reports/dashboard.html` is a single self-contained file. Open it in a browser. Every prediction in it
-is out-of-sample: it comes from the walk-forward run, where the model is retrained before each session.
+For front-end development, run `uv run f1qp-serve` and `cd web && npm run dev` side by side. Vite
+serves the app on http://localhost:5173 and forwards `/api` to the Python server.
 
-- **Overview:** correct picks per season, the model vs the simple rules, how often each score happened,
-  and feature importance.
-- **Drivers by track:** pick a driver to see every track they raced at: visits, average and best
-  qualifying position, Q3 rate, poles, a colour-coded result chip for each season, the model's average
-  predicted position, and how often the model called it right.
-- **Tracks:** the same stats for every driver at one track, plus the model's score at each session there.
-- **Heatmap:** average qualifying position for each driver at each track.
-- **Sessions:** the model's full predicted order for any race, with the actual result.
-
-All views can be filtered by season.
+To add a Python dependency, run `uv add <package>` and commit `pyproject.toml` and `uv.lock`.
 
 Example output (`uv run f1qp-predict 2024 monaco`). ✓ means the driver was correctly placed
 inside or outside the top 10:
@@ -115,6 +110,107 @@ inside or outside the top 10:
 ...
 Correct top-10 picks: 8/10
 ```
+
+## Web app
+
+| Page | What it shows |
+|---|---|
+| **Overview** | correct picks per season vs the simple rules, how much car / driver / practice decide a prediction, most useful inputs |
+| **Live** | this weekend's predicted qualifying order, rebuilt after every finished session; after qualifying, the real result next to it |
+| **Drivers** | grid of driver photos; each profile has the driver's record at every track, team history, and the driver-vs-car split |
+| **Cars** | every car of a season ranked by pace; each car has an interactive schematic, pace through the season, its drivers, and a power-unit comparison |
+| **Tracks** | track outlines and maps; every driver's record at that track, and the model's score at each session there |
+| **What if** | put any driver in any car at any race and see the predicted grid slot |
+| **Sessions** | predicted order vs result for any race, with the reason behind each prediction |
+| **Heatmap** | average qualifying position per driver × track |
+
+All of it comes from the walk-forward run, so every prediction shown is out-of-sample.
+
+### Car and driver features
+
+Every feature belongs to one group (`FEATURE_GROUPS` in `features.py`):
+
+- **Car**: team form (average quali, Q3 rate, pace gap to pole, season average) and team standings.
+  It is tracked per team lineage, so it stays with the car when a driver changes team and carries
+  over a rebrand.
+- **Driver**: the driver's own results, teammate head-to-head, track record, experience and standings.
+  It follows the driver to a new team. A driver's past results also contain the cars they had, so
+  the split is not perfectly clean.
+- **Practice**: this weekend's practice order and gaps, which reflect car and driver together.
+- **Event**: sprint weekend, street circuit.
+
+Ridge regression is linear, so every prediction splits exactly into one contribution per group
+(`model.contributions`, tested to add up to the prediction). The app shows these as places gained or
+lost compared with an average entry. The **What if** tool (`model.swap_rows`) keeps the driver's
+features and takes the car features and practice pace from the other team's entries.
+
+We also tested extra features to separate car and driver further: a driver's career average gap to
+teammates, a driver's gap to their own car's best lap, engine-supplier pace, and an in-season
+development trend. None changed walk-forward accuracy by more than ±0.03 picks per race, which is
+noise, so the model itself is unchanged.
+
+### Car schematics
+
+The schematics are our own SVG drawings (`web/src/components/CarSchematic.tsx`). They are built from
+the public regulation dimensions of each era: 2017–2021 (wide cars with bargeboards), 2022–2025
+(ground effect) and 2026 (narrower, shorter, active aero). Each one is coloured in that car's livery
+(`f1qp/cars.py` has the chassis name and colours for every team and season since 2020). Every part is
+clickable and shows what it does, plus the car-level numbers the model uses. The data has no
+measurements of individual parts, and the app says so.
+
+### Pictures
+
+Driver photos (2023–2026), car photos (2023–2026) and track maps come from
+[toUpperCase78/formula1-datasets](https://github.com/toUpperCase78/formula1-datasets). That repository
+says they come from formula1.com, so **they are Formula 1's copyright**. We do not copy them into this
+repository: `data/media_manifest.json` only links to the files there, pinned to one commit, and the
+browser loads them from GitHub. `uv run f1qp-media` rebuilds the manifest from the latest commit; it
+downloads file names only, not the images.
+
+Before a public deployment, check that you may show these pictures, or set `F1QP_MEDIA=off`. The app
+then shows only its own graphics: track outlines from
+[bacinger/f1-circuits](https://github.com/bacinger/f1-circuits) (MIT, bundled in `f1qp/assets/`) and
+team-coloured initials. Drivers who have no photo (most of 2020–2022) always get initials.
+
+## Deployment
+
+One Docker image holds the API, the built front end and the precomputed predictions:
+
+```bash
+docker compose up --build          # http://localhost:8000
+```
+
+or:
+
+```bash
+docker build -t f1qp .
+docker run -p 8000:8000 f1qp
+```
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `F1QP_LIVE_INTERVAL` | `900` | seconds between live refreshes; `0` turns live updates off |
+| `F1QP_LIVE_UPDATE` | `1` | also pull the latest F1DB results on each refresh |
+| `F1QP_MEDIA` | `on` | show the upstream driver/car/track pictures |
+| `F1QP_ADMIN_TOKEN` | empty | enables `POST /api/live/refresh` with `Authorization: Bearer <token>` |
+| `F1QP_CORS_ORIGINS` | empty | comma-separated origins, if the front end is hosted elsewhere |
+| `PORT` / `HOST` | `8000` / `0.0.0.0` | where the server listens |
+
+**Live service:** every `F1QP_LIVE_INTERVAL` seconds the server runs the same code as `f1qp-live`
+(F1DB update plus OpenF1 sessions) in a background thread. When new results arrive (a new F1DB round,
+or a finished qualifying saved in `data/live/`), it rebuilds the predictions and swaps them in without
+a restart. The compose file keeps `data/live`, the F1DB checkout and the artifacts on volumes. The
+image runs as a non-root user and has a health check (`GET /api/health`).
+
+It runs on any container host (Fly.io, Render, Railway, Google Cloud Run, a VM). Live updates need
+outbound HTTPS to `api.openf1.org` and `github.com`. Plan for about 1 GB of memory.
+
+Behind a TLS-intercepting corporate proxy, build with the proxy's CA as a build secret (see the
+comment at the top of the `Dockerfile`). If Docker Hub rate-limits you, pass
+`--build-arg REGISTRY=mirror.gcr.io/library`.
+
+CI (`.github/workflows/ci.yml`) runs the Python tests, builds the front end, then builds the Docker
+image and smoke-tests it. The API reference is at `/api/docs` on a running server.
 
 ## Data
 
@@ -159,19 +255,28 @@ unchanged.
 ## Project layout
 
 ```
-f1qp/data.py       download F1DB + build data/qualifying_entries.csv
-f1qp/features.py   leakage-free pre-qualifying features
-f1qp/model.py      models, baselines, metrics, permutation importance
-f1qp/train.py      walk-forward evaluation, saves final model
-f1qp/predict.py    predict any past GP vs. the actual result
-f1qp/live.py       live predictions for the next race (F1DB + OpenF1)
-f1qp/dashboard.py  build the interactive HTML dashboard (template: dashboard_template.html)
-reports/           evaluation report + dashboard.html
-data/live/         weekends saved by f1qp-live
-tests/             data sanity, leakage and live (offline, fake OpenF1) tests
+f1qp/data.py        download F1DB + build data/qualifying_entries.csv
+f1qp/features.py    leakage-free pre-qualifying features, car/driver feature groups
+f1qp/model.py       Ridge model, baselines, metrics, contributions, what-if swap
+f1qp/train.py       walk-forward evaluation report
+f1qp/predict.py     predict any past GP vs. the actual result (terminal)
+f1qp/live.py        live predictions for the next race (F1DB + OpenF1)
+f1qp/build.py       precompute everything the web app serves -> artifacts/state.pkl
+f1qp/server.py      FastAPI app: JSON API, live background service, serves web/dist
+f1qp/cars.py        chassis names, liveries and regulation eras per team and season
+f1qp/media.py       picture manifest (links to the upstream photos, not copies)
+f1qp/tracks.py      track outlines as SVG paths (MIT GeoJSON in f1qp/assets/)
+f1qp/names.py       display names and team colours
+web/                React + TypeScript front end (Vite)
+data/               F1DB entries table, media manifest, data/live/ weekends
+Dockerfile, docker-compose.yml, .github/workflows/ci.yml
+tests/              data sanity, leakage, live (fake OpenF1), API and explanation tests
 ```
 
 ## Ideas for next steps
+
+- Data on which team brought upgrades to which race, as a car feature, to separate car from driver
+  more cleanly.
 
 - Predict the exact grid order (ranking model, e.g. LightGBM LambdaRank) instead of only top 10.
 - Add weather (wet qualifying is where the model fails most), long-run vs. short-run practice pace and

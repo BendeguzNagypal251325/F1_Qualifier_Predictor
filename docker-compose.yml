@@ -1,0 +1,22 @@
+# docker compose up --build   ->  http://localhost:8000
+services:
+  app:
+    build: .
+    image: f1qp:latest
+    ports:
+      - "8000:8000"
+    environment:
+      F1QP_LIVE_INTERVAL: "900"     # seconds between live refreshes; 0 = off
+      F1QP_LIVE_UPDATE: "1"         # also pull the latest F1DB results
+      F1QP_MEDIA: "on"              # upstream driver/car/track pictures; "off" to hide them
+      F1QP_ADMIN_TOKEN: "${F1QP_ADMIN_TOKEN:-}"   # enables POST /api/live/refresh
+    volumes:
+      # live weekends, F1DB checkout and rebuilt artifacts survive restarts
+      - f1qp-live:/app/data/live
+      - f1qp-raw:/app/data/raw
+      - f1qp-artifacts:/app/artifacts
+    restart: unless-stopped
+volumes:
+  f1qp-live:
+  f1qp-raw:
+  f1qp-artifacts:

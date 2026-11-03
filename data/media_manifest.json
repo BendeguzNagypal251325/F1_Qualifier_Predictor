@@ -1,0 +1,254 @@
+{
+ "source": "https://github.com/toUpperCase78/formula1-datasets",
+ "commit": "6c1d8b6a3238367f9b84a398ddc25952dbdd8041",
+ "credit": "Pictures: Formula 1 (formula1.com), collected in toUpperCase78/formula1-datasets.",
+ "drivers": {
+  "alexander-albon": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Alexander_Albon_23.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Alexander_Albon_23.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Alexander_Albon_23.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Alexander_Albon_23.png"
+  },
+  "carlos-sainz-jr": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Carlos_Sainz_55.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Carlos_Sainz_55.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Carlos_Sainz_55.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Carlos_Sainz_55.png"
+  },
+  "charles-leclerc": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Charles_Leclerc_16.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Charles_Leclerc_16.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Charles_Leclerc_16.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Charles_Leclerc_16.png"
+  },
+  "daniel-ricciardo": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Daniel_Ricciardo_3.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Daniel_Ricciardo_3.png"
+  },
+  "esteban-ocon": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Esteban_Ocon_31.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Esteban_Ocon_31.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Esteban_Ocon_31.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Esteban_Ocon_31.png"
+  },
+  "fernando-alonso": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Fernando_Alonso_14.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Fernando_Alonso_14.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Fernando_Alonso_14.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Fernando_Alonso_14.png"
+  },
+  "george-russell": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/George_Russell_63.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/George_Russell_63.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/George_Russell_63.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/George_Russell_63.png"
+  },
+  "guanyu-zhou": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Guanyu_Zhou_24.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Guanyu_Zhou_24.png"
+  },
+  "kevin-magnussen": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Kevin_Magnussen_20.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Kevin_Magnussen_20.png"
+  },
+  "lance-stroll": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Lance_Stroll_18.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Lance_Stroll_18.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Lance_Stroll_18.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Lance_Stroll_18.png"
+  },
+  "lando-norris": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Lando_Norris_4.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Lando_Norris_4.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Lando_Norris_4.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Lando_Norris_1.png"
+  },
+  "lewis-hamilton": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Lewis_Hamilton_44.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Lewis_Hamilton_44.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Lewis_Hamilton_44.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Lewis_Hamilton_44.png"
+  },
+  "liam-lawson": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Liam_Lawson_40.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Liam_Lawson_30.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Liam_Lawson_30.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Liam_Lawson_30.png"
+  },
+  "logan-sargeant": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Logan_Sargeant_2.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Logan_Sargeant_2.png"
+  },
+  "max-verstappen": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Max_Verstappen_1.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Max_Verstappen_1.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Max_Verstappen_1.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Max_Verstappen_3.png"
+  },
+  "nico-hulkenberg": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Nico_Hulkenberg_27.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Nico_Hulkenberg_27.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Nico_Hulkenberg_27.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Nico_Hulkenberg_27.png"
+  },
+  "nyck-de-vries": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Nyck_De_Vries_21.png"
+  },
+  "oscar-piastri": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Oscar_Piastri_81.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Oscar_Piastri_81.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Oscar_Piastri_81.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Oscar_Piastri_81.png"
+  },
+  "pierre-gasly": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Pierre_Gasly_10.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Pierre_Gasly_10.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Pierre_Gasly_10.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Pierre_Gasly_10.png"
+  },
+  "sergio-perez": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Sergio_Perez_11.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Sergio_Perez_11.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Sergio_Perez_11.png"
+  },
+  "valtteri-bottas": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Valtteri_Bottas_77.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Valtteri_Bottas_77.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Valtteri_Bottas_77.png"
+  },
+  "yuki-tsunoda": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Drivers/Yuki_Tsunoda_22.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Yuki_Tsunoda_22.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Yuki_Tsunoda_22.png"
+  },
+  "franco-colapinto": {
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Franco_Colapinto_43.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Franco_Colapinto_43.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Franco_Colapinto_43.png"
+  },
+  "jack-doohan": {
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Jack_Doohan_61.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Jack_Doohan_7.png"
+  },
+  "oliver-bearman": {
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Drivers/Oliver_Bearman_38.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Oliver_Bearman_87.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Oliver_Bearman_87.png"
+  },
+  "gabriel-bortoleto": {
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Gabriel_Bortoleto_5.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Gabriel_Bortoleto_5.png"
+  },
+  "isack-hadjar": {
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Isack_Hadjar_6.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Isack_Hadjar_6.png"
+  },
+  "kimi-antonelli": {
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Drivers/Kimi_Antonelli_12.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Kimi_Antonelli_12.png"
+  },
+  "arvid-lindblad": {
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Drivers/Arvid_Lindblad_41.png"
+  }
+ },
+ "cars": {
+  "alfa-romeo": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Cars/Alfa_Romeo_C43.png"
+  },
+  "alphatauri": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Cars/AlphaTauri_AT04.png"
+  },
+  "alpine": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Cars/Alpine_A523.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Cars/Alpine_A524.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Cars/Alpine_A525.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Cars/Alpine_A526.png"
+  },
+  "aston-martin": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Cars/Aston_Martin_AMR23.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Cars/Aston_Martin_AMR24.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Cars/Aston_Martin_AMR25.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Cars/Aston_Martin_AMR26.png"
+  },
+  "ferrari": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Cars/Ferrari_SF-23.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Cars/Ferrari_SF-24.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Cars/Ferrari_SF-25.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Cars/Ferrari_SF-26.png"
+  },
+  "haas": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Cars/Haas_VF-23.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Cars/Haas_VF-24.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Cars/Haas_VF-25.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Cars/Haas_VF-26.png"
+  },
+  "mclaren": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Cars/McLaren_MCL60.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Cars/McLaren_MCL38.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Cars/McLaren_MCL39.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Cars/McLaren_MCL40.png"
+  },
+  "mercedes": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Cars/Mercedes-AMG_W14.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Cars/Mercedes-AMG_W15.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Cars/Mercedes-AMG_W16.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Cars/Mercedes-AMG_W17.png"
+  },
+  "red-bull": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Cars/Red_Bull_RB19.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Cars/Red_Bull_RB20.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Cars/Red_Bull_RB21.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Cars/Red_Bull_RB22.png"
+  },
+  "williams": {
+   "2023": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202023%20Season%20Cars/Williams_FW45.png",
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Cars/Williams_FW46.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Cars/Williams_FW47.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Cars/Williams_FW48.png"
+  },
+  "kick-sauber": {
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Cars/Kick_Sauber_C44.png",
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Cars/Kick_Sauber_C45.png"
+  },
+  "rb": {
+   "2024": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202024%20Season%20Cars/RB_VCARB_01.png"
+  },
+  "racing-bulls": {
+   "2025": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202025%20Season%20Cars/Racing_Bulls_VCARB_02.png",
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Cars/Racing_Bulls_VCARB03.png"
+  },
+  "audi": {
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Cars/Audi_R26.png"
+  },
+  "cadillac": {
+   "2026": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%202026%20Season%20Cars/Cadillac_MAC-26.png"
+  }
+ },
+ "tracks": {
+  "melbourne": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Australia_Albert_Park.png",
+  "spielberg": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Austria_Red_Bull_Ring.png",
+  "baku": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Azerbaijan_Baku.png",
+  "bahrain": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Bahrain_Bahrain_International.png",
+  "spa-francorchamps": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Belgium_Spa_Francorchamps.png",
+  "interlagos": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Brazil_Jose_Carlos_Pace.png",
+  "montreal": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Canada_Gilles_Villeneuve.png",
+  "shanghai": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/China_Shanghai_International.png",
+  "silverstone": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Great_Britain_Silverstone.png",
+  "hungaroring": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Hungary_Hungaroring.png",
+  "imola": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Italy_Imola_Internazionale_Enzo_Dino_Ferrari.png",
+  "monza": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Italy_Monza.png",
+  "suzuka": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Japan_Suzuka.png",
+  "mexico-city": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Mexico_Hermanos_Rodriguez.png",
+  "monaco": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Monaco_Circuit_de_Monaco.png",
+  "zandvoort": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Netherlands_Zandvoort.png",
+  "lusail": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Qatar_Lusail_International.png",
+  "jeddah": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Saudi_Arabia_Jeddah_Corniche.png",
+  "marina-bay": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Singapore_Marina_Bay_Street.png",
+  "catalunya": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/Spain_Barcelona_Catalunya.png",
+  "yas-marina": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/UAE_Abu_Dhabi_Yas_Marina.png",
+  "austin": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/USA_Circuit_of_the_Americas.png",
+  "las-vegas": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/USA_Las_Vegas_Strip.png",
+  "miami": "https://raw.githubusercontent.com/toUpperCase78/formula1-datasets/6c1d8b6a3238367f9b84a398ddc25952dbdd8041/F1%20Race%20Tracks/USA_Miami_International.png"
+ },
+ "unmatched": []
+}
