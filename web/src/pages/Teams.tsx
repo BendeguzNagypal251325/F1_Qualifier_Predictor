@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
+import { prefetchCar } from "../three/modelFiles";
 import { useApi, useMeta } from "../api";
 import { RaceLine } from "../components/Charts";
 import { CarImage } from "../components/lazy3d";
@@ -8,6 +10,7 @@ import { engineName } from "./Cars";
 
 export function TeamList() {
   const meta = useMeta();
+  useEffect(() => prefetchCar(meta.latest), [meta.latest]);
   const { data, error } = useApi<TeamSummary[]>("/api/teams");
   if (error) return <ErrorBox error={error} />;
   const current = data?.filter((t) => t.last_season === meta.latest) ?? [];
@@ -58,6 +61,8 @@ const surname = (name: string) => name.split(" ").slice(1).join(" ") || name;
 
 export function TeamPage() {
   const { id = "" } = useParams();
+  const lastSeason = useMeta().latest;
+  useEffect(() => prefetchCar(lastSeason), [lastSeason]);
   const { data: t, error } = useApi<TeamDetail>(`/api/teams/${id}`);
   if (error) return <ErrorBox error={error} />;
   if (!t) return <Loading height={480} />;

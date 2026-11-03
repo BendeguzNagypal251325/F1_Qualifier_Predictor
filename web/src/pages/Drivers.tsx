@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { prefetchHelmet } from "../three/modelFiles";
 import { Link, useParams } from "react-router-dom";
 import { seasonsParam, useApi, useMeta } from "../api";
 import {
@@ -29,6 +30,7 @@ function DriverCard({ d, latest }: { d: DriverMeta; latest: number }) {
 
 export function DriverList() {
   const meta = useMeta();
+  useEffect(prefetchHelmet, []);
   const [q, setQ] = useState("");
   const [current, setCurrent] = useState(true);
   const list = meta.drivers.filter((d) => (!current || d.last_season === meta.latest) && d.name.toLowerCase().includes(q.toLowerCase()));
@@ -69,6 +71,7 @@ function spells(teams: { team: string; season: number; sessions: number }[]) {
 
 export function DriverPage() {
   const { id = "" } = useParams();
+  useEffect(prefetchHelmet, []);
   const meta = useMeta();
   const [seasons, setSeasons] = useSeasons();
   const q = seasonsParam(seasons, meta.seasons);

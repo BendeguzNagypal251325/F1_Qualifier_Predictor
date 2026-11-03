@@ -204,8 +204,9 @@ noise, so the model itself is unchanged.
 
 ### 3D cars
 
-The 2022–2025 and 2026 cars are adapted from detailed reference models (see [3D references](#3d-references)):
-the Alpine A525 for the ground-effect era and the Red Bull RB22 for 2026. `tools/models/` turns them into
+Every car is adapted from a detailed reference model (see [3D references](#3d-references)): the Alpine
+A525 for the ground-effect era (2022–2025), the Red Bull RB22 for 2026, and a 2022 car reshaped
+towards the 2017–2021 rules for 2020 and 2021. `tools/models/` turns them into
 the app's assets (`web/public/models/`, about 0.8 MB per car):
 
 1. keep only the car (the A525 file is a whole pit scene with a driver, mechanics' tools and a laptop);
@@ -216,9 +217,14 @@ the app's assets (`web/public/models/`, about 0.8 MB per car):
    chrome, glass, light) and drop sponsor decals, numbers and the original textures;
 5. turn painted textures into colour-zone masks (primary / secondary / accent / carbon) with lettering
    and logos filtered out, so the app can paint every team's livery onto the same model;
-6. simplify and compress with meshoptimizer (`tools/models/optimize.sh`).
+6. for 2020–2021 only, reshape the 2022 car to that era's rules: 13-inch wheels (330 mm rims, 660 mm
+   tyres instead of 457 mm and 720 mm), no wheel covers and no winglets over the front wheels, the
+   wheelbase stretched to 3.65 m, and the front wing widened to the full 2.0 m. That era's bargeboards
+   and higher noses are not added;
+7. simplify and compress with meshoptimizer (`tools/models/optimize.sh`).
 
 ```bash
+bpyenv/bin/python tools/models/blend2glb.py "<refs>/f2022/source/Ferrari Mission Winnow.blend" <refs>/f2022/f2022.glb
 uv run tools/models/prepare_models.py --refs <unpacked models> --out build/models
 tools/models/optimize.sh build/models web/public/models
 ```
@@ -228,10 +234,15 @@ helmet in the cockpit. You can rotate and zoom it, jump to front, side, top or r
 of eight parts: front wing, nose, cockpit and halo, sidepods, floor, power unit, rear wing, and tyres
 and suspension. The selected part glows red, and the side panel explains it with the car-level
 numbers. Every team of an era shares the reference car's shape, so it shows the era's car, not each
-team's own design. The 2020–2021 cars (no reference model) are built in code from that era's FIA
-dimensions (`web/src/three/car.ts`). The car list shows still renders of the same models, made by one
+team's own design. If a model cannot be loaded, a simplified car built in code
+(`web/src/three/car.ts`) is shown instead. The car list shows still renders of the same models, made by one
 hidden renderer, because browsers allow only about 16 live 3D views per page; renders are kept in the
 browser's Cache Storage. three.js and the models load only on pages that show 3D.
+Those pages start downloading their model as soon as they open, in parallel with the 3D code (one
+download, shared with the 3D loader), and each team livery is painted once per car model. The 3D code
+is also fetched in the background after the first page, except on connections where the visitor asked
+to save data or that are very slow. The driver's helmet is seated from each model's own geometry: in
+front of the roll hoop, its centre just above the cockpit rim.
 
 ### Helmets and names
 
@@ -277,10 +288,9 @@ compressed.
 - "2026 Redbull RB22" (https://skfb.ly/pOvxI) by Dave Love SketchFab: 2026 cars
 - "2025 alpine A525" (https://skfb.ly/pHXyZ) by Abu Saif: 2022–2025 cars
 - "Helmet Redbull - Max Verstappen" (https://skfb.ly/pEDBZ) by Maubian: helmets
+- "Formula 1 2022 Car" (https://skfb.ly/owxuQ) by Luis Adrian V.: 2020–2021 cars, reshaped as
+  described above (driver figure removed)
 - "Scuderia Ferrari F1 SF23 2023" (https://skfb.ly/oRV79) by Redgrund: used to check proportions only
-
-Not used: "Formula 1 2022 Car" (https://skfb.ly/owxuQ) by Luis Adrian V. (a Blender file; the A525
-covers that era).
 
 ## Deployment
 

@@ -1,23 +1,20 @@
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
+import { fetchModel } from "./modelFiles";
 
 // Loader for the prepared 3D models in /models (see tools/models): meshopt-compressed glTF.
 
-/** Bump when the files in /models change: the server lets browsers cache versioned model URLs for a year. */
-export const MODELS_VERSION = "1";
-export const modelUrl = (file: string) => `/models/${file}?v=${MODELS_VERSION}`;
-
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-const files = new Map<string, Promise<GLTF>>();
+const parsed = new Map<string, Promise<GLTF>>();
 
-/** Load (once) a model from /models. */
+/** Load (once) a model from /models; shares the download a page may already have started. */
 export function loadGLB(name: string): Promise<GLTF> {
-  let p = files.get(name);
+  let p = parsed.get(name);
   if (!p) {
-    p = loader.loadAsync(modelUrl(name));
-    files.set(name, p);
-    p.catch(() => files.delete(name)); // allow a retry after a network error
+    p = fetchModel(name).then((buf) => loader.parseAsync(buf, ""));
+    parsed.set(name, p);
+    p.catch(() => parsed.delete(name));
   }
   return p;
 }

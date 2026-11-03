@@ -154,7 +154,9 @@ def to_car_frame(pieces: list[Piece], tyre_mats: set[str], width: float, steer_m
     # the mapping (la, up, wa) -> (x, y, z) must be a rotation, not a mirror, or every triangle turns
     # inside out; the car is symmetric, so fix a mirror by flipping z
     M = np.zeros((3, 3))
-    M[0, la] = sign; M[1, up] = 1; M[2, wa] = sign
+    M[0, la] = sign
+    M[1, up] = 1
+    M[2, wa] = sign
     zs = sign * (1 if np.linalg.det(M) > 0 else -1)
 
     def tf(V):
@@ -269,7 +271,8 @@ def export(pieces: list[Piece], slot_of: dict[str, str], meta: dict, out: Path, 
             used = np.unique(F)
             remap = np.full(len(p.V), -1)
             remap[used] = np.arange(len(used))
-            Vs.append(p.V[used]); Fs.append(remap[F] + off)
+            Vs.append(p.V[used])
+            Fs.append(remap[F] + off)
             Ns.append(p.N[used] if p.N is not None else None)
             if use_uv:
                 UVs.append(p.UV[used])
@@ -336,9 +339,101 @@ A525 = {
 }
 
 
+F2022 = {
+    # 2017-2021 cars: "Formula 1 2022 Car" by Luis Adrian V., reshaped towards the 2017-2021 rules
+    # (13-inch wheels, no wheel covers or wheel winglets, longer wheelbase, full-width front wing).
+    "slots": {
+        "Livery1Mtl.001": "P", "Part1Mtl.001": "A", "Aero2Mtl.001": "carbon", "Aero1Mtl.001": "carbon2",
+        "Meshesmesh101Mtl.001": "dark", "Led1Mtl.001": "metal", "Cover1Mtl.001": "drop",
+        "Wheeldecal1Mtl.001": "rubber", "Wheeldecal2Mtl.001": "rubber", "Meshesmcledgears0011Mtl.001": "light",
+        # the driver figure: the app seats its own helmet instead
+        "Rightupperarm1Mtl.001": "drop", "Righthand1Mtl.001": "drop", "Meshpart1Mtl.001": "drop",
+    },
+    "tyres": {"Wheeldecal1Mtl.001", "Wheeldecal2Mtl.001"}, "steer": {"Meshpart1Mtl.001"},
+    "wheels": {"Wheeldecal1Mtl.001", "Wheeldecal2Mtl.001", "Led1Mtl.001", "Cover1Mtl.001"},
+    "head": {"Meshpart1Mtl.001"},
+    "deform": "retro_2017",
+}
+
+
+def retro_2017(pieces: list[Piece], meta: dict, cfg: dict) -> None:
+    """Reshape a 2022 car towards a 2017-2021 one, in place (car frame, metres)."""
+    wb, R = meta["wheelbase"], meta["tyreRadius"]
+    tyre = np.vstack([p.V for p in pieces if p.mat in cfg["tyres"]])
+    corners = []
+    for front in (False, True):
+        for side in (-1, 1):
+            c = tyre[((tyre[:, 0] > wb / 2) == front) & (np.sign(tyre[:, 2]) == side)]
+            corners.append((front, (c.min(0) + c.max(0)) / 2, c.max(0) - c.min(0)))
+    # 1. wheels: 13-inch rims (330 mm) and 660 mm tyres instead of 18-inch (457 mm) and 720 mm
+    R_new, rim_old, rim_new = 0.33, 0.229, 0.165
+    for p in pieces:
+        wheel_mat = p.mat in cfg["wheels"]
+        for _front, ctr, ext in corners:
+            dx, dy = p.V[:, 0] - ctr[0], p.V[:, 1] - ctr[1]
+            r = np.hypot(dx, dy)
+            band = np.abs(p.V[:, 2] - ctr[2]) < ext[2] / 2 + 0.05
+            sel = band & (r < R + 0.03) if wheel_mat else band & (r < rim_old)  # body parts: only inside the rim
+            if not sel.any():
+                continue
+            rr = r[sel]
+            new = np.where(rr <= rim_old, rr * rim_new / rim_old,
+                           np.where(rr <= R, rim_new + (rr - rim_old) * (R_new - rim_new) / (R - rim_old), rr - R + R_new))
+            k = np.divide(new, rr, out=np.ones_like(rr), where=rr > 1e-9)
+            p.V[sel, 0] = ctr[0] + dx[sel] * k
+            p.V[sel, 1] = R_new + dy[sel] * k
+    # 2. no winglets over the front wheels (allowed only from 2022)
+    for p in pieces:
+        if p.mat in cfg["wheels"]:
+            continue
+        C = p.V[p.F].mean(1)
+        drop = np.zeros(len(p.F), dtype=bool)
+        for front, ctr, ext in corners:
+            if front:
+                drop |= ((np.abs(C[:, 0] - ctr[0]) < R * 0.95) & (C[:, 1] > R_new * 1.75) & (C[:, 1] < R * 2.6)
+                         & (np.abs(C[:, 2] - ctr[2]) < ext[2] / 2 + 0.06))
+        p.F = p.F[~drop]
+    # 3. longer wheelbase (2020-21 cars ran about 3.6-3.7 m): stretch the middle of the car
+    d = 3.65 - wb
+    a, b = 0.9, wb - 1.9
+    for p in pieces:
+        x = p.V[:, 0]
+        p.V[:, 0] = np.where(x < a, x, np.where(x > b, x + d, x + (x - a) / (b - a) * d))
+    meta["wheelbase"] = round(wb + d, 4)
+    meta["tyreRadius"] = R_new
+    for key in ("steeringWheel", "head"):
+        if key in meta and meta[key][0] > b:
+            meta[key][0] = round(meta[key][0] + d, 4)
+    # 4. full-width front wing (2.0 m, endplates in line with the tyres)
+    xf = meta["wheelbase"]
+    wing = [(p, (p.V[:, 0] > xf + R_new * 0.7) & (p.V[:, 1] < 0.36)) for p in pieces if p.mat not in cfg["wheels"]]
+    half = max((np.abs(p.V[m, 2]).max() for p, m in wing if m.any()), default=1.0)
+    f = min(1.2, (meta["width"] / 2 - 0.005) / half)
+    for p, m in wing:
+        p.V[m, 2] *= f
+    print(f"retro: wheelbase {wb:.3f} -> {meta['wheelbase']}, front wing half-span {half:.3f} -> {half * f:.3f}")
+
+
+def helmet_seat(pieces: list[Piece], meta: dict, wheel_mats: set[str]) -> list[float]:
+    """Where the driver's helmet goes: in front of the roll hoop, its centre just above the cockpit rim."""
+    wb = meta["wheelbase"]
+    body = np.vstack([p.V for p in pieces if p.mat not in wheel_mats])
+    core = body[(np.abs(body[:, 2]) < 0.2) & (body[:, 0] > 0.8) & (body[:, 0] < wb - 1.0)]
+    hoop_x = core[core[:, 1].argmax(), 0]
+    hx = hoop_x + 0.36
+    rim = body[(np.abs(body[:, 0] - hx) < 0.12) & (np.abs(body[:, 2]) > 0.2) & (np.abs(body[:, 2]) < 0.32)]
+    hy = float(rim[:, 1].max()) + 0.02
+    return [round(float(hx), 4), round(hy, 4), 0.0]
+
+
 def build_car(pieces, cfg, era, width, out_dir: Path):
     pieces = [p for p in pieces if p.mat in cfg["slots"]]
     meta = to_car_frame(pieces, cfg["tyres"], width, cfg["steer"])
+    if "head" in cfg:  # where the original driver's head is: the app seats its helmet there
+        H = np.vstack([p.V for p in pieces if p.mat in cfg["head"]])
+        meta["head"] = [round(float(v), 4) for v in (H.min(0) + H.max(0)) / 2]
+    if cfg.get("deform") == "retro_2017":
+        retro_2017(pieces, meta, cfg)
     # drop anything far from the car (props that share a car material)
     keep = []
     for p in pieces:
@@ -353,6 +448,8 @@ def build_car(pieces, cfg, era, width, out_dir: Path):
             masks[p.mat] = livery_mask(p.tex, cfg["palette"], 1024, 11)
             masks[p.mat].save(out_dir / f"{era}-{p.mat}-mask.png")
     meta["era"] = era
+    meta["helmetSeat"] = helmet_seat([p for p in keep if cfg["slots"].get(p.mat) != "drop"], meta, cfg["wheels"])
+    print(f"{era}: helmet seat {meta['helmetSeat']}")
     tris = export(keep, cfg["slots"], meta, out_dir / f"car-{era}.glb", masks, cfg["wheels"])
     meta["sourceTriangles"] = tris
     (out_dir / f"car-{era}.json").write_text(json.dumps(meta, indent=1))
@@ -371,7 +468,9 @@ def build_helmet(pieces: list[Piece], out_dir: Path):
     front = 1 if visor.V.mean(0)[la] > mid[la] else -1
     s = 2.0 / ext[wa]   # unit-ish size: width 2 (the procedural shell is about 1.8 wide)
     M = np.zeros((3, 3))
-    M[0, la] = front; M[1, 1] = 1; M[2, wa] = front
+    M[0, la] = front
+    M[1, 1] = 1
+    M[2, wa] = front
     zs = front * (1 if np.linalg.det(M) > 0 else -1)  # rotation, never a mirror (see to_car_frame)
     for p in (shell, visor, trim):
         V = p.V - mid
@@ -398,6 +497,8 @@ def main():
     a.out.mkdir(parents=True, exist_ok=True)
     build_car(load_gltf(a.refs / "rb22" / "scene.gltf"), RB22, "2026-", 1.9, a.out)
     build_car(load_usd(a.refs / "a525" / "scene.usdc", a.refs / "a525" / "0"), A525, "2022-2025", 2.0, a.out)
+    # f2022/f2022.glb: the Blender file exported to glTF (tools/models/blend2glb.py)
+    build_car(load_gltf(a.refs / "f2022" / "f2022.glb"), F2022, "2017-2021", 2.0, a.out)
     build_helmet(load_usd(a.refs / "helmet" / "scene.usdc", a.refs / "helmet" / "0"), a.out)
 
 
