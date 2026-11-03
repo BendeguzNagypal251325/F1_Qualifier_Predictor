@@ -27,7 +27,7 @@ import time
 import unicodedata
 import urllib.parse
 import urllib.request
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -279,6 +279,9 @@ def predict_weekend(entries: pd.DataFrame, weekend: pd.DataFrame) -> pd.DataFram
     has_practice = this["fp_sessions"].max() > 0
     model = M.fit(train, M.FEATURES if has_practice else M.PRE_WEEKEND_FEATURES)
     this["pred_score"] = M.predict_position(model, this)
+    contrib = M.contributions(model, this)
+    for col in contrib.columns:
+        this[f"contrib_{col}"] = contrib[col]
     this = this.sort_values("pred_score").reset_index(drop=True)
     this["pred_pos"] = np.arange(1, len(this) + 1)
     return this
@@ -304,7 +307,8 @@ def report(pred: pd.DataFrame, used: list[str]) -> str:
     return "\n".join(lines)
 
 
-def run(race: str | None = None, season: int = CURRENT_SEASON, update: bool = True, get=openf1_get) -> str:
+def _prepare(race: str | None, season: int, update: bool, get):
+    """Shared by the CLI and the web server: (entries, prediction table, finished sessions used)."""
     if update:
         sdir = fetch_f1db(seasons=HISTORY_SEASONS)
         entries = build_entries(sdir, HISTORY_SEASONS)
@@ -322,7 +326,41 @@ def run(race: str | None = None, season: int = CURRENT_SEASON, update: bool = Tr
 
     LIVE_DIR.mkdir(parents=True, exist_ok=True)
     weekend.to_csv(LIVE_DIR / f"{weekend['race_key'].iloc[0]}.csv", index=False)
-    return report(predict_weekend(entries, weekend), used)
+    return entries, predict_weekend(entries, weekend), used
+
+
+def run(race: str | None = None, season: int = CURRENT_SEASON, update: bool = True, get=openf1_get) -> str:
+    _, pred, used = _prepare(race, season, update, get)
+    return report(pred, used)
+
+
+def snapshot(pred: pd.DataFrame, used: list[str]) -> dict:
+    """JSON-ready live prediction (what the web app shows on its Live page)."""
+    first = pred.iloc[0]
+    done = bool(pred["quali_pos"].notna().all())
+    rows = []
+    for r in pred.itertuples():
+        rows.append({
+            "pred_pos": int(r.pred_pos), "score": round(float(r.pred_score), 2), "driver_id": r.driver_id,
+            "constructor_id": r.constructor_id, "fp_last_pos": None if pd.isna(r.fp_last_pos) else int(r.fp_last_pos),
+            "quali_pos": int(r.quali_pos) if done else None,
+            "contrib": {g: round(float(getattr(r, f"contrib_{g}")), 2) for g in ("driver", "car", "weekend", "context")},
+        })
+    out = {
+        "race_key": first["race_key"], "season": int(first["season"]), "round": int(first["round"]),
+        "grand_prix": first["grand_prix"], "circuit": first["circuit"], "date": str(first["date"])[:10],
+        "sessions_used": used, "qualifying_done": done, "rows": rows,
+        "model": "full (with practice)" if pred["fp_sessions"].max() > 0 else "pre-weekend (no practice yet)",
+    }
+    if done:
+        out["correct"] = int(((pred["pred_pos"] <= 10) & (pred["quali_pos"] <= 10)).sum())
+        out["mae"] = round(float((pred["pred_pos"] - pred["quali_pos"]).abs().mean()), 2)
+    return out
+
+
+def live_snapshot(race: str | None = None, season: int = CURRENT_SEASON, update: bool = True, get=openf1_get) -> dict:
+    _, pred, used = _prepare(race, season, update, get)
+    return snapshot(pred, used)
 
 
 def main() -> None:

@@ -19,7 +19,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from . import TRAIN_FROM
-from .features import FEATURES, TARGET
+from .features import CAR_FEATURES, FEATURE_GROUP, FEATURE_GROUPS, FEATURES, TARGET
 
 
 def make_model():
@@ -104,3 +104,50 @@ def feature_importance(model, df: pd.DataFrame, n_repeats: int = 5, seed: int = 
             scores.append(evaluate(shuffled, predict_position(model, shuffled))["correct_per_10"])
         drops[feat] = base - float(np.mean(scores))
     return pd.Series(drops).sort_values(ascending=False)
+
+
+# ---------------------------------------------------------------- explanations ----------------------------------------
+
+
+def contributions(model, df: pd.DataFrame) -> pd.DataFrame:
+    """Exact additive split of each prediction into feature-group contributions (in grid places).
+
+    The pipeline is imputer -> scaler -> ridge, so prediction = intercept + sum(coef * scaled value).
+    Each scaled column (including the imputer's "was missing" indicators) is credited to the group
+    of the feature it came from. A negative contribution moves the driver up the grid; zero means
+    "like the average entry in the training data". Columns: one per group plus ``baseline``.
+    """
+    imputer, scaler, ridge = (model.named_steps[k] for k in ("simpleimputer", "standardscaler", "ridge"))
+    names = list(model.feature_names_in_)
+    X = scaler.transform(imputer.transform(df[names]))
+    cols = list(imputer.get_feature_names_out(names))
+    out = pd.DataFrame(0.0, index=df.index, columns=list(FEATURE_GROUPS))
+    for j, col in enumerate(cols):
+        base = col.removeprefix("missingindicator_")
+        out[FEATURE_GROUP[base]] += X[:, j] * ridge.coef_[j]
+    out["baseline"] = float(ridge.intercept_)
+    return out
+
+
+SWAP_WEEKEND = FEATURE_GROUPS["weekend"]
+
+
+def swap_rows(session: pd.DataFrame, driver_id: str, team_id: str) -> pd.DataFrame:
+    """Rows for ``driver_id`` placed in ``team_id``'s car at this session (a what-if).
+
+    Driver features come from the driver's own row. Car features, and this weekend's practice
+    results (which mostly reflect the car), come from the target team's entries: the average of its
+    drivers. ``drv_team_sessions`` is set to 0 when the team is new for the driver.
+    """
+    me = session[session["driver_id"] == driver_id]
+    team = session[session["team_id"] == team_id]
+    if me.empty or team.empty:
+        raise KeyError("driver or team not in this session")
+    row = me.iloc[[0]].copy()
+    for col in CAR_FEATURES + SWAP_WEEKEND:
+        row[col] = team[col].mean()
+    if row["team_id"].iloc[0] != team_id:
+        row["drv_team_sessions"] = 0
+    row["team_id"] = team_id
+    row["constructor_id"] = team["constructor_id"].iloc[0]
+    return row

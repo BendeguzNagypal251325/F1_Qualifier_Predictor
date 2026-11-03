@@ -48,6 +48,28 @@ FEATURES = [
 
 TARGET = "quali_pos"
 
+# Every feature belongs to exactly one group. "car" features describe the team's car (tracked per
+# team lineage, so they stay with the car when a driver leaves); "driver" features follow the driver
+# from team to team. Practice results measure car and driver together, so they are their own group.
+# Ridge regression is linear, so a prediction splits exactly into one contribution per group
+# (see model.contributions).
+FEATURE_GROUPS = {
+    "driver": [
+        "drv_pos_last", "drv_pos_mean3", "drv_pos_mean5", "drv_top10_rate5", "drv_pace_gap_mean3",
+        "drv_season_pos_mean", "drv_vs_teammate5", "drv_circuit_last_pos", "drv_career_sessions",
+        "drv_team_sessions", "driver_champ_pos_before", "driver_points_before",
+    ],
+    "car": [
+        "con_pos_mean3", "con_top10_rate3", "con_pace_gap_mean3", "con_season_pos_mean",
+        "constructor_champ_pos_before", "constructor_points_before",
+    ],
+    "weekend": ["fp_last_pos", "fp_last_gap_pct", "fp_best_pos", "fp_mean_gap_pct", "fp_sessions"],
+    "context": ["sprint_weekend", "street_circuit"],
+}
+FEATURE_GROUP = {f: g for g, fs in FEATURE_GROUPS.items() for f in fs}
+CAR_FEATURES = FEATURE_GROUPS["car"]
+DRIVER_FEATURES = FEATURE_GROUPS["driver"]
+
 # Teams that changed name but are the same team (same factory, same staff, same car line).
 # Constructor form and "sessions with this team" are tracked per lineage, so a rebrand
 # does not look like a brand-new team with no history.
