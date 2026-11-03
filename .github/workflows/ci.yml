@@ -42,3 +42,8 @@ jobs:
           for i in $(seq 1 30); do curl -fs localhost:8000/api/health && break; sleep 2; done
           curl -fs localhost:8000/api/overview > /dev/null
           curl -fs localhost:8000/ | grep -q '<div id="root">'
+      - name: Click through the app in a browser
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.49.1
+          npx playwright install --with-deps chromium
+          node web/scripts/check-navigation.cjs http://localhost:8000

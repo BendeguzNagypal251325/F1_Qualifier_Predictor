@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { MetaContext, useApi } from "./api";
 import { ErrorBox, Loading, TooltipLayer } from "./components/ui";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import type { Meta } from "./types";
 import Overview from "./pages/Overview";
 import LivePage from "./pages/Live";
@@ -28,7 +29,11 @@ const NAV = [
 export default function App() {
   const meta = useApi<Meta>("/api/meta");
   const { pathname } = useLocation();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  // Braces matter: in current Chrome window.scrollTo returns a Promise, and an effect must not return
+  // anything but a cleanup function (React would try to call the Promise on the next navigation).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   return (
     <>
@@ -53,6 +58,7 @@ export default function App() {
         {meta.data && (
           <MetaContext.Provider value={meta.data}>
             <div className="page" key={pathname} style={{ display: "grid", gap: 20 }}>
+            <ErrorBoundary>
             <Routes>
               <Route path="/" element={<Overview />} />
               <Route path="/live" element={<LivePage />} />
@@ -70,6 +76,7 @@ export default function App() {
               <Route path="/heatmap" element={<HeatmapPage />} />
               <Route path="*" element={<div className="panel empty-state"><h2>Page not found</h2><NavLink to="/" className="btn">Back to the overview</NavLink></div>} />
             </Routes>
+            </ErrorBoundary>
             </div>
           </MetaContext.Provider>
         )}
