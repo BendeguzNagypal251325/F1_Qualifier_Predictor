@@ -25,6 +25,7 @@ export interface Meta {
   built_at: string;
   drivers: DriverMeta[];
   teams: TeamMeta[];
+  cars: Record<string, Record<string, { chassis: string; livery: [string, string, string]; era: string }>>;
   circuits: CircuitMeta[];
   groups: Record<Group, string[]>;
   live: LiveStatus;

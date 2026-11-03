@@ -1,16 +1,16 @@
-"""Car facts per team and season, used by the car schematics in the web app.
+"""Car facts per team and season, used by the 3D cars and helmets in the web app.
 
-Chassis names and livery colours are public facts. The schematics themselves are drawn by the
-front end from this table (original SVG drawings, not copies of team or F1 artwork). Engine
+Chassis names and livery colours are public facts. The 3D models themselves are built by the
+front end from this table (original models, not copies of team or F1 artwork). Engine
 suppliers are not repeated here: they come from F1DB (``engine`` column of the entries table).
 
 Livery = (primary, secondary, accent) colours as hex. They are approximations of each car's main
-colours, good enough to recognise the car in a schematic.
+colours, good enough to recognise the car in 3D.
 """
 
 from __future__ import annotations
 
-# Technical-regulation eras. The schematic changes shape with the era.
+# Technical-regulation eras. The 3D model changes shape with the era.
 ERAS = {
     "2017-2021": {
         "label": "Wide-body, bargeboard era (2017–2021)",

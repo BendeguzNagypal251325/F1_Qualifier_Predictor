@@ -164,6 +164,18 @@ export function useDriverTeam(driver: string, season?: number): string {
   return (season && d.teams[String(season)]) || d.team;
 }
 
+/** Colours and number for a driver's helmet in ``season`` (team livery of that season). */
+export function useHelmetSpec(driver: string, season?: number, teamOverride?: string) {
+  const meta = useMeta();
+  const d = meta.drivers.find((x) => x.id === driver);
+  const year = season ?? d?.last_season ?? meta.latest;
+  const team = teamOverride ?? ((d && d.teams[String(year)]) || d?.team || "");
+  const car = meta.cars[String(year)]?.[team];
+  const t = meta.teams.find((x) => x.id === team);
+  const colors: [string, string, string] = car?.livery ?? [t?.color ?? "#444444", "#ffffff", "#e10600"];
+  return { driverId: driver, initials: initials(d?.name ?? driver), number: d?.number ?? null, colors, team, year };
+}
+
 /** Readable text colour on a team colour. */
 export function inkOn(hex: string): string {
   const n = parseInt(hex.replace("#", ""), 16);

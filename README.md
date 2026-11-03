@@ -4,8 +4,9 @@ Predicts which 10 drivers reach Q3 (qualify in the top 10) for every Formula 1 G
 information available **before** qualifying starts. It can also run live during a race weekend: after
 every practice session and after qualifying (see [Live weekend predictions](#live-weekend-predictions)).
 
-The results are served as a **web app** (FastAPI back end + React front end, one Docker image): driver
-and car pages, track outlines, interactive car schematics for every team and season, a
+The results are served as a **web app** (FastAPI back end + React front end, one Docker image) in a
+dark red-and-black theme: driver pages with 3D helmets, interactive 3D cars for every team and season,
+track outlines, a
 "what if this driver drove that car" tool, and a live page for the current weekend. See
 [Web app](#web-app) and [Deployment](#deployment).
 
@@ -118,7 +119,7 @@ Correct top-10 picks: 8/10
 | **Overview** | correct picks per season vs the simple rules, how much car / driver / practice decide a prediction, most useful inputs |
 | **Live** | this weekend's predicted qualifying order, rebuilt after every finished session; after qualifying, the real result next to it |
 | **Drivers** | every driver as initials in their team colour; each profile has the driver's record at every track, team history, and the driver-vs-car split |
-| **Cars** | every car of a season ranked by pace; each car has an interactive schematic, pace through the season, its drivers, and a power-unit comparison |
+| **Cars** | every car of a season ranked by pace; each car has an interactive 3D model, pace through the season, its drivers, and a power-unit comparison |
 | **Tracks** | track outlines and maps; every driver's record at that track, and the model's score at each session there |
 | **What if** | put any driver in any car at any race and see the predicted grid slot |
 | **Sessions** | predicted order vs result for any race, with the reason behind each prediction |
@@ -149,18 +150,40 @@ teammates, a driver's gap to their own car's best lap, engine-supplier pace, and
 development trend. None changed walk-forward accuracy by more than ±0.03 picks per race, which is
 noise, so the model itself is unchanged.
 
-### Car schematics
+### 3D cars
 
-The schematics are our own SVG drawings (`web/src/components/CarSchematic.tsx`). They are built from
-the public regulation dimensions of each era: 2017–2021 (wide cars with bargeboards), 2022–2025
-(ground effect) and 2026 (narrower, shorter, active aero). Each one is coloured in that car's livery
-(`f1qp/cars.py` has the chassis name and colours for every team and season since 2020). Every part is
-clickable and shows what it does, plus the car-level numbers the model uses. The data has no
-measurements of individual parts, and the app says so.
+Every car is a real-time 3D model (three.js, `web/src/three/car.ts`) built from the published FIA
+dimensions of its era:
+
+| Era | Width | Wheelbase | Wheels | Shape |
+|---|---|---|---|---|
+| 2017–2021 | 2.0 m | ~3.65 m | 13-inch | high nose, bargeboards, five-element front wing, box sidepods |
+| 2022–2025 | 2.0 m | 3.6 m | 18-inch with covers | lower nose, downwash sidepods, floor edge wings |
+| 2026– | 1.9 m | 3.4 m | 18-inch, narrower | shorter and narrower, active front and rear wings |
+
+Each car is painted in its team's colours for that season (`f1qp/cars.py`) and carries a helmet in
+the cockpit. You can rotate and zoom it, jump to front, side, top or rear views, and click any of
+eight parts: front wing, nose, cockpit and halo, sidepods, floor, power unit, rear wing, and tyres
+and suspension. The selected part glows red, and the side panel explains it with the car-level
+numbers. Shapes are simplified and carry no sponsor logos: the models follow each era's rules, but
+they are not replicas of the real cars. The car list shows still renders of the same models, made
+by one hidden renderer, because browsers allow only about 16 live 3D views per page. three.js is
+loaded only on pages that show 3D.
+
+### Helmets and names
+
+Every driver has a 3D helmet (`web/src/three/helmet.ts`). The pattern is chosen once per driver from
+eight designs, seeded by their id, so it stays the same every season. The colours follow the team
+they drove for that season, and the car number is on both sides. These are our own designs, not
+the drivers' real helmets, which are their own artwork. On a driver's profile the helmet can be
+rotated, and picking one season repaints it in that year's colours.
+
+Driver cards show the name in a handwritten-style font (Mrs Saint Delafield). It is a font, not the
+driver's real signature: we do not reproduce real signatures.
 
 ### Driver and track graphics
 
-The app uses no photos. Drivers are shown as their initials on their team's colour. The colour follows
+The app uses no photos. In tables, drivers are shown as their initials on their team's colour. The colour follows
 the season (`/api/meta` gives each driver's team per season), so Hamilton is Mercedes teal up to 2024
 and Ferrari red from 2025. Each driver card and profile has a season strip in those colours. Tracks are
 drawn from the outlines in [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits) (MIT,

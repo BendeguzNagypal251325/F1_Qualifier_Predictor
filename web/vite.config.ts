@@ -5,5 +5,5 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: { proxy: { "/api": process.env.F1QP_API ?? "http://127.0.0.1:8000" } },
-  build: { outDir: "dist", sourcemap: true },
+  build: { outDir: "dist", sourcemap: true, chunkSizeWarningLimit: 600 }, // three.js chunk is loaded only on 3D pages
 });

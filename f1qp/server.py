@@ -259,6 +259,9 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
             "built_at": st.built_at,
             "drivers": drivers,
             "teams": [{"id": t, "name": N.team_name(t), "color": N.team_color(t)} for t in teams],
+            # season -> team -> {chassis, livery [primary, secondary, accent], era}: for 3D cars and helmets
+            "cars": {str(y): {t: {"chassis": c, "livery": list(l), "era": C.era_for(y)} for (yy, t), (c, l) in C.CARS.items() if yy == y}
+                     for y in st.overview["seasons"]},
             "circuits": [{"id": c, "name": N.circuit_name(c), "outline": outl.get(c, {}).get("path"),
                           "length_m": outl.get(c, {}).get("length_m")} for c in circuits],
             "groups": st.overview["feature_groups"],

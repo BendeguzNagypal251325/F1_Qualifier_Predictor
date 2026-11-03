@@ -92,6 +92,8 @@ def test_health_and_meta(client):
     assert ver["name"] == "Max Verstappen"
     ham = next(d for d in meta["drivers"] if d["id"] == "lewis-hamilton")
     assert ham["teams"]["2024"] == "mercedes" and ham["teams"]["2025"] == "ferrari"  # colour follows the season
+    assert meta["cars"]["2026"]["mclaren"]["chassis"] == "MCL40" and len(meta["cars"]["2026"]["mclaren"]["livery"]) == 3
+    assert meta["cars"]["2021"]["red-bull"]["era"] == "2017-2021"
     monaco = next(c for c in meta["circuits"] if c["id"] == "monaco")
     assert monaco["outline"].startswith("M") and "map" not in monaco
 

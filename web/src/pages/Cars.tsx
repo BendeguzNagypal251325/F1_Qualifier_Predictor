@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApi, useMeta } from "../api";
-import { CarSchematic, ERA_SPECS, PART_LABEL, PART_ORDER, type PartId } from "../components/CarSchematic";
+import { Car3D, CarImage } from "../components/lazy3d";
+import { ERA_SPECS, PART_LABEL, PART_ORDER, type PartId } from "../three/parts";
 import { RaceLine } from "../components/Charts";
-import { Avatar, ContribBars, ErrorBox, fmt, Loading, pct, signed, Swatch, Tile } from "../components/ui";
+import { Avatar, ContribBars, ErrorBox, fmt, Loading, pct, signed, Swatch, Tile, useHelmetSpec } from "../components/ui";
 import type { CarDetail, CarList as CarListData } from "../types";
 
 const ENGINE_NAMES: Record<string, string> = {
@@ -39,8 +40,8 @@ export function CarList() {
           <div className="card-grid">
             {data.cars.map((c, i) => (
               <Link key={c.team} to={`/cars/${season}/${c.team}`} className="card" style={{ ["--stripe" as string]: c.livery[0] }}>
-                <div className="media" style={{ display: "grid", placeItems: "center", background: "var(--surface-2)" }}>
-                  <CarSchematic era={c.era} livery={c.livery} chassis={c.chassis} compact />
+                <div className="media" style={{ background: "radial-gradient(120% 90% at 50% 15%, #24242f, #0b0b0f 70%)" }}>
+                  <CarImage era={c.era} livery={c.livery} alt={`${c.name} ${c.chassis ?? ""} 3D model`} />
                 </div>
                 <div className="body">
                   <h3>{c.name} {c.chassis}</h3>
@@ -161,6 +162,11 @@ function EraSpecs({ era, label }: { era: string; label: string }) {
   );
 }
 
+function CarViewer({ car, part, onSelect }: { car: CarDetail; part: PartId | null; onSelect: (p: PartId) => void }) {
+  const helmet = useHelmetSpec(car.drivers[0]?.driver ?? "", car.season, car.team);
+  return <Car3D era={car.era} livery={car.livery} selected={part} onSelect={onSelect} helmet={car.drivers.length ? helmet : undefined} label={`${car.name} ${car.chassis ?? ""}`} />;
+}
+
 export function CarPage() {
   const { season = "", team = "" } = useParams();
   const nav = useNavigate();
@@ -193,11 +199,11 @@ export function CarPage() {
 
       <div className="car-wrap">
         <section className="panel">
-          <CarSchematic era={car.era} livery={car.livery} chassis={car.chassis} selected={part} onSelect={(p) => setPart(part === p ? null : p)} />
+          <CarViewer car={car} part={part} onSelect={(p) => setPart((cur) => (cur === p ? null : p))} />
           <div className="part-list" role="group" aria-label="Car parts">
             {PART_ORDER.map((p) => <button key={p} type="button" aria-pressed={part === p} onClick={() => setPart(part === p ? null : p)}>{PART_LABEL[p]}</button>)}
           </div>
-          <p className="credit">Schematic: our own drawing from the {car.era_label.toLowerCase()} regulation dimensions, in {car.name}'s {car.season} colours. Not to scale in detail.</p>
+          <p className="credit">3D model built from the {car.era_label.toLowerCase()} regulation dimensions (wheelbase, width, wheels, wing spans) in {car.name}'s {car.season} colours. Simplified shapes, no sponsor logos; not a replica of the real car.</p>
         </section>
         <PartPanel part={part} car={car} cars={cars} />
       </div>

@@ -2,18 +2,21 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { seasonsParam, useApi, useMeta } from "../api";
 import {
-  Bar, ContribBars, ErrorBox, fmt, initials, inkOn, Loading, pct, PosLegend, SeasonFilter, SeasonStrip, Sortable, Swatch, Tile,
+  Bar, ContribBars, ErrorBox, fmt, Loading, pct, PosLegend, SeasonFilter, SeasonStrip, Sortable, Swatch, Tile, useHelmetSpec,
   TrackOutline, useSeasons, useTeam, YearChips,
 } from "../components/ui";
 import type { DriverDetail, DriverMeta } from "../types";
+import { Helmet3D, HelmetImage } from "../components/lazy3d";
 
 function DriverCard({ d, latest }: { d: DriverMeta; latest: number }) {
   const team = useTeam(d.team);
-  const ink = inkOn(team.color);
+  const spec = useHelmetSpec(d.id, d.last_season);
   return (
     <Link to={`/drivers/${d.id}`} className="card" style={{ ["--stripe" as string]: team.color }}>
-      <div className="media" style={{ background: team.color, color: ink }}>
-        <div className="monogram" style={{ fontSize: 64 }}>{initials(d.name)}{d.number != null && <span className="num">#{d.number}</span>}</div>
+      <div className="dcard-media" style={{ ["--glow" as string]: `color-mix(in oklab, ${team.color} 45%, #15151e)` }}>
+        <HelmetImage spec={spec} alt={`${d.name}'s helmet design`} />
+        {d.number != null && <span className="num">{d.number}</span>}
+        <span className="script" aria-hidden>{d.name}</span>
       </div>
       <div className="body">
         <h3>{d.name}</h3>
@@ -59,6 +62,9 @@ export function DriverPage() {
   const { data, error } = useApi<DriverDetail>(`/api/drivers/${id}${q ? "?" + q : ""}`);
   const d = meta.drivers.find((x) => x.id === id);
   const team = useTeam(d?.team ?? "");
+  const heroSeason = seasons[seasons.length - 1];
+  const helmet = useHelmetSpec(id, d && d.teams[String(heroSeason)] ? heroSeason : d?.last_season);
+  const heroTeam = useTeam(helmet.team);
   if (!d) return <ErrorBox error={`Unknown driver “${id}”`} />;
   const stints = new Map<string, number[]>();
   data?.teams.forEach((t) => stints.set(t.team, [...(stints.get(t.team) ?? []), t.season]));
@@ -70,6 +76,7 @@ export function DriverPage() {
           <span className="eyebrow">{team.name}{d.number ? ` · #${d.number}` : ""}</span>
           <h1>{d.name}</h1>
           <SeasonStrip driver={d.id} labels />
+          <p className="note">Helmet: our own design for {d.name.split(" ")[0]}, in the {heroTeam.name} colours of {helmet.year}. Pick one season below to repaint it. Not the real helmet.</p>
           <div className="controls"><SeasonFilter value={seasons} onChange={setSeasons} /></div>
           <div className="legend">
             {[...stints.entries()].map(([t, ys]) => (
@@ -79,8 +86,10 @@ export function DriverPage() {
             ))}
           </div>
         </div>
-        <div className="hero-img" style={{ background: team.color, color: inkOn(team.color) }}>
-          <div className="monogram" style={{ fontSize: 112 }} aria-hidden>{initials(d.name)}{d.number != null && <span className="num" style={{ fontSize: "1.3rem" }}>#{d.number}</span>}</div>
+        <div className="hero-img" style={{ background: `radial-gradient(80% 80% at 50% 45%, color-mix(in oklab, ${heroTeam.color} 50%, #15151e), #0b0b0f 75%)` }}>
+          <Helmet3D spec={helmet} label={`${d.name}'s helmet in ${heroTeam.name} colours, ${helmet.year}`} />
+          <span className="script-name" style={{ position: "absolute", left: 18, bottom: 10, pointerEvents: "none" }} aria-hidden>{d.name}</span>
+          {d.number != null && <span className="dcard-media" style={{ position: "absolute", right: 16, top: 10, background: "none", aspectRatio: "auto", overflow: "visible" }}><span className="num" style={{ position: "static", fontSize: "2.2rem" }}>{d.number}</span></span>}
         </div>
       </section>
 
