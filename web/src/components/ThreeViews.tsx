@@ -31,7 +31,7 @@ function viewPosition(view: View, centre: THREE.Vector3, d: number): THREE.Vecto
 function useViewer(container: React.RefObject<HTMLDivElement>, opts: { autoRotate?: boolean; floor?: boolean; fov?: number; fit?: number; sync?: CameraSync }) {
   const api = useRef<{
     renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; controls: OrbitControls;
-    setObject: (o: THREE.Object3D) => void; flyTo: (v: View) => void; focus: (box: THREE.Box3 | null) => void; object: THREE.Object3D | null;
+    setObject: (o: THREE.Object3D) => void; flyTo: (v: View) => void; object: THREE.Object3D | null;
   } | null>(null);
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -53,7 +53,6 @@ function useViewer(container: React.RefObject<HTMLDivElement>, opts: { autoRotat
     });
     let fly: { from: THREE.Vector3; to: THREE.Vector3; fromT: THREE.Vector3; toT: THREE.Vector3; t: number } | null = null;
     let dist = 6;
-    let home = new THREE.Vector3();
     const startFly = (to: THREE.Vector3, toT: THREE.Vector3) => {
       fly = { from: camera.position.clone(), to, fromT: controls.target.clone(), toT, t: 0 };
     };
@@ -65,9 +64,8 @@ function useViewer(container: React.RefObject<HTMLDivElement>, opts: { autoRotat
         scene.add(o);
         const { centre, size } = frame(o);
         dist = Math.max(size.x, size.z, size.y * 1.6) * (opts.fit ?? 1.55);
-        home = centre.clone();
         controls.target.copy(centre);
-        controls.minDistance = dist * 0.12;
+        controls.minDistance = dist * 0.45;
         controls.maxDistance = dist * 2.2;
         if (!fly) camera.position.copy(viewPosition("3/4", centre, dist));
       },
@@ -75,16 +73,6 @@ function useViewer(container: React.RefObject<HTMLDivElement>, opts: { autoRotat
         controls.autoRotate = false;
         if (sync) sync.leader = me;
         startFly(viewPosition(v, controls.target, camera.position.distanceTo(controls.target)), controls.target.clone());
-      },
-      /** Turn the camera towards ``box`` (one part) and frame it; ``null`` frames the whole car again. */
-      focus(box: THREE.Box3 | null) {
-        controls.autoRotate = false;
-        if (sync) sync.leader = null;
-        const target = box ? box.getCenter(new THREE.Vector3()) : home.clone();
-        const size = box ? box.getSize(new THREE.Vector3()) : null;
-        const d = size ? Math.max(size.x, size.y * 1.6, size.z, 0.35) * 1.9 : dist;
-        const dir = camera.position.clone().sub(controls.target).normalize();
-        startFly(target.clone().addScaledVector(dir, d), target);
       },
     };
     api.current = state;
@@ -157,7 +145,8 @@ export function Car3D({ era, livery, selected, onSelect, helmet, label, season, 
   const selRef = useRef(selected);
   const [hoverLabel, setHoverLabel] = useState<string | null>(null);
 
-  // A selected part is shown on its own: the rest of the car fades to a faint outline.
+  // A selected part is shown on its own: the rest of the car fades to a faint outline. The camera
+  // stays where it is, so the part is seen in its place on the whole car.
   const highlight = () => {
     const sel = selRef.current;
     parts.current.forEach((meshes, id) => {
@@ -167,7 +156,7 @@ export function Car3D({ era, livery, selected, onSelect, helmet, label, season, 
         if (m.userData.opacity === undefined) m.userData.opacity = { opacity: mat.opacity, transparent: mat.transparent };
         const base = m.userData.opacity as { opacity: number; transparent: boolean };
         mat.transparent = hidden || base.transparent;
-        mat.opacity = hidden ? 0.03 : base.opacity;
+        mat.opacity = hidden ? 0.08 : base.opacity;
         mat.depthWrite = !hidden;
         m.castShadow = !hidden;
         mat.needsUpdate = true;
@@ -176,15 +165,6 @@ export function Car3D({ era, livery, selected, onSelect, helmet, label, season, 
         mat.emissiveIntensity = hov && !hidden ? 0.16 : 0;
       });
     });
-  };
-  const focusSelected = () => {
-    if (!api.current) return;
-    const sel = selRef.current;
-    const meshes = sel ? parts.current.get(sel) ?? [] : [];
-    if (!meshes.length) { api.current.focus(null); return; }
-    const b = new THREE.Box3();
-    meshes.forEach((m) => b.expandByObject(m));
-    api.current.focus(b);
   };
 
   useEffect(() => {
@@ -196,12 +176,11 @@ export function Car3D({ era, livery, selected, onSelect, helmet, label, season, 
       parts.current = built.parts;
       api.current.setObject(built.group);
       highlight();
-      if (selRef.current) focusSelected();
     });
     return () => { stale = true; };
   }, [ready, era, season, livery.join(","), helmet?.driverId, helmet?.colors.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { selRef.current = selected; highlight(); focusSelected(); }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { selRef.current = selected; highlight(); }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!ready || !api.current) return;

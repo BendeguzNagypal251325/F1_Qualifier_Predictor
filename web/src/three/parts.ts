@@ -27,7 +27,7 @@ export const PART_INFO: Record<PartId, { what: string; eras: Record<string, stri
     eras: {
       "2017-2021": "Wide (2.0 m) wing with simplified endplates since 2019, so the air spills less outwards around the tyres.",
       "2022-2025": "Up to four elements blended into the nose; designed to throw less turbulent air at a car behind.",
-      "2026-": "About 10 cm narrower, with flaps that move: a high-downforce setting for corners, a low-drag setting on straights.",
+      "2026-": "10 cm narrower, with a two-element flap that moves: a high-downforce setting for corners, a low-drag setting on straights.",
     },
   },
   nose: {
@@ -43,7 +43,7 @@ export const PART_INFO: Record<PartId, { what: string; eras: Record<string, stri
     eras: {
       "2017-2021": "Halo mandatory since 2018: a titanium hoop that protects the driver's head.",
       "2022-2025": "Halo carried over; stronger roll-hoop tests from 2023 after a roll-hoop failure in 2022.",
-      "2026-": "Halo carried over, with stricter safety tests.",
+      "2026-": "Halo carried over; the roll hoop behind the driver must now survive 20 g loads instead of 16 g.",
     },
   },
   sidepods: {
@@ -59,7 +59,7 @@ export const PART_INFO: Record<PartId, { what: string; eras: Record<string, stri
     eras: {
       "2017-2021": "Mostly flat floor with a diffuser at the back; most downforce came from the wings and bargeboards.",
       "2022-2025": "Two Venturi tunnels under the car make most of the downforce (ground effect). Running too low causes bouncing (porpoising).",
-      "2026-": "Flatter floor with smaller tunnels: less ground effect, so less sensitive to ride height.",
+      "2026-": "Much less ground effect: a flatter floor without the big Venturi tunnels, and 15 cm narrower. Less sensitive to ride height.",
     },
   },
   "power-unit": {
@@ -75,7 +75,7 @@ export const PART_INFO: Record<PartId, { what: string; eras: Record<string, stri
     eras: {
       "2017-2021": "Wide, low rear wing with DRS: a flap that opens on the straights within one second of the car ahead.",
       "2022-2025": "Rolled-over wing tips and a beam wing below; DRS kept.",
-      "2026-": "No DRS: the wing flattens on the straights for every car (active aero), and an electric boost is used for overtaking instead.",
+      "2026-": "Three-element active wing and no beam wing. No DRS: the wing flattens on the straights for every car, and an electric boost is used for overtaking instead.",
     },
   },
   wheels: {

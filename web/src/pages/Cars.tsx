@@ -5,6 +5,7 @@ import { useApi, useMeta } from "../api";
 import { Car3D, CarImage, HelmetImage } from "../components/lazy3d";
 import { MODEL_CREDIT } from "../three/credits";
 import { ERA_SPECS, PART_LABEL, PART_ORDER, partInfo, type PartId } from "../three/parts";
+import { carPhysics, partPhysics, type Fact } from "../three/physics";
 import { RaceLine } from "../components/Charts";
 import { Avatar, ContribBars, ErrorBox, fmt, Loading, pct, signed, Swatch, Tile, useHelmetSpec, Info } from "../components/ui";
 import type { CarDetail, CarList as CarListData } from "../types";
@@ -94,6 +95,7 @@ function PartPanel({ part, car, cars }: { part: PartId | null; car: CarDetail; c
         <h2>Pick a part</h2>
         <p className="body-text">Click a part of the car, or use the buttons under it.</p>
         <EraSpecs era={car.era} label={car.era_label} />
+        <PhysicsList title="Physics of this car" facts={carPhysics(car.season, car.era, car.pace_gap)} />
       </div>
     );
   }
@@ -143,8 +145,25 @@ function PartPanel({ part, car, cars }: { part: PartId | null; car: CarDetail; c
       <h2>{PART_LABEL[part]}</h2>
       <p className="body-text">{info.what}</p>
       <PartRules label={car.era_label} rules={info.rules} note={info.note} />
+      <PhysicsList title="Physics" facts={partPhysics(part, car.season, car.era)} />
       <h3 className="sub-head">This car's numbers <Info>Numbers are for the whole car. The data has no measurements of single parts.</Info></h3>
       {body}
+    </div>
+  );
+}
+
+export function PhysicsList({ title, facts }: { title: string; facts: Fact[] }) {
+  return (
+    <div className="physics">
+      <span className="eyebrow">{title} <Info>Worked out from the season's public rules (minimum weight, tyre size) with simple formulas. Not measured data of this team's car.</Info></span>
+      <dl>
+        {facts.map((f) => (
+          <div key={f.label}>
+            <dt>{f.label}</dt>
+            <dd><b className="mono">{f.value}</b><span>{f.how}</span></dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }

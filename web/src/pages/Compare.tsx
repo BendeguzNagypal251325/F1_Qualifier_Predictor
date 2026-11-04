@@ -4,6 +4,7 @@ import { useApi, useMeta } from "../api";
 import { Car3D } from "../components/lazy3d";
 import { ErrorBox, fmt, Info, Loading, pct, Swatch } from "../components/ui";
 import { ERA_SPECS, PART_LABEL, PART_ORDER, partInfo, type PartId } from "../three/parts";
+import { carPhysics, partPhysics } from "../three/physics";
 import { makeCameraSync } from "../three/sync";
 import type { CarDetail, CarList as CarListData } from "../types";
 import { engineName } from "./Cars";
@@ -171,12 +172,15 @@ function CompareTable({ cars, part }: { cars: CarDetail[]; part: PartId | null }
               const info = partInfo(part, c.era, c.season);
               return [info.rules, info.note].filter(Boolean).join(" ");
             })}
+            {part && partPhysics(part, cars[0].season, cars[0].era).map((_, k) =>
+              textRow(`Physics: ${partPhysics(part, cars[0].season, cars[0].era)[k].label}`, (c) => partPhysics(part, c.season, c.era)[k]?.value ?? "–"))}
             {textRow("Era", (c) => c.era_label)}
             {textRow("Width", (c) => spec(c)?.width ?? "–")}
             {textRow("Wheelbase", (c) => spec(c)?.wheelbase ?? "–")}
             {textRow("Minimum weight", (c) => spec(c)?.weight ?? "–")}
             {textRow("Wheels", (c) => spec(c)?.wheels ?? "–")}
             {textRow("Power unit", (c) => engineName(c.engine))}
+            {[1, 2].map((k) => textRow(carPhysics(cars[0].season, cars[0].era, null)[k].label, (c) => carPhysics(c.season, c.era, null)[k].value))}
             {numRow("Gap to pole", (c) => c.pace_gap, (v) => `+${v.toFixed(2)}%`)}
             {numRow("Pace rank", (c) => c.pace_rank, (v) => fmt(v, 1))}
             {numRow("Avg qualifying", (c) => c.avg_pos, (v) => `P${fmt(v)}`)}

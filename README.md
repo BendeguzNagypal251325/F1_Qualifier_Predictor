@@ -255,10 +255,11 @@ tools/models/optimize.sh build/models web/public/models
 Each car is painted in its team's colours for that season (`f1qp/cars.py`) and carries the driver's
 helmet in the cockpit. You can rotate and zoom it, jump to front, side, top or rear views, and click any
 of eight parts: front wing, nose, cockpit and halo, sidepods, floor, power unit, rear wing, and tyres
-and suspension. A selected part is shown on its own (the rest of the car fades to a faint outline) and
-the camera zooms to it; click it again for the whole car. The side panel says what the part does, the
+and suspension. A selected part is shown solid while the rest of the car fades to a see-through outline;
+the camera stays on the whole car. Click the part again to show the whole car. The side panel says what the part does, the
 main public FIA rules for it in that era, notes for single seasons, and the car-level numbers
-(`PART_INFO` and `SEASON_NOTES` in `web/src/three/parts.ts`). Every team of an era shares the reference
+(`PART_INFO` and `SEASON_NOTES` in `web/src/three/parts.ts`). Each car and each part also has physics facts worked out from
+the season's rules with simple formulas, each showing how it was calculated (`web/src/three/physics.ts`). Every team of an era shares the reference
 car's shape, so it shows the era's car, not each team's own design.
 
 Finish (`web/src/three/models.ts`): the 2020–21 and 2022–25 models, whose sources have one body

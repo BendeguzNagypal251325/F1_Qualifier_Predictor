@@ -183,6 +183,12 @@ svg .lbl { fill: var(--ink); font-family: var(--font-body); font-size: 12px; }
 .part-rules { display: grid; gap: 4px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .sub-head { font-size: 0.95rem; margin: 4px 0 0; }
 .compare-note { margin: 4px 0; }
+.physics { display: grid; gap: 6px; padding-top: 6px; }
+.physics dl { margin: 0; display: grid; gap: 8px; }
+.physics dl > div { display: grid; grid-template-columns: minmax(120px, 0.9fr) 1.6fr; gap: 10px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.physics dt { color: var(--ink-2); font-size: 0.85rem; }
+.physics dd { margin: 0; display: grid; gap: 2px; }
+.physics dd span { color: var(--ink-2); font-size: 0.8rem; }
 .compare-grid { display: grid; gap: 16px; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); align-items: start; }
 .compare-grid.n1 { --cols: 1; } .compare-grid.n2 { --cols: 2; } .compare-grid.n3 { --cols: 3; }
 @media (max-width: 900px) { .compare-grid { --cols: 1 !important; } }
