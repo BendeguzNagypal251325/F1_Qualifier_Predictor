@@ -43,5 +43,11 @@ def outlines(size: float = 100.0) -> dict[str, dict]:
         oy = (size - (max(ys) - min(ys)) * k) / 2
         p2 = [((x - min(xs)) * k + ox, (y - min(ys)) * k + oy) for x, y in pts]
         path = "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in p2) + " Z"
-        out[circuit] = {"path": path, "name": f["properties"].get("Name"), "length_m": f["properties"].get("length")}
+        out[circuit] = {"path": path, "points": p2, "name": f["properties"].get("Name"), "length_m": f["properties"].get("length")}
     return out
+
+
+def outline_points(circuit: str) -> list[tuple[float, float]] | None:
+    """The outline's points in the same 100 x 100 box as its SVG path."""
+    o = outlines().get(circuit)
+    return o["points"] if o else None

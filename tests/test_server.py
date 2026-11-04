@@ -203,3 +203,41 @@ def test_versioned_models_are_cached(artifact, tmp_path):
         versioned = c.get("/models/car.json?v=1")
         assert versioned.status_code == 200 and "immutable" in versioned.headers["cache-control"]
         assert "immutable" not in c.get("/models/car.json").headers.get("cache-control", "")
+
+
+def test_track_segments(client):
+    seg = client.get("/api/tracks/monza").json()["segments"]
+    assert set(seg) == {"q1", "q2", "q3"}
+    for k, (field_min, through) in {"q1": (19, 15), "q2": (14, 10), "q3": (10, 1)}.items():
+        for s in seg[k]["sessions"]:
+            assert s["field"] >= field_min
+            if k != "q3":
+                assert all(o["pos"] > through for o in s["out"])          # knocked out here
+                assert s["cutoff"]["pos"] <= through                        # the slowest who got through
+            if s["gap_s"] is not None:
+                assert s["gap_s"] >= 0 and s["fastest"]["time"] <= s["cutoff"]["time"]
+        for d in seg[k]["drivers"]:
+            assert 0 <= d["through"] <= d["reached"]
+    # everyone who reached Q3 also reached Q2
+    q2 = {d["driver"]: d["reached"] for d in seg["q2"]["drivers"]}
+    assert all(q2[d["driver"]] >= d["reached"] for d in seg["q3"]["drivers"])
+
+
+def test_track_sectors(client, tmp_path, monkeypatch):
+    from f1qp import sectors
+    from tests.test_sectors import _fake_trace
+
+    monkeypatch.setattr(sectors, "SECTOR_DIR", tmp_path)
+    assert client.get("/api/tracks/monza").json()["sectors"]["sessions"] == []  # nothing downloaded yet
+    trace, _ = _fake_trace("monza")
+    key = next(s["race_key"] for s in client.get("/api/tracks/monza").json()["sessions"] if s["season"] == 2025)
+    sectors.save({"race_key": key, "session_key": 1, "trace": {"driver": "max-verstappen", "points": trace}, "drivers": [
+        {"driver": "max-verstappen", "number": 1, "s1": 26.0, "s2": 27.1, "s3": 26.2, "lap": 79.3, "speed": 350},
+        {"driver": "lando-norris", "number": 4, "s1": 26.2, "s2": 26.9, "s3": 26.3, "lap": 79.4, "speed": 347},
+        {"driver": None, "number": 99, "s1": 20.0, "s2": 20.0, "s3": 20.0, "lap": 60.0, "speed": 400},  # not in F1DB: ignored
+    ]})
+    sec = client.get("/api/tracks/monza").json()["sectors"]  # new file: the response cache must not serve the old answer
+    s = sec["sessions"][0]
+    assert s["season"] == 2025 and s["best"]["s1"]["driver"] == "max-verstappen" and s["best"]["s2"]["driver"] == "lando-norris"
+    assert s["ideal"] == round(26.0 + 26.9 + 26.2, 3) and s["top_speed"]["time"] == 350 and s["pole_lap"]["driver"] == "max-verstappen"
+    assert sec["records"]["s3"]["season"] == 2025 and sec["map"]["season"] == 2025 and len(sec["map"]["paths"]) == 3

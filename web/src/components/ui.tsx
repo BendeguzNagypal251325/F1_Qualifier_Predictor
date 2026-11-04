@@ -160,10 +160,10 @@ export function PosLegend() {
   );
 }
 
-export function Bar({ value, max = 1, label }: { value: number | null; max?: number; label: string }) {
+export function Bar({ value, max = 1, label, color }: { value: number | null; max?: number; label: string; color?: string }) {
   return (
     <div className="cell-bar">
-      <div className="bar"><span style={{ width: `${Math.max(0, Math.min(1, (value ?? 0) / max)) * 100}%` }} /></div>
+      <div className="bar"><span style={{ width: `${Math.max(0, Math.min(1, (value ?? 0) / max)) * 100}%`, ...(color ? { background: color } : {}) }} /></div>
       <b>{label}</b>
     </div>
   );

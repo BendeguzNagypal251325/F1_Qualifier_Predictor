@@ -21,6 +21,7 @@ import secrets
 from collections import OrderedDict
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from functools import lru_cache
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -37,7 +38,8 @@ from . import model as M
 from . import names as N
 from .build import GROUPS, State, compute_state, data_mtime, load_state, save_state, ARTIFACT
 from .data import ROOT
-from .tracks import outlines
+from . import sectors
+from .tracks import outline_points, outlines
 
 log = logging.getLogger("f1qp")
 
@@ -53,6 +55,8 @@ class Settings:
     static_dir: Path = Path(os.environ.get("F1QP_STATIC_DIR", str(ROOT / "web" / "dist")))
     cors_origins: tuple[str, ...] = tuple(o for o in os.environ.get("F1QP_CORS_ORIGINS", "").split(",") if o)
     artifact: Path = ARTIFACT
+    # download sector times from OpenF1 in the background (only while live updates are on)
+    sectors: bool = os.environ.get("F1QP_SECTORS", "1") == "1"
 
 
 # ---------------------------------------------------------------- live service ------------------------------------------
@@ -229,6 +233,123 @@ async def _warm(app: FastAPI) -> None:
         log.info("cache warm-up skipped: %s", e)
 
 
+@lru_cache(maxsize=256)
+def _sector_map(circuit: str, race_key: str, mtime: float) -> dict | None:
+    """The track outline split into this session's three sectors (cached per file version)."""
+    d = sectors.load(race_key)
+    pts = outline_points(circuit)
+    if not d or not d.get("trace") or not pts:
+        return None
+    return sectors.sector_paths(pts, d["trace"]["points"])
+
+
+def _sector_block(circuit: str, rows: pd.DataFrame) -> dict:
+    """Best S1 / S2 / S3 per qualifying session at this track (OpenF1, 2023 on) and the sector map."""
+    sessions = []
+    for key, g in rows.groupby("race_key"):
+        d = sectors.load(key)
+        if not d:
+            continue
+        team = dict(zip(g["driver_id"], g["constructor_id"]))
+        entries = []
+        for x in d["drivers"]:
+            if not x.get("driver"):
+                continue
+            secs = [x.get(f"s{i}") for i in (1, 2, 3)]
+            entries.append({"driver": x["driver"], "name": N.driver_name(x["driver"]), "team": team.get(x["driver"], ""),
+                            "s1": secs[0], "s2": secs[1], "s3": secs[2], "lap": x.get("lap"), "speed": x.get("speed"),
+                            "ideal": round(sum(secs), 3) if all(v is not None for v in secs) else None})
+
+        def holder(col, lowest=True):
+            c = [e for e in entries if e[col] is not None]
+            if not c:
+                return None
+            e = (min if lowest else max)(c, key=lambda e: e[col])
+            return {"driver": e["driver"], "name": e["name"], "team": e["team"], "time": e[col]}
+
+        best = {f"s{i}": holder(f"s{i}") for i in (1, 2, 3)}
+        ideal = round(sum(b["time"] for b in best.values()), 3) if all(best.values()) else None
+        sessions.append({"race_key": key, "season": int(g["season"].iloc[0]), "best": best, "pole_lap": holder("lap"),
+                         "ideal": ideal, "top_speed": holder("speed", lowest=False),
+                         "drivers": sorted(entries, key=lambda e: e["lap"] if e["lap"] is not None else 1e9)})
+    sessions.sort(key=lambda x: x["season"])
+    records = {}
+    for i in (1, 2, 3):
+        c = [(s["best"][f"s{i}"], s["season"]) for s in sessions if s["best"][f"s{i}"]]
+        if c:
+            b, yr = min(c, key=lambda t: t[0]["time"])
+            records[f"s{i}"] = {**b, "season": yr}
+    track_map = None
+    for sess in reversed(sessions):  # the most recent session whose lap fits the outline
+        mtime = sectors.path_for(sess["race_key"]).stat().st_mtime
+        m = _sector_map(circuit, sess["race_key"], mtime)
+        if m:
+            track_map = {**m, "season": sess["season"]}
+            break
+    return {"first_season": sectors.FIRST_SEASON, "sessions": sessions, "records": records, "map": track_map}
+
+
+def _q_cut(field: int) -> dict[int, int]:
+    """Positions that take part in each qualifying session: everyone in Q1, the top 15 in Q2 (16 with 22
+    cars, from 2026), the top 10 in Q3."""
+    return {1: field, 2: 16 if field >= 22 else 15, 3: 10}
+
+
+def _segments(rows: pd.DataFrame) -> dict:
+    """Q1 / Q2 / Q3 at one track: fastest lap, the cut-off to get through, who was knocked out, and a
+    record per driver. Sessions are assigned by final position (the official rule), so a driver who
+    set no time in a session they reached still counts as having reached it."""
+    out: dict[str, dict] = {}
+    for seg in (1, 2, 3):
+        col = f"q{seg}_s"
+        sessions, per_driver = [], {}
+        for key, g in rows.groupby("race_key"):
+            g = g.dropna(subset=["quali_pos"])
+            if g.empty:
+                continue
+            cut = _q_cut(len(g))
+            inside = g[g["quali_pos"] <= cut[seg]].sort_values("quali_pos")
+            through = cut.get(seg + 1, 1)  # Q3: "through" means pole
+            timed = inside.dropna(subset=[col]).sort_values(col)
+            fastest = timed.iloc[0] if len(timed) else None
+            # Q1/Q2: the slowest driver who still made the next session; Q3: the slowest lap (top-10 spread)
+            nxt = inside[inside["quali_pos"] <= through] if seg < 3 else inside
+            cut_row = nxt.sort_values(col).dropna(subset=[col]).iloc[-1] if nxt[col].notna().any() else None
+            knocked = inside[inside["quali_pos"] > through] if seg < 3 else inside.iloc[0:0]
+
+            def who(r):
+                return None if r is None else {"driver": r.driver_id, "name": N.driver_name(r.driver_id), "team": r.constructor_id,
+                                               "time": _f(getattr(r, col), 3), "pos": int(r.quali_pos)}
+
+            sessions.append({
+                "race_key": key, "season": int(g["season"].iloc[0]), "field": int(len(inside)),
+                "fastest": who(fastest), "cutoff": who(cut_row),
+                "gap_s": _f(cut_row[col] - fastest[col], 3) if fastest is not None and cut_row is not None else None,
+                "out": [who(r) for r in knocked.itertuples()] if seg < 3 else [who(r) for r in inside.head(3).itertuples()],
+            })
+            best = fastest[col] if fastest is not None else None
+            for r in inside.itertuples():
+                d = per_driver.setdefault(r.driver_id, {"driver": r.driver_id, "name": N.driver_name(r.driver_id), "team": r.constructor_id,
+                                                        "reached": 0, "through": 0, "best_pos": 99, "gaps": []})
+                d["team"] = r.constructor_id
+                d["reached"] += 1
+                d["through"] += int(r.quali_pos <= through)
+                d["best_pos"] = min(d["best_pos"], int(r.quali_pos))
+                t = getattr(r, col)
+                if best is not None and pd.notna(t):
+                    d["gaps"].append((t - best) / best * 100)
+        drivers = []
+        for d in per_driver.values():
+            gaps = d.pop("gaps")
+            drivers.append({**d, "avg_gap_pct": _f(sum(gaps) / len(gaps), 3) if gaps else None})
+        # most often through (Q3: most appearances), then closest to the fastest lap
+        drivers.sort(key=lambda d: (-(d["reached"] if seg == 3 else d["through"]), -d["through"],
+                                    d["avg_gap_pct"] if d["avg_gap_pct"] is not None else 99))
+        sessions.sort(key=lambda x: x["season"])
+        out[f"q{seg}"] = {"sessions": sessions, "drivers": drivers}
+    return out
+
+
 def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
     settings = settings or Settings()
     app_state = AppState(settings)
@@ -238,8 +359,14 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
     async def lifespan(app: FastAPI):
         await app_state.load()
         live.start()
+        fetcher = None
+        if settings.sectors and settings.live_interval > 0:
+            fetcher = sectors.SectorFetcher(lambda: app_state.state.wf)
+            fetcher.start()
         asyncio.create_task(_warm(app))
         yield
+        if fetcher:
+            fetcher.stop.set()
         await live.stop()
 
     app = FastAPI(
@@ -253,7 +380,7 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
     )
     # Every GET answer except live/health depends only on the data version, so it is computed once
     # and served from memory until the data changes (the version is part of the key).
-    cache: OrderedDict[tuple[str, str], tuple[int, bytes, str]] = OrderedDict()
+    cache: OrderedDict[tuple, tuple[int, bytes, str]] = OrderedDict()
     uncached = ("/api/live", "/api/health", "/api/docs", "/api/openapi.json")
 
     @app.middleware("http")
@@ -265,7 +392,7 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
                 # /assets: file names are content hashes; /models: the app adds a version (?v=) it bumps when they change
                 response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
             return response
-        key = (app_state.state.built_at, str(request.url.path) + "?" + str(request.url.query))
+        key = (app_state.state.built_at, sectors.version(), str(request.url.path) + "?" + str(request.url.query))
         hit = cache.get(key)
         if hit:
             cache.move_to_end(key)
@@ -378,7 +505,8 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
                      "pole": N.driver_name(rows.loc[(rows["race_key"] == k) & (rows["quali_pos"] == 1), "driver_id"].iloc[0])}
                     for k, v in sess.sort_index().items()]
         return {"id": circuit_id, "name": N.circuit_name(circuit_id), "sessions": sessions,
-                "model_correct": _f(sess.mean()) if len(sess) else None, "drivers": drivers}
+                "model_correct": _f(sess.mean()) if len(sess) else None, "drivers": drivers,
+                "segments": _segments(rows), "sectors": _sector_block(circuit_id, rows)}
 
     # ---------------------------------------------------------------- heatmap
 
