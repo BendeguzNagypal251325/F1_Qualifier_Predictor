@@ -20,6 +20,7 @@ import logging
 import os
 import threading
 import time
+from contextlib import contextmanager
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -134,21 +135,89 @@ def save(data: dict) -> None:
     tmp.replace(path_for(data["race_key"]))
 
 
-def fetch_missing(entries: pd.DataFrame, season: int | None = None, get=openf1_get, pause: float = 2.0, stop: threading.Event | None = None) -> int:
-    """Download every missing session; returns how many were saved. ``pause`` keeps within OpenF1's rate limit."""
-    saved = 0
+class Paced:
+    """Wraps an OpenF1 getter: at most one request every ``interval`` seconds (OpenF1's free tier allows
+    about 30 a minute), and the season's session list fetched once instead of once per race."""
+
+    def __init__(self, get, interval: float = 2.2, sleep=time.sleep, clock=time.monotonic):
+        self.get, self.interval, self.sleep, self.clock = get, interval, sleep, clock
+        self.last = -1e9
+        self.seasons: dict[int, list] = {}
+
+    def __call__(self, endpoint: str, **params):
+        if endpoint == "sessions" and set(params) == {"year"} and params["year"] in self.seasons:
+            return self.seasons[params["year"]]
+        wait = self.last + self.interval - self.clock()
+        if wait > 0:
+            self.sleep(wait)
+        try:
+            out = self.get(endpoint, **params)
+        finally:
+            self.last = self.clock()
+        if endpoint == "sessions" and set(params) == {"year"}:
+            self.seasons[params["year"]] = out
+        return out
+
+
+class Busy(RuntimeError):
+    """Another downloader (the web server's background one, or a second command) is already running."""
+
+
+@contextmanager
+def _one_downloader():
+    """Only one downloader at a time: two would together exceed OpenF1's rate limit."""
+    SECTOR_DIR.mkdir(parents=True, exist_ok=True)
+    with open(SECTOR_DIR / ".download.lock", "a+") as f:
+        try:
+            import fcntl
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except ImportError:  # Windows without Docker: no lock, just go ahead
+            pass
+        except OSError as e:
+            raise Busy("another sector download is already running") from e
+        yield
+
+
+def fetch_missing(entries: pd.DataFrame, season: int | None = None, get=openf1_get, stop: threading.Event | None = None,
+                  interval: float = 2.2, sleep=time.sleep, max_failures: int = 3) -> int:
+    with _one_downloader():
+        return _fetch_missing(entries, season, get, stop, interval, sleep, max_failures)
+
+
+def _fetch_missing(entries, season, get, stop, interval, sleep, max_failures) -> int:
+    """Download every missing session; returns how many were saved.
+
+    Requests are paced to stay within OpenF1's rate limit. A session that still fails (rate limit,
+    network) is skipped and picked up by the next run; after ``max_failures`` failures in a row the run
+    stops, since OpenF1 is then unavailable for a while."""
+    paced = get if isinstance(get, Paced) else Paced(get, interval, sleep)
+    saved = failures = 0
     for key, yr, day, numbers in missing_sessions(entries, season):
         if stop is not None and stop.is_set():
             break
         if day > date.today():
             continue
-        data = fetch_session(key, yr, day, numbers, get)
+        try:
+            data = fetch_session(key, yr, day, numbers, paced)
+        except Exception as e:  # noqa: BLE001 - any OpenF1 / network problem: skip, retry next run
+            failures += 1
+            log.warning("sectors: %s skipped (%s)", key, _why(e))
+            if failures >= max_failures:
+                log.warning("sectors: OpenF1 keeps refusing; stopping for now. Run again later to fetch the rest.")
+                break
+            sleep(30 * failures)
+            continue
+        failures = 0
         if data:
             save(data)
             saved += 1
             log.info("sectors: saved %s", key)
-        time.sleep(pause)
     return saved
+
+
+def _why(e: Exception) -> str:
+    code = getattr(e, "code", None)
+    return "rate limit, too many requests" if code == 429 else f"HTTP {code}" if code else type(e).__name__
 
 
 class SectorFetcher:
@@ -166,6 +235,8 @@ class SectorFetcher:
         while not self.stop.is_set():
             try:
                 fetch_missing(self.entries_fn(), get=self.get, stop=self.stop)
+            except Busy:
+                pass  # someone runs `f1qp-sectors` right now; try again next round
             except Exception as e:  # network down or OpenF1 unavailable: try again later
                 log.info("sectors: OpenF1 not reachable (%s); retrying later", type(e).__name__)
             self.stop.wait(self.interval_s)
@@ -240,8 +311,14 @@ def main() -> None:
     ap.add_argument("--season", type=int)
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
-    n = fetch_missing(load_entries(), a.season)
-    print(f"saved {n} session(s) to {SECTOR_DIR}")
+    try:
+        n = fetch_missing(load_entries(), a.season)
+    except Busy:
+        print("The app is already downloading sector times in the background (watch its log for 'sectors: saved').\n"
+              "Wait for it to finish, or run this again in a few minutes.")
+        return
+    left = len([m for m in missing_sessions(load_entries(), a.season) if m[2] <= date.today()])
+    print(f"saved {n} session(s) to {SECTOR_DIR}" + (f"; {left} still missing (OpenF1 had no data or refused). Run again later." if left else "; all sessions done."))
 
 
 if __name__ == "__main__":

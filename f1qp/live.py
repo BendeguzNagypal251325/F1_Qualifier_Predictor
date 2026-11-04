@@ -86,11 +86,21 @@ def openf1_get(endpoint: str, raw: str = "", **params) -> list[dict]:
                 return []
             if attempt == 3:
                 raise
+            if e.code == 429:  # rate limited: wait as long as OpenF1 asks (or a growing pause)
+                time.sleep(_retry_after(e, default=15 * (attempt + 1)))
+                continue
         except urllib.error.URLError:
             if attempt == 3:
                 raise
         time.sleep(2 * (attempt + 1))
     return []
+
+
+def _retry_after(e: urllib.error.HTTPError, default: float) -> float:
+    try:
+        return min(120.0, max(1.0, float(e.headers.get("Retry-After", default))))
+    except (TypeError, ValueError):
+        return default
 
 
 def _parse_time(text: str | None) -> datetime | None:
