@@ -146,3 +146,15 @@ def test_openf1_get_waits_on_429(monkeypatch):
     monkeypatch.setattr(live.time, "sleep", waits.append)
     assert live.openf1_get("laps", session_key=1) == [{"ok": 1}]
     assert waits == [7.0, 7.0]
+
+
+def test_only_one_downloader(tmp_path, monkeypatch):
+    import pandas as pd
+    import pytest
+
+    monkeypatch.setattr(sectors, "SECTOR_DIR", tmp_path)
+    empty = pd.DataFrame({"race_key": [], "season": [], "date": [], "driver_number": [], "driver_id": []})
+    with sectors._one_downloader():
+        with pytest.raises(sectors.Busy):
+            sectors.fetch_missing(empty, get=lambda *a, **k: [])
+    assert sectors.fetch_missing(empty, get=lambda *a, **k: []) == 0  # free again

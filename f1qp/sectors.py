@@ -20,6 +20,7 @@ import logging
 import os
 import threading
 import time
+from contextlib import contextmanager
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -158,8 +159,32 @@ class Paced:
         return out
 
 
+class Busy(RuntimeError):
+    """Another downloader (the web server's background one, or a second command) is already running."""
+
+
+@contextmanager
+def _one_downloader():
+    """Only one downloader at a time: two would together exceed OpenF1's rate limit."""
+    SECTOR_DIR.mkdir(parents=True, exist_ok=True)
+    with open(SECTOR_DIR / ".download.lock", "a+") as f:
+        try:
+            import fcntl
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except ImportError:  # Windows without Docker: no lock, just go ahead
+            pass
+        except OSError as e:
+            raise Busy("another sector download is already running") from e
+        yield
+
+
 def fetch_missing(entries: pd.DataFrame, season: int | None = None, get=openf1_get, stop: threading.Event | None = None,
                   interval: float = 2.2, sleep=time.sleep, max_failures: int = 3) -> int:
+    with _one_downloader():
+        return _fetch_missing(entries, season, get, stop, interval, sleep, max_failures)
+
+
+def _fetch_missing(entries, season, get, stop, interval, sleep, max_failures) -> int:
     """Download every missing session; returns how many were saved.
 
     Requests are paced to stay within OpenF1's rate limit. A session that still fails (rate limit,
@@ -210,6 +235,8 @@ class SectorFetcher:
         while not self.stop.is_set():
             try:
                 fetch_missing(self.entries_fn(), get=self.get, stop=self.stop)
+            except Busy:
+                pass  # someone runs `f1qp-sectors` right now; try again next round
             except Exception as e:  # network down or OpenF1 unavailable: try again later
                 log.info("sectors: OpenF1 not reachable (%s); retrying later", type(e).__name__)
             self.stop.wait(self.interval_s)
@@ -284,7 +311,12 @@ def main() -> None:
     ap.add_argument("--season", type=int)
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
-    n = fetch_missing(load_entries(), a.season)
+    try:
+        n = fetch_missing(load_entries(), a.season)
+    except Busy:
+        print("The app is already downloading sector times in the background (watch its log for 'sectors: saved').\n"
+              "Wait for it to finish, or run this again in a few minutes.")
+        return
     left = len([m for m in missing_sessions(load_entries(), a.season) if m[2] <= date.today()])
     print(f"saved {n} session(s) to {SECTOR_DIR}" + (f"; {left} still missing (OpenF1 had no data or refused). Run again later." if left else "; all sessions done."))
 
