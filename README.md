@@ -68,8 +68,10 @@ uv run f1qp-sectors               # download every missing session now
 uv run f1qp-sectors --season 2026
 ```
 
-While live updates are on, the web server fills in missing sessions in the background, slowly enough to
-stay within OpenF1's rate limits (`F1QP_SECTORS=0` turns that off, `F1QP_SECTOR_DIR` moves the folder).
+Requests are paced to stay within OpenF1's free rate limit (about 30 a minute), so a full download from
+2023 takes roughly 10 to 12 minutes; if OpenF1 still refuses, the session is skipped and fetched by the
+next run (already saved sessions are never downloaded again). While live updates are on, the web server
+also fills in missing sessions in the background (`F1QP_SECTORS=0` turns that off, `F1QP_SECTOR_DIR` moves the folder).
 Tracks without downloaded sessions show the plain outline.
 
 ## Live weekend predictions
