@@ -7,6 +7,7 @@ import { loadCar } from "../three/models";
 import { buildHelmet, helmetModelReady, type HelmetSpec } from "../three/helmet";
 import { PART_LABEL, type PartId } from "../three/parts";
 import { makeRenderer, makeStage, snapshot, want } from "../three/stage";
+import type { CameraSync } from "../three/sync";
 
 type View = "3/4" | "front" | "side" | "top" | "rear";
 
@@ -27,10 +28,10 @@ function viewPosition(view: View, centre: THREE.Vector3, d: number): THREE.Vecto
 }
 
 /** Shared viewer: renderer, stage, orbit controls, resize and visibility handling. */
-function useViewer(container: React.RefObject<HTMLDivElement>, opts: { autoRotate?: boolean; floor?: boolean; fov?: number; fit?: number }) {
+function useViewer(container: React.RefObject<HTMLDivElement>, opts: { autoRotate?: boolean; floor?: boolean; fov?: number; fit?: number; sync?: CameraSync }) {
   const api = useRef<{
     renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; controls: OrbitControls;
-    setObject: (o: THREE.Object3D) => void; flyTo: (v: View) => void; object: THREE.Object3D | null;
+    setObject: (o: THREE.Object3D) => void; flyTo: (v: View) => void; focus: (box: THREE.Box3 | null) => void; object: THREE.Object3D | null;
   } | null>(null);
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -45,9 +46,17 @@ function useViewer(container: React.RefObject<HTMLDivElement>, opts: { autoRotat
     controls.maxPolarAngle = Math.PI * 0.49;
     controls.autoRotate = !!opts.autoRotate;
     controls.autoRotateSpeed = 0.8;
-    controls.addEventListener("start", () => (controls.autoRotate = false));
-    let fly: { from: THREE.Vector3; to: THREE.Vector3; t: number } | null = null;
+    const sync = opts.sync, me = sync ? sync.next++ : -1;
+    controls.addEventListener("start", () => {
+      controls.autoRotate = false;
+      if (sync) sync.leader = me;
+    });
+    let fly: { from: THREE.Vector3; to: THREE.Vector3; fromT: THREE.Vector3; toT: THREE.Vector3; t: number } | null = null;
     let dist = 6;
+    let home = new THREE.Vector3();
+    const startFly = (to: THREE.Vector3, toT: THREE.Vector3) => {
+      fly = { from: camera.position.clone(), to, fromT: controls.target.clone(), toT, t: 0 };
+    };
     const state = {
       renderer, scene, camera, controls, object: null as THREE.Object3D | null,
       setObject(o: THREE.Object3D) {
@@ -56,14 +65,26 @@ function useViewer(container: React.RefObject<HTMLDivElement>, opts: { autoRotat
         scene.add(o);
         const { centre, size } = frame(o);
         dist = Math.max(size.x, size.z, size.y * 1.6) * (opts.fit ?? 1.55);
+        home = centre.clone();
         controls.target.copy(centre);
-        controls.minDistance = dist * 0.45;
+        controls.minDistance = dist * 0.12;
         controls.maxDistance = dist * 2.2;
         if (!fly) camera.position.copy(viewPosition("3/4", centre, dist));
       },
       flyTo(v: View) {
         controls.autoRotate = false;
-        fly = { from: camera.position.clone(), to: viewPosition(v, controls.target, dist), t: 0 };
+        if (sync) sync.leader = me;
+        startFly(viewPosition(v, controls.target, camera.position.distanceTo(controls.target)), controls.target.clone());
+      },
+      /** Turn the camera towards ``box`` (one part) and frame it; ``null`` frames the whole car again. */
+      focus(box: THREE.Box3 | null) {
+        controls.autoRotate = false;
+        if (sync) sync.leader = null;
+        const target = box ? box.getCenter(new THREE.Vector3()) : home.clone();
+        const size = box ? box.getSize(new THREE.Vector3()) : null;
+        const d = size ? Math.max(size.x, size.y * 1.6, size.z, 0.35) * 1.9 : dist;
+        const dir = camera.position.clone().sub(controls.target).normalize();
+        startFly(target.clone().addScaledVector(dir, d), target);
       },
     };
     api.current = state;
@@ -89,7 +110,12 @@ function useViewer(container: React.RefObject<HTMLDivElement>, opts: { autoRotat
         fly.t = Math.min(1, fly.t + (reduce ? 1 : 0.06));
         const e = 1 - (1 - fly.t) ** 3;
         camera.position.lerpVectors(fly.from, fly.to, e);
+        controls.target.lerpVectors(fly.fromT, fly.toT, e);
         if (fly.t >= 1) fly = null;
+      }
+      if (sync && sync.leader !== null) {
+        if (sync.leader === me) sync.offset = camera.position.clone().sub(controls.target).toArray();
+        else if (!fly) camera.position.copy(controls.target).add(new THREE.Vector3(...sync.offset));
       }
       controls.update();
       renderer.render(scene, camera);
@@ -112,47 +138,70 @@ function useViewer(container: React.RefObject<HTMLDivElement>, opts: { autoRotat
 
 // ---------------------------------------------------------------- car
 
-export function Car3D({ era, livery, selected, onSelect, helmet, label }: {
+export function Car3D({ era, livery, selected, onSelect, helmet, label, season, sync }: {
   era: string;
   livery: [string, string, string];
   selected: PartId | null;
   onSelect: (p: PartId) => void;
   helmet?: HelmetSpec;
   label: string;
+  /** Adds the season's visible rule changes to the era model. */
+  season?: number;
+  /** Links this viewer's camera with others (compare page). */
+  sync?: CameraSync;
 }) {
   const box = useRef<HTMLDivElement>(null);
-  const { api, ready } = useViewer(box, { autoRotate: true });
+  const { api, ready } = useViewer(box, { autoRotate: !sync, sync });
   const parts = useRef<Map<PartId, THREE.Mesh[]>>(new Map());
   const hovered = useRef<PartId | null>(null);
   const selRef = useRef(selected);
   const [hoverLabel, setHoverLabel] = useState<string | null>(null);
 
+  // A selected part is shown on its own: the rest of the car fades to a faint outline.
   const highlight = () => {
+    const sel = selRef.current;
     parts.current.forEach((meshes, id) => {
-      const on = id === selRef.current, hov = id === hovered.current;
+      const hidden = sel !== null && id !== sel, hov = id === hovered.current;
       meshes.forEach((m) => {
         const mat = m.material as THREE.MeshStandardMaterial;
+        if (m.userData.opacity === undefined) m.userData.opacity = { opacity: mat.opacity, transparent: mat.transparent };
+        const base = m.userData.opacity as { opacity: number; transparent: boolean };
+        mat.transparent = hidden || base.transparent;
+        mat.opacity = hidden ? 0.03 : base.opacity;
+        mat.depthWrite = !hidden;
+        m.castShadow = !hidden;
+        mat.needsUpdate = true;
         if (!mat.emissive || m.userData.light) return;
-        mat.emissive.set(on ? "#ff1200" : hov ? "#ffffff" : "#000000");
-        mat.emissiveIntensity = on ? 1.1 : hov ? 0.16 : 0;
+        mat.emissive.set(hov && !hidden ? "#ffffff" : "#000000");
+        mat.emissiveIntensity = hov && !hidden ? 0.16 : 0;
       });
     });
+  };
+  const focusSelected = () => {
+    if (!api.current) return;
+    const sel = selRef.current;
+    const meshes = sel ? parts.current.get(sel) ?? [] : [];
+    if (!meshes.length) { api.current.focus(null); return; }
+    const b = new THREE.Box3();
+    meshes.forEach((m) => b.expandByObject(m));
+    api.current.focus(b);
   };
 
   useEffect(() => {
     if (!ready || !api.current) return;
     let stale = false;
-    void loadCar(era, livery, helmet).then((built) => {
+    void loadCar(era, livery, helmet, season).then((built) => {
       if (stale || !api.current) { disposeObject(built.group); return; }
       built.group.traverse((o) => { if ((o as THREE.Mesh).isMesh && (o as THREE.Mesh).material && ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissiveIntensity > 1) o.userData.light = true; });
       parts.current = built.parts;
       api.current.setObject(built.group);
       highlight();
+      if (selRef.current) focusSelected();
     });
     return () => { stale = true; };
-  }, [ready, era, livery.join(","), helmet?.driverId, helmet?.colors.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ready, era, season, livery.join(","), helmet?.driverId, helmet?.colors.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { selRef.current = selected; highlight(); }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { selRef.current = selected; highlight(); focusSelected(); }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!ready || !api.current) return;
@@ -163,7 +212,9 @@ export function Car3D({ era, livery, selected, onSelect, helmet, label }: {
       const r = el.getBoundingClientRect();
       const p = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       ray.setFromCamera(p, camera);
-      const meshes = [...parts.current.values()].flat();
+      // while a part is shown on its own, only that part (and clicking it again) can be picked
+      const sel = selRef.current;
+      const meshes = sel ? parts.current.get(sel) ?? [] : [...parts.current.values()].flat();
       const hit = ray.intersectObjects(meshes, false)[0];
       return (hit?.object.userData.part as PartId) ?? null;
     };
@@ -200,7 +251,9 @@ export function Car3D({ era, livery, selected, onSelect, helmet, label }: {
 
   return (
     <div className="viewer" ref={box} role="img" aria-label={`${label}, interactive 3D model`}>
-      <span className="hint">{hoverLabel ? `${hoverLabel} · click` : "Drag to rotate · scroll to zoom · click a part"}</span>
+      <span className="hint">{selected
+        ? (hoverLabel ? `${hoverLabel} · click to show the whole car` : `${PART_LABEL[selected]} · click it again for the whole car`)
+        : hoverLabel ? `${hoverLabel} · click` : "Drag to rotate · scroll to zoom · click a part"}</span>
       <div className="views">
         {(["3/4", "front", "side", "top", "rear"] as View[]).map((v) => (
           <button key={v} type="button" onClick={() => api.current?.flyTo(v)}>{v}</button>
@@ -305,12 +358,12 @@ export function HelmetImage({ spec, alt }: { spec: HelmetSpec; alt: string }) {
   return src ? <img src={src} alt={alt} /> : <span ref={box} className="helmet-ph" aria-label="Rendering helmet" />;
 }
 
-export function CarImage({ era, livery, alt }: { era: string; livery: [string, string, string]; alt: string }) {
-  const key = `car|${era}|${livery.join(",")}`;
+export function CarImage({ era, livery, alt, season }: { era: string; livery: [string, string, string]; alt: string; season?: number }) {
+  const key = `car|${era}|${livery.join(",")}|${season === 2021 ? 2021 : ""}`;
   const [box, visible] = useNearScreen<HTMLSpanElement>();
   const src = useSnapshot(visible ? key : "", () => visible ? snapshot({
     key, width: 720, height: 405,
-    build: () => loadCar(era, livery).then((c) => c.group),
+    build: () => loadCar(era, livery, undefined, season).then((c) => c.group),
     camera: (o) => {
       const { centre, size } = frame(o);
       const d = Math.max(size.x, size.z) * 1.12;

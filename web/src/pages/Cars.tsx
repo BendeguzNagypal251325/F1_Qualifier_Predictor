@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { useApi, useMeta } from "../api";
 import { Car3D, CarImage, HelmetImage } from "../components/lazy3d";
 import { MODEL_CREDIT } from "../three/credits";
-import { ERA_SPECS, PART_LABEL, PART_ORDER, type PartId } from "../three/parts";
+import { ERA_SPECS, PART_LABEL, PART_ORDER, partInfo, type PartId } from "../three/parts";
 import { RaceLine } from "../components/Charts";
 import { Avatar, ContribBars, ErrorBox, fmt, Loading, pct, signed, Swatch, Tile, useHelmetSpec, Info } from "../components/ui";
 import type { CarDetail, CarList as CarListData } from "../types";
@@ -44,7 +44,7 @@ export function CarList() {
             {data.cars.map((c, i) => (
               <Link key={c.team} to={`/cars/${season}/${c.team}`} className="card lift">
                 <div className="media" style={{ background: "linear-gradient(180deg, #1d1d26, #101016)" }}>
-                  <CarImage era={c.era} livery={c.livery} alt={`${c.name} ${c.chassis ?? ""} 3D model`} />
+                  <CarImage era={c.era} livery={c.livery} season={season} alt={`${c.name} ${c.chassis ?? ""} 3D model`} />
                 </div>
                 <div className="body">
                   <h3>{c.name} {c.chassis}</h3>
@@ -136,12 +136,26 @@ function PartPanel({ part, car, cars }: { part: PartId | null; car: CarDetail; c
       </div>
     );
   }
+  const info = partInfo(part, car.era, car.season);
   return (
     <div className="panel">
       <span className="eyebrow">{car.name} {car.chassis} · {car.season}</span>
-      <h2>{PART_LABEL[part]} <Info>Numbers are for the whole car. The data has no measurements of single parts.</Info></h2>
-      <p className="body-text">{car.parts[part]}</p>
+      <h2>{PART_LABEL[part]}</h2>
+      <p className="body-text">{info.what}</p>
+      <PartRules label={car.era_label} rules={info.rules} note={info.note} />
+      <h3 className="sub-head">This car's numbers <Info>Numbers are for the whole car. The data has no measurements of single parts.</Info></h3>
       {body}
+    </div>
+  );
+}
+
+export function PartRules({ label, rules, note }: { label: string; rules: string; note: string | null }) {
+  if (!rules && !note) return null;
+  return (
+    <div className="part-rules">
+      <span className="eyebrow">Rules · {label.replace(/\s*\(.*\)$/, "")} <Info>Main public FIA regulation points for this part. Every car of an era uses the same 3D model shape here.</Info></span>
+      {rules && <p className="body-text">{rules}</p>}
+      {note && <p className="body-text">{note}</p>}
     </div>
   );
 }
@@ -170,7 +184,7 @@ function DriverHelmet({ driver, season, team }: { driver: string; season: number
 
 function CarViewer({ car, part, onSelect }: { car: CarDetail; part: PartId | null; onSelect: (p: PartId) => void }) {
   const helmet = useHelmetSpec(car.drivers[0]?.driver ?? "", car.season, car.team);
-  return <Car3D era={car.era} livery={car.livery} selected={part} onSelect={onSelect} helmet={car.drivers.length ? helmet : undefined} label={`${car.name} ${car.chassis ?? ""}`} />;
+  return <Car3D era={car.era} livery={car.livery} season={car.season} selected={part} onSelect={onSelect} helmet={car.drivers.length ? helmet : undefined} label={`${car.name} ${car.chassis ?? ""}`} />;
 }
 
 export function CarPage() {
@@ -200,6 +214,7 @@ export function CarPage() {
               {car.lineage.map((l) => <option key={l.season} value={l.season}>{l.season}{l.team !== car.team ? ` (${l.name})` : ""}</option>)}
             </select>
           </label>
+          <Link to={`/cars/compare?cars=${car.season}.${car.team}${part ? `&part=${part}` : ""}`} className="btn ghost">Compare{part ? ` the ${PART_LABEL[part].toLowerCase()}` : " this car"}</Link>
           <Link to={`/what-if?team=${car.team}&season=${car.season}`} className="btn">Put another driver in this car</Link>
         </div>
       </div>

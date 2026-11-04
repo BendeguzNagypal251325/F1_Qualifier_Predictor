@@ -165,7 +165,7 @@ Correct top-10 picks: 8/10
 | **Live** | this weekend's predicted qualifying order, rebuilt after every finished session; after qualifying, the real result next to it |
 | **Drivers** | every driver as initials in their team colour; each profile has the driver's record at every track, team history, and the driver-vs-car split |
 | **Teams** | one page per team across renames (Toro Rosso → AlphaTauri → RB → Racing Bulls…): pace rank per season and race by race, every car with its engine, teammate head-to-heads per season, strongest and weakest tracks |
-| **Cars** | every car of a season ranked by pace; each car has an interactive 3D model, pace through the season, its drivers, and a power-unit comparison |
+| **Cars** | every car of a season ranked by pace; each car has an interactive 3D model where each part can be shown on its own with what it does and its rules, pace through the season, its drivers, and a power-unit comparison; **Compare** puts up to three cars (or one part of each) side by side |
 | **Tracks** | the track map in its three timing sectors with the fastest time in each (all-time or per season), every driver's best sectors, ideal lap and top speed; every driver's record at that track, the model's score at each session there, and a Q1 / Q2 / Q3 breakdown (pick a session: fastest lap, the slowest lap that still got through, who was knocked out, and each driver's record in that session there), coloured like the position chips |
 | **What if** | put any driver in any car at any race and see the predicted grid slot |
 | **Sessions** | a season strip (one cell per race, shaded by correct picks) and the predicted order vs result for any race, with the reason behind each prediction |
@@ -255,9 +255,24 @@ tools/models/optimize.sh build/models web/public/models
 Each car is painted in its team's colours for that season (`f1qp/cars.py`) and carries the driver's
 helmet in the cockpit. You can rotate and zoom it, jump to front, side, top or rear views, and click any
 of eight parts: front wing, nose, cockpit and halo, sidepods, floor, power unit, rear wing, and tyres
-and suspension. The selected part glows red, and the side panel explains it with the car-level
-numbers. Every team of an era shares the reference car's shape, so it shows the era's car, not each
-team's own design. If a model cannot be loaded, a simplified car built in code
+and suspension. A selected part is shown on its own (the rest of the car fades to a faint outline) and
+the camera zooms to it; click it again for the whole car. The side panel says what the part does, the
+main public FIA rules for it in that era, notes for single seasons, and the car-level numbers
+(`PART_INFO` and `SEASON_NOTES` in `web/src/three/parts.ts`). Every team of an era shares the reference
+car's shape, so it shows the era's car, not each team's own design.
+
+Finish (`web/src/three/models.ts`): the 2020–21 and 2022–25 models, whose sources have one body
+material, get a generic two-tone split in the team's colours (lower body in the secondary colour with
+a thin accent line); the 2026 model keeps its own colour zones. Tyre sidewalls carry a red compound
+band. Both are drawn in the shader from the car's coordinates. Visible rule changes within an era are
+applied per season: in 2021 the floor is cut back in front of the rear tyres. Smaller changes (such as
+the 2023 floor edge) are described in the part notes only.
+
+**Compare** (`/cars/compare?cars=2024.ferrari,2021.mercedes&part=floor`, `web/src/pages/Compare.tsx`):
+up to three cars from any seasons, the whole car or one part, with cameras that move together
+(`web/src/three/sync.ts`), and a side-by-side table of the era rules for that part, the era
+dimensions and the car-level numbers. Cars of the same era share one shape, so the page says so and
+the differences are in the numbers. If a model cannot be loaded, a simplified car built in code
 (`web/src/three/car.ts`) is shown instead. The car list shows still renders of the same models, made by one
 hidden renderer, because browsers allow only about 16 live 3D views per page; renders are kept in the
 browser's Cache Storage. three.js and the models load only on pages that show 3D.

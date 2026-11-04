@@ -36,6 +36,106 @@ function loadTemplate(era: string): Promise<Template> {
   return t;
 }
 
+// ---------------------------------------------------------------- finish and per-season shape
+
+// Paint zones drawn in the shader from the car's own coordinates (x forward, y up, z sideways),
+// so the lines are clean whatever the mesh's triangles look like.
+
+/** Body panels that get a two-tone finish on the models whose source has one body material
+ *  (2017-2021 and 2022-2025): the lower body in the team's secondary colour with a thin accent line.
+ *  The 2026 model has its own colour zones. A generic paint split, not a team's real livery. */
+const TWO_TONE_PARTS = new Set<PartId>(["nose", "cockpit", "sidepods", "power-unit"]);
+const LOWER_EDGE = 0.34, ACCENT_LINE = 0.025; // metres above the ground
+
+function withZones(mat: THREE.MeshStandardMaterial, key: string, uniforms: Record<string, { value: unknown }>, glsl: string) {
+  mat.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    const decl = `varying vec3 vZonePos;\nvarying vec3 vZoneNormal;\n${Object.keys(uniforms).map((u) => `uniform ${uniforms[u].value instanceof THREE.Color ? "vec3" : "float"} ${u};`).join("\n")}\n`;
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", `#include <common>\nvarying vec3 vZonePos;\nvarying vec3 vZoneNormal;`)
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvZonePos = position;\nvZoneNormal = normal;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", `#include <common>\n${decl}`)
+      .replace("#include <color_fragment>", `#include <color_fragment>\n${glsl}`);
+  };
+  mat.customProgramCacheKey = () => key;
+  return mat;
+}
+
+function twoTone(mat: THREE.MeshStandardMaterial, livery: [string, string, string]) {
+  return withZones(mat, "two-tone", {
+    uSecondary: { value: new THREE.Color(livery[1]) }, uAccent: { value: new THREE.Color(livery[2]) },
+    uEdge: { value: LOWER_EDGE }, uLine: { value: ACCENT_LINE },
+  }, `{
+    float w = fwidth(vZonePos.y);
+    float lower = 1.0 - smoothstep(uEdge - w, uEdge + w, vZonePos.y);
+    float line = smoothstep(uEdge - w, uEdge + w, vZonePos.y) * (1.0 - smoothstep(uEdge + uLine - w, uEdge + uLine + w, vZonePos.y));
+    diffuseColor.rgb = mix(mix(diffuseColor.rgb, uSecondary, lower), uAccent, line);
+  }`);
+}
+
+/** Tyre sidewalls get a coloured compound band (qualifying is run on the softest, red-banded tyre). */
+function tyreBand(mat: THREE.MeshStandardMaterial, meta: CarMeta) {
+  return withZones(mat, "tyre-band", {
+    uBand: { value: new THREE.Color("#d8232a") }, uRadius: { value: meta.tyreRadius }, uWheelbase: { value: meta.wheelbase },
+  }, `{
+    float axle = vZonePos.x > uWheelbase * 0.5 ? uWheelbase : 0.0;
+    float r = length(vec2(vZonePos.x - axle, vZonePos.y - uRadius)) / uRadius;
+    float side = step(0.6, abs(normalize(vZoneNormal).z));
+    float w = fwidth(r);
+    float band = side * smoothstep(0.815 - w, 0.815 + w, r) * (1.0 - smoothstep(0.855 - w, 0.855 + w, r));
+    diffuseColor.rgb = mix(diffuseColor.rgb, uBand, band);
+  }`);
+}
+
+// Visible rule changes within an era. 2021: the floor was cut back in a diagonal in front of the
+// rear tyres: narrower just ahead of the tyre, back to full width further forward.
+const FLOOR_CUT = { start: 0.35, length: 1.2, depth: 0.12 }; // metres ahead of the rear axle
+
+function seasonShape(meshes: Template["meshes"], era: string, season?: number): Template["meshes"] {
+  if (era !== "2017-2021" || season !== 2021) return meshes;
+  // the floor's own half-width along the car (10 cm steps), so the cut follows its outline
+  const BIN = 0.1, width = new Map<number, number>();
+  for (const m of meshes) {
+    if (m.part !== "floor") continue;
+    const pos = m.geometry.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const k = Math.floor(pos.getX(i) / BIN);
+      width.set(k, Math.max(width.get(k) ?? 0, Math.abs(pos.getZ(i))));
+    }
+  }
+  return meshes.map((m) => {
+    if (m.part !== "floor") return m;
+    const g = m.geometry.clone();
+    const pos = g.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), z = pos.getZ(i);
+      const t = (x - FLOOR_CUT.start) / FLOOR_CUT.length;
+      if (t < 0 || t > 1) continue;
+      const limit = (width.get(Math.floor(x / BIN)) ?? 0) - FLOOR_CUT.depth * (1 - t);
+      if (Math.abs(z) > limit) pos.setZ(i, Math.sign(z) * limit);
+    }
+    pos.needsUpdate = true;
+    g.computeVertexNormals();
+    g.userData.shared = true;
+    return { ...m, geometry: g };
+  });
+}
+
+const finished = new Map<string, Promise<Template>>();
+
+/** The era's template with the season's shape changes (cached). */
+function finishedTemplate(era: string, season?: number): Promise<Template> {
+  const key = `${era}|${era === "2017-2021" && season === 2021 ? 2021 : "base"}`;
+  let t = finished.get(key);
+  if (!t) {
+    t = loadTemplate(era).then((tpl) => ({ meta: tpl.meta, meshes: seasonShape(tpl.meshes, era, season) }));
+    finished.set(key, t);
+    t.catch(() => finished.delete(key));
+  }
+  return t;
+}
+
 /** Start downloading a car model early (e.g. while the page that shows it renders). */
 export function preloadCar(era: string) {
   if (MODEL_FILE[era]) void loadTemplate(era).catch(() => {});
@@ -95,12 +195,13 @@ function slotMaterial(slot: string, livery: [string, string, string], map?: THRE
   }
 }
 
-/** Build a car: the reference model for 2022-2025 and 2026 cars, the procedural one otherwise. */
-export async function loadCar(era: string, livery: [string, string, string], helmet?: HelmetSpec): Promise<BuiltCar> {
+/** Build a car from the era's reference model (procedural fallback if it cannot be loaded).
+ *  ``season`` adds that season's visible rule changes (see ``seasonShape``). */
+export async function loadCar(era: string, livery: [string, string, string], helmet?: HelmetSpec, season?: number): Promise<BuiltCar> {
   if (!MODEL_FILE[era]) return buildCar(era, livery, helmet);
   let tpl: Template;
   try {
-    [tpl] = await Promise.all([loadTemplate(era), helmet ? helmetModelReady() : Promise.resolve()]);
+    [tpl] = await Promise.all([finishedTemplate(era, season), helmet ? helmetModelReady() : Promise.resolve()]);
   } catch {
     return buildCar(era, livery, helmet); // model could not be loaded: the procedural car still works
   }
@@ -108,7 +209,10 @@ export async function loadCar(era: string, livery: [string, string, string], hel
   const parts = new Map<PartId, THREE.Mesh[]>();
   for (const m of tpl.meshes) {
     const map = m.slot === "livery" && m.mask ? liveryTexture(m.mask, livery) : undefined;
-    const mesh = new THREE.Mesh(m.geometry, slotMaterial(m.slot, livery, map));
+    let mat = slotMaterial(m.slot, livery, map) as THREE.MeshStandardMaterial;
+    if (m.slot === "P" && era !== "2026-" && TWO_TONE_PARTS.has(m.part)) mat = twoTone(mat, livery);
+    if (m.slot === "rubber" && m.part === "wheels") mat = tyreBand(mat, tpl.meta);
+    const mesh = new THREE.Mesh(m.geometry, mat);
     mesh.castShadow = true; mesh.receiveShadow = true;
     mesh.userData.part = m.part;
     if (m.slot === "light") mesh.userData.light = true;

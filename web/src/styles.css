@@ -180,6 +180,21 @@ svg .lbl { fill: var(--ink); font-family: var(--font-body); font-size: 12px; }
 .part-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .part-list button { font: inherit; font-size: 0.8rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
 .part-list button[aria-pressed="true"] { border-color: var(--focus); color: var(--ink); background: color-mix(in oklab, var(--focus) 10%, var(--surface)); }
+.part-rules { display: grid; gap: 4px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.sub-head { font-size: 0.95rem; margin: 4px 0 0; }
+.compare-note { margin: 4px 0; }
+.compare-grid { display: grid; gap: 16px; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); align-items: start; }
+.compare-grid.n1 { --cols: 1; } .compare-grid.n2 { --cols: 2; } .compare-grid.n3 { --cols: 3; }
+@media (max-width: 900px) { .compare-grid { --cols: 1 !important; } }
+.compare-slot { display: grid; gap: 10px; }
+.compare-pick { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.compare-pick label { display: grid; gap: 2px; font-size: 0.75rem; color: var(--ink-2); }
+.compare-title { margin: 0; font-size: 1rem; }
+.compare-add { display: grid; place-items: center; min-height: 160px; font: inherit; font-size: 1rem; color: var(--ink-2); border-style: dashed; cursor: pointer; background: transparent; }
+.compare-add:hover { color: var(--ink); border-color: var(--focus); }
+.compare-add span { font-size: 1.6rem; line-height: 1; }
+.compare-table td.best { color: var(--ink); font-weight: 700; }
+.btn.small { padding: 4px 10px; font-size: 0.8rem; box-shadow: none; }
 
 #tip { position: fixed; z-index: 50; pointer-events: none; background: #fff; color: #0b0b0f; font-size: 0.8rem; padding: 6px 9px; border-radius: 6px; max-width: 280px; line-height: 1.35; box-shadow: 0 4px 16px rgb(0 0 0 / 0.2); }
 

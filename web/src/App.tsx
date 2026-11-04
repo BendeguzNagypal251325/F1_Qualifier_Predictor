@@ -12,6 +12,7 @@ import LivePage from "./pages/Live";
 import { DriverList, DriverPage } from "./pages/Drivers";
 import { TrackList, TrackPage } from "./pages/Tracks";
 import { CarList, CarPage } from "./pages/Cars";
+import { ComparePage } from "./pages/Compare";
 import { TeamList, TeamPage } from "./pages/Teams";
 import WhatIf from "./pages/WhatIf";
 import Sessions from "./pages/Sessions";
@@ -98,6 +99,7 @@ export default function App() {
                   <Route path="/teams" element={<TeamList />} />
                   <Route path="/teams/:id" element={<TeamPage />} />
                   <Route path="/cars" element={<CarList />} />
+                  <Route path="/cars/compare" element={<ComparePage />} />
                   <Route path="/cars/:season/:team" element={<CarPage />} />
                   <Route path="/what-if" element={<WhatIf />} />
                   <Route path="/sessions" element={<Sessions />} />

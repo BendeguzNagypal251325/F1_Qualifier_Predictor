@@ -58,6 +58,18 @@ const { chromium } = require("playwright");
   await p.click('.seg-q button:has-text("Q1")');
   await check("track Q1 breakdown");
   if (!p.url().includes("q=q1") || !(await p.$(".out-chip"))) { console.log("FAIL Q1 breakdown"); failed++; }
+  // car page: show one part, then compare it with another car
+  await p.goto(base + "/cars/2024/ferrari", { waitUntil: "networkidle" });
+  await p.click('.part-list button:has-text("Floor")');
+  await check("car part focus");
+  await p.click('a.btn:has-text("Compare")');
+  await check("compare page");
+  if (!p.url().includes("/cars/compare") || !p.url().includes("part=floor")) { console.log("FAIL compare link " + p.url()); failed++; }
+  await p.click('.compare-add');
+  await p.waitForSelector(".compare-slot >> nth=1", { timeout: 20000 });
+  await check("compare: add a car");
+  await p.click('.part-list button:has-text("Whole car")');
+  await check("compare: whole car");
   await p.click(`nav.nav a:has-text("Overview")`);
   await p.waitForTimeout(1500);
   await p.click("svg g.clickable >> nth=1"); // a season row in the dot plot
