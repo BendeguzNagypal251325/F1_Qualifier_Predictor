@@ -585,7 +585,7 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
         team_best = field_.groupby(["race_key", "constructor_id"])["pace_gap"].min().unstack()
         rank = team_best.rank(axis=1)
         races = rows.drop_duplicates("race_key").sort_values("round")
-        trend = [{"race_key": r.race_key, "round": int(r.round), "gp": N.gp_name(r.grand_prix),
+        trend = [{"race_key": r.race_key, "round": int(r.round), "gp": N.gp_name(r.grand_prix), "circuit": r.circuit,
                   "gap": _f(team_best.loc[r.race_key, team], 3), "rank": _f(rank.loc[r.race_key, team], 0),
                   "best_pos": int(rows.loc[rows["race_key"] == r.race_key, "quali_pos"].min()),
                   "car_contrib": _f(rows.loc[rows["race_key"] == r.race_key, "contrib_car"].mean())} for r in races.itertuples()]

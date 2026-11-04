@@ -153,7 +153,7 @@ export interface CarDetail extends Stats {
   pace_rank: number;
   teams_in_season: number;
   lineage: { season: number; team: string; name: string }[];
-  trend: { race_key: string; round: number; gp: string; gap: number | null; rank: number | null; best_pos: number; car_contrib: number }[];
+  trend: { race_key: string; round: number; gp: string; circuit: string; gap: number | null; rank: number | null; best_pos: number; car_contrib: number }[];
   drivers: (Stats & { driver: string; name: string; vs_teammate: number | null })[];
 }
 

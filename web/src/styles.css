@@ -183,6 +183,17 @@ svg .lbl { fill: var(--ink); font-family: var(--font-body); font-size: 12px; }
 .part-rules { display: grid; gap: 4px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .sub-head { font-size: 0.95rem; margin: 4px 0 0; }
 .compare-note { margin: 4px 0; }
+.best-worst { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 600px) { .best-worst { grid-template-columns: 1fr; } }
+/* car page: the left column stretches to the right column's height; the tracks panel fills the rest */
+@media (min-width: 901px) {
+  .car-wrap.fill { align-items: stretch; }
+  .car-wrap.fill > .stackcol:first-child { grid-template-rows: auto auto 1fr; align-content: stretch; }
+}
+.best-worst-panel { display: flex; flex-direction: column; }
+.best-worst-panel .best-worst { flex: 1; }
+.best-worst > div { display: flex; flex-direction: column; }
+.best-worst table { flex: 1; height: 100%; }
 .physics { display: grid; gap: 6px; padding-top: 6px; }
 .physics dl { margin: 0; display: grid; gap: 8px; }
 .physics dl > div { display: grid; grid-template-columns: minmax(120px, 0.9fr) 1.6fr; gap: 10px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }

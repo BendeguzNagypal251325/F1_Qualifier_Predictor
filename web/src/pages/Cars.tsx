@@ -7,7 +7,7 @@ import { MODEL_CREDIT } from "../three/credits";
 import { ERA_SPECS, PART_LABEL, PART_ORDER, partInfo, type PartId } from "../three/parts";
 import { carPhysics, partPhysics, type Fact } from "../three/physics";
 import { RaceLine } from "../components/Charts";
-import { Avatar, ContribBars, ErrorBox, fmt, Loading, pct, signed, Swatch, Tile, useHelmetSpec, Info } from "../components/ui";
+import { Avatar, ContribBars, ErrorBox, fmt, Loading, pct, signed, Swatch, Tile, TrackOutline, useHelmetSpec, Info } from "../components/ui";
 import type { CarDetail, CarList as CarListData } from "../types";
 
 const ENGINE_NAMES: Record<string, string> = {
@@ -152,6 +152,37 @@ function PartPanel({ part, car, cars }: { part: PartId | null; car: CarDetail; c
   );
 }
 
+/** The car's best and worst races of the season: best grid slot first, then gap to pole. */
+function BestWorstTracks({ car }: { car: CarDetail }) {
+  const races = [...car.trend].sort((a, b) => a.best_pos - b.best_pos || (a.gap ?? 9) - (b.gap ?? 9));
+  if (races.length < 2) return null;
+  const n = Math.min(5, Math.floor(races.length / 2));
+  const lists = [["Best tracks", races.slice(0, n)], ["Worst tracks", races.slice(-n).reverse()]] as const;
+  return (
+    <section className="panel best-worst-panel">
+      <div className="panel-head">
+        <h2>Best and worst tracks<Info>Ranked by the car's best grid slot at each race of {car.season}, then by its gap to pole. The gap is the team's fastest qualifying lap as a percentage slower than pole.</Info></h2>
+      </div>
+      <div className="best-worst">
+        {lists.map(([title, list]) => (
+          <div key={title}>
+            <span className="eyebrow">{title}</span>
+            <table className="wrap"><tbody>
+              {list.map((r) => (
+                <tr key={r.race_key}>
+                  <td><Link to={`/tracks/${r.circuit}`} className="cell-name"><TrackOutline circuit={r.circuit} size={26} stroke={2} /><span>{r.gp}</span></Link></td>
+                  <td className="num">P{r.best_pos}</td>
+                  <td className="num note">{r.gap != null ? `+${r.gap.toFixed(2)}%` : "–"}</td>
+                </tr>
+              ))}
+            </tbody></table>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function PhysicsList({ title, facts }: { title: string; facts: Fact[] }) {
   return (
     <div className="physics">
@@ -238,7 +269,7 @@ export function CarPage() {
         </div>
       </div>
 
-      <div className="car-wrap">
+      <div className="car-wrap fill">
         <div className="stackcol">
         <section className="panel">
           <CarViewer car={car} part={part} onSelect={(p) => setPart((cur) => (cur === p ? null : p))} />
@@ -256,6 +287,7 @@ export function CarPage() {
           <Tile label="Reached Q3" value={pct(car.q3_rate)} sub="of entries" />
           <Tile label="Model right" value={pct(car.right / Math.max(1, car.sessions))} sub="Q3 calls" />
         </div>
+        <BestWorstTracks car={car} />
         </div>
         <div className="stackcol">
           <PartPanel part={part} car={car} cars={cars} />
