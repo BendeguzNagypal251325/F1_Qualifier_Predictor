@@ -96,6 +96,17 @@ export interface TrackDetail {
   sessions: { race_key: string; season: number; correct: number; pole: string }[];
   drivers: (Stats & { driver: string; name: string; team: string; results: Result[] })[];
   segments: Record<"q1" | "q2" | "q3", QualiSegment>;
+  sectors: TrackSectors;
+}
+
+/** Best sector times per qualifying session (OpenF1, 2023 on) and the outline split into its sectors. */
+export interface SectorHolder { driver: string; name: string; team: string; time: number; season?: number }
+export interface SectorEntry { driver: string; name: string; team: string; s1: number | null; s2: number | null; s3: number | null; lap: number | null; speed: number | null; ideal: number | null }
+export interface TrackSectors {
+  first_season: number;
+  sessions: { race_key: string; season: number; best: Record<"s1" | "s2" | "s3", SectorHolder | null>; pole_lap: SectorHolder | null; ideal: number | null; top_speed: SectorHolder | null; drivers: SectorEntry[] }[];
+  records: Partial<Record<"s1" | "s2" | "s3", SectorHolder>>;
+  map: { paths: [string, string, string]; start: [number, number]; fit: number; season: number } | null;
 }
 
 /** One qualifying session (Q1, Q2 or Q3) at a track, season by season and per driver. */

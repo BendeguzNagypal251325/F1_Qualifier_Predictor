@@ -71,9 +71,12 @@ COLUMNS = [
 # ---------------------------------------------------------------- OpenF1 ----------------------------------------------
 
 
-def openf1_get(endpoint: str, **params) -> list[dict]:
-    """GET an OpenF1 endpoint; retries a few times on rate limits / network errors."""
-    url = f"{OPENF1}/{endpoint}?{urllib.parse.urlencode(params)}"
+def openf1_get(endpoint: str, raw: str = "", **params) -> list[dict]:
+    """GET an OpenF1 endpoint; retries a few times on rate limits / network errors.
+
+    ``raw`` is appended to the query as-is, for OpenF1's comparison filters (``date>=...``), which must
+    not be URL-encoded."""
+    url = f"{OPENF1}/{endpoint}?{urllib.parse.urlencode(params)}" + (f"&{raw}" if raw else "")
     for attempt in range(4):
         try:
             with urllib.request.urlopen(url, timeout=30) as resp:

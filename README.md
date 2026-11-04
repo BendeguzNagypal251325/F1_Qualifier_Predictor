@@ -54,6 +54,24 @@ where the gaps are often under a tenth.
   Alfa Romeo/Sauber → Audi) are tracked as one team (`TEAM_LINEAGE` in `features.py`), so team form
   carries over a rebrand. This lowered MAE slightly.
 
+## Sector times
+
+Sector times, speed traps and car positions come from [OpenF1](https://openf1.org), which has them from
+2023 on (F1DB, the main data source, has only lap times per qualifying session). For each qualifying
+session `f1qp/sectors.py` keeps each driver's best S1 / S2 / S3, best lap and top speed, plus the
+position trace of the session's fastest lap, in `data/live/sectors/` (a Docker volume). The trace is
+fitted onto the track outline (rotation, scale, start point and direction), so the outline can be drawn in
+its three real sectors; a trace that does not fit (layout change, bad data) is not drawn.
+
+```bash
+uv run f1qp-sectors               # download every missing session now
+uv run f1qp-sectors --season 2026
+```
+
+While live updates are on, the web server fills in missing sessions in the background, slowly enough to
+stay within OpenF1's rate limits (`F1QP_SECTORS=0` turns that off, `F1QP_SECTOR_DIR` moves the folder).
+Tracks without downloaded sessions show the plain outline.
+
 ## Live weekend predictions
 
 ```bash
@@ -146,7 +164,7 @@ Correct top-10 picks: 8/10
 | **Drivers** | every driver as initials in their team colour; each profile has the driver's record at every track, team history, and the driver-vs-car split |
 | **Teams** | one page per team across renames (Toro Rosso → AlphaTauri → RB → Racing Bulls…): pace rank per season and race by race, every car with its engine, teammate head-to-heads per season, strongest and weakest tracks |
 | **Cars** | every car of a season ranked by pace; each car has an interactive 3D model, pace through the season, its drivers, and a power-unit comparison |
-| **Tracks** | track outlines; every driver's record at that track, the model's score at each session there, and a Q1 / Q2 / Q3 breakdown (pick a session: fastest lap, the slowest lap that still got through, who was knocked out, and each driver's record in that session there), coloured like the position chips |
+| **Tracks** | the track map in its three timing sectors with the fastest time in each (all-time or per season), every driver's best sectors, ideal lap and top speed; every driver's record at that track, the model's score at each session there, and a Q1 / Q2 / Q3 breakdown (pick a session: fastest lap, the slowest lap that still got through, who was knocked out, and each driver's record in that session there), coloured like the position chips |
 | **What if** | put any driver in any car at any race and see the predicted grid slot |
 | **Sessions** | a season strip (one cell per race, shaded by correct picks) and the predicted order vs result for any race, with the reason behind each prediction |
 | **Heatmap** | average qualifying position per driver × track |

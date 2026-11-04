@@ -31,6 +31,9 @@
   --q3: #2fb36a;
   --q2: #d6a01f;
   --out: #4a4a57;
+  --sector-1: #f5304f;
+  --sector-2: #1594e0;
+  --sector-3: #ffc906;
   --chip-ink: #0b0b0f;
   --good: #2fb36a;
   --bad: #ff4d4d;
@@ -353,12 +356,10 @@ footer.foot { max-width: 1240px; margin: 0 auto; padding: 8px max(16px, env(safe
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--ink-2); font-size: 0.85rem; }
 
 /* ---------- qualifying sessions (track page) ---------- */
-.quali { border-top: 3px solid var(--seg); }
 .seg-q button { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; padding: 7px 16px; letter-spacing: 0.04em; }
 .seg-q button i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
-.seg-q button[aria-pressed="true"] { background: var(--c); color: var(--ci); box-shadow: 0 0 14px -3px var(--c); }
+.seg-q button[aria-pressed="true"] { background: var(--c); color: var(--ci); box-shadow: none; }
 .seg-q button[aria-pressed="true"] i { background: var(--ci); opacity: 0.6; }
-.quali .tile { border-left: 3px solid var(--seg); }
 .quali .cell-name .lap { margin-left: 6px; color: var(--ink-2); font-size: 0.82rem; }
 .out-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .out-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px 2px 2px; border-radius: 999px; background: color-mix(in srgb, var(--seg) 22%, var(--surface-2)); color: var(--ink); text-decoration: none; font-family: var(--font-data); font-size: 0.75rem; }
@@ -368,15 +369,16 @@ footer.foot { max-width: 1240px; margin: 0 auto; padding: 8px max(16px, env(safe
 
 /* ---------- quick search ---------- */
 .search-btn { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink-2); font: inherit; font-size: 0.85rem; cursor: pointer; }
-.search-btn:hover, .search-btn:focus-visible { color: #fff; border-color: var(--accent); outline: none; }
+.search-btn:hover, .search-btn:focus-visible { color: #fff; border-color: var(--ink-2); outline: none; }
 kbd { font-family: var(--font-data); font-size: 0.7rem; padding: 1px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface-2); color: var(--ink-2); }
 @media (max-width: 700px) { .search-btn .search-label, .search-btn kbd { display: none; } }
 .palette-backdrop { position: fixed; inset: 0; z-index: 60; background: rgb(4 4 7 / 0.72); backdrop-filter: blur(3px); display: grid; justify-items: center; align-items: start; padding: 12vh 16px 16px; }
-.palette { width: min(620px, 100%); background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: 10px; box-shadow: 0 24px 60px rgb(0 0 0 / 0.6); overflow: hidden; animation: pop-in 120ms ease; }
+.palette { width: min(620px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 24px 60px rgb(0 0 0 / 0.6); overflow: hidden; animation: pop-in 120ms ease; }
 .palette input { width: 100%; box-sizing: border-box; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: #fff; font: 500 1.05rem var(--font-body); padding: 16px 18px; outline: none; }
 .palette ul { list-style: none; margin: 0; padding: 6px; max-height: min(60vh, 460px); overflow-y: auto; }
 .palette li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 6px; cursor: pointer; }
-.palette li[aria-selected="true"] { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent); }
+.palette li[aria-selected="true"] { background: var(--surface-2); }
+.palette li[aria-selected="true"]::after { content: "↵"; margin-left: 10px; color: var(--ink-2); font-size: 0.85rem; }
 .pal-kind { flex: none; width: 52px; font-family: var(--font-display); font-weight: 600; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
 .pal-label { color: #fff; }
 .pal-sub { margin-left: auto; color: var(--ink-2); font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -393,3 +395,26 @@ kbd { font-family: var(--font-data); font-size: 0.7rem; padding: 1px 5px; border
 .skip-link { position: absolute; left: 12px; top: -48px; z-index: 70; background: var(--accent); color: #fff; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; }
 .skip-link:focus { top: 10px; }
 main:focus { outline: none; }
+
+/* ---------- sector map (track page) ---------- */
+.track-map .map-wrap { display: grid; place-items: center; }
+.sector-map { width: min(100%, 320px); aspect-ratio: 1; }
+.sector-map path { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.sector-map .base { stroke: var(--surface-2); stroke-width: 7; }
+.sector-map .sec { stroke-width: 3.2; transition: opacity 150ms ease; cursor: default; }
+.sector-map .sec.dim { opacity: 0.22; }
+.sector-map .start circle { fill: #fff; stroke: var(--bg); stroke-width: 1; }
+.sector-map .start text { fill: var(--ink-2); font: 600 3.2px var(--font-display); letter-spacing: 0.08em; }
+.sector-map.plain { display: grid; place-items: center; }
+.sector-legend { display: grid; gap: 2px; }
+.sector-row { display: grid; grid-template-columns: 10px 64px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px; }
+.sector-row.on { background: var(--surface-2); }
+.sector-row > i { width: 10px; height: 10px; border-radius: 2px; }
+.sector-row .sector-name { font-family: var(--font-display); font-weight: 600; color: var(--ink-2); font-size: 0.85rem; }
+.sector-row .cell-name span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sector-row .yr { color: var(--ink-2); font-size: 0.8rem; }
+.sector-sum { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; padding: 8px 8px 0; border-top: 1px solid var(--line); margin-top: 6px; font-size: 0.9rem; }
+.sector-sum span { color: var(--ink-2); }
+.sector-sum b { text-align: right; font-weight: 500; }
+.sector-sum small { color: var(--ink-2); font-family: var(--font-body); }
+td.fastest { color: var(--pole); font-weight: 600; }

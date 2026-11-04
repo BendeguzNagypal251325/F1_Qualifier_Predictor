@@ -5,6 +5,7 @@ import {
 } from "../components/ui";
 import type { SessionSummary, TrackDetail } from "../types";
 import { QualiBreakdown } from "../components/QualiBreakdown";
+import { SectorTable, TrackMap } from "../components/TrackSectors";
 
 export function TrackList() {
   const meta = useMeta();
@@ -68,10 +69,11 @@ export function TrackPage() {
         </div>
       </div>
       <div className="split">
-        <section className="panel">
-          <div style={{ display: "grid", placeItems: "center", padding: 12 }}><TrackOutline circuit={c.id} size={300} stroke={6} /></div>
-          <p className="credit">Track outline: bacinger/f1-circuits (MIT)</p>
-        </section>
+        {data ? <TrackMap data={data} /> : (
+          <section className="panel">
+            <div style={{ display: "grid", placeItems: "center", padding: 12 }}><TrackOutline circuit={c.id} size={300} stroke={6} /></div>
+          </section>
+        )}
         <div style={{ display: "grid", gap: 12, alignContent: "start" }}>
           {!data ? <Loading /> : (
             <>
@@ -96,6 +98,7 @@ export function TrackPage() {
       </div>
       {error && <ErrorBox error={error} />}
       {data && <QualiBreakdown data={data} />}
+      {data && <SectorTable data={data} />}
       {data && (
         <section className="panel">
           <div className="panel-head"><h2>Every driver at {c.name}</h2><PosLegend /></div>
