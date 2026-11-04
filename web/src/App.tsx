@@ -4,6 +4,7 @@ import { MetaContext, useApi } from "./api";
 import { Wordmark } from "./components/Brand";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SpeedLines } from "./components/SpeedLines";
+import { Search } from "./components/Search";
 import { ErrorBox, Info, TooltipLayer } from "./components/ui";
 import type { Meta } from "./types";
 import Overview from "./pages/Overview";
@@ -66,6 +67,7 @@ export default function App() {
   return (
     <>
       <SpeedLines />
+      <a href="#main" className="skip-link">Skip to content</a>
       <header className="topbar">
         <div className="topbar-inner">
           <NavLink to="/" className="brand" aria-label="Gridcast home"><Wordmark /></NavLink>
@@ -77,9 +79,10 @@ export default function App() {
               </NavLink>
             ))}
           </nav>
+          {meta.data && <Search meta={meta.data} />}
         </div>
       </header>
-      <main>
+      <main id="main" tabIndex={-1}>
         {meta.error && <ErrorBox error={meta.error} />}
         {meta.data && (
           <MetaContext.Provider value={meta.data}>

@@ -95,6 +95,14 @@ export interface TrackDetail {
   model_correct: number | null;
   sessions: { race_key: string; season: number; correct: number; pole: string }[];
   drivers: (Stats & { driver: string; name: string; team: string; results: Result[] })[];
+  segments: Record<"q1" | "q2" | "q3", QualiSegment>;
+}
+
+/** One qualifying session (Q1, Q2 or Q3) at a track, season by season and per driver. */
+export interface SegmentDriverTime { driver: string; name: string; team: string; time: number | null; pos: number }
+export interface QualiSegment {
+  sessions: { race_key: string; season: number; field: number; fastest: SegmentDriverTime | null; cutoff: SegmentDriverTime | null; gap_s: number | null; out: SegmentDriverTime[] }[];
+  drivers: { driver: string; name: string; team: string; reached: number; through: number; best_pos: number; avg_gap_pct: number | null }[];
 }
 
 export interface SessionSummary { race_key: string; season: number; round: number; gp: string; circuit: string; date: string; sprint: boolean; correct: number }

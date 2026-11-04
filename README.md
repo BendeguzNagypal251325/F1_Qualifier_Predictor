@@ -146,12 +146,15 @@ Correct top-10 picks: 8/10
 | **Drivers** | every driver as initials in their team colour; each profile has the driver's record at every track, team history, and the driver-vs-car split |
 | **Teams** | one page per team across renames (Toro Rosso → AlphaTauri → RB → Racing Bulls…): pace rank per season and race by race, every car with its engine, teammate head-to-heads per season, strongest and weakest tracks |
 | **Cars** | every car of a season ranked by pace; each car has an interactive 3D model, pace through the season, its drivers, and a power-unit comparison |
-| **Tracks** | track outlines and maps; every driver's record at that track, and the model's score at each session there |
+| **Tracks** | track outlines; every driver's record at that track, the model's score at each session there, and a Q1 / Q2 / Q3 breakdown (pick a session: fastest lap, the slowest lap that still got through, who was knocked out, and each driver's record in that session there), coloured like the position chips |
 | **What if** | put any driver in any car at any race and see the predicted grid slot |
 | **Sessions** | a season strip (one cell per race, shaded by correct picks) and the predicted order vs result for any race, with the reason behind each prediction |
 | **Heatmap** | average qualifying position per driver × track |
 
 All of it comes from the walk-forward run, so every prediction shown is out-of-sample.
+
+**Quick search** (Ctrl+K, ⌘K or `/`, or the search button in the top bar) jumps to any driver, team,
+track, car or page; it works with the keyboard (↑ ↓ Enter Esc).
 
 Charts link to the detail behind them: click a season on the overview to open its sessions, a
 histogram bar to list the sessions with that score, or a group (driver / car / practice) to highlight

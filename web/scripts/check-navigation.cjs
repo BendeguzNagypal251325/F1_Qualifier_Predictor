@@ -45,6 +45,19 @@ const { chromium } = require("playwright");
     await p.goForward();
     await check("forward to " + what);
   }
+  // quick search: Ctrl+K, type, Enter opens the first match
+  await p.keyboard.press("Control+k");
+  await p.waitForSelector(".palette input", { timeout: 5000 });
+  await p.keyboard.type("hamilton");
+  await p.waitForTimeout(200);
+  await p.keyboard.press("Enter");
+  await check("search: hamilton");
+  if (!p.url().includes("/drivers/lewis-hamilton")) { console.log("FAIL search opened " + p.url()); failed++; }
+  // track page: switch qualifying session
+  await p.goto(base + "/tracks/monza", { waitUntil: "networkidle" });
+  await p.click('.seg-q button:has-text("Q1")');
+  await check("track Q1 breakdown");
+  if (!p.url().includes("q=q1") || !(await p.$(".out-chip"))) { console.log("FAIL Q1 breakdown"); failed++; }
   await p.click(`nav.nav a:has-text("Overview")`);
   await p.waitForTimeout(1500);
   await p.click("svg g.clickable >> nth=1"); // a season row in the dot plot

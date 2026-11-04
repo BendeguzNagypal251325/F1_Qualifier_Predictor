@@ -203,3 +203,21 @@ def test_versioned_models_are_cached(artifact, tmp_path):
         versioned = c.get("/models/car.json?v=1")
         assert versioned.status_code == 200 and "immutable" in versioned.headers["cache-control"]
         assert "immutable" not in c.get("/models/car.json").headers.get("cache-control", "")
+
+
+def test_track_segments(client):
+    seg = client.get("/api/tracks/monza").json()["segments"]
+    assert set(seg) == {"q1", "q2", "q3"}
+    for k, (field_min, through) in {"q1": (19, 15), "q2": (14, 10), "q3": (10, 1)}.items():
+        for s in seg[k]["sessions"]:
+            assert s["field"] >= field_min
+            if k != "q3":
+                assert all(o["pos"] > through for o in s["out"])          # knocked out here
+                assert s["cutoff"]["pos"] <= through                        # the slowest who got through
+            if s["gap_s"] is not None:
+                assert s["gap_s"] >= 0 and s["fastest"]["time"] <= s["cutoff"]["time"]
+        for d in seg[k]["drivers"]:
+            assert 0 <= d["through"] <= d["reached"]
+    # everyone who reached Q3 also reached Q2
+    q2 = {d["driver"]: d["reached"] for d in seg["q2"]["drivers"]}
+    assert all(q2[d["driver"]] >= d["reached"] for d in seg["q3"]["drivers"])

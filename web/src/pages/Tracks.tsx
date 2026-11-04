@@ -4,6 +4,7 @@ import {
   Avatar, Bar, ErrorBox, fmt, Loading, pct, PosLegend, SeasonFilter, Sortable, Swatch, Tile, TrackOutline, useSeasons, YearChips,
 } from "../components/ui";
 import type { SessionSummary, TrackDetail } from "../types";
+import { QualiBreakdown } from "../components/QualiBreakdown";
 
 export function TrackList() {
   const meta = useMeta();
@@ -94,6 +95,7 @@ export function TrackPage() {
         </div>
       </div>
       {error && <ErrorBox error={error} />}
+      {data && <QualiBreakdown data={data} />}
       {data && (
         <section className="panel">
           <div className="panel-head"><h2>Every driver at {c.name}</h2><PosLegend /></div>
