@@ -25,10 +25,13 @@ const { chromium } = require("playwright");
   };
   await p.goto(base + "/", { waitUntil: "networkidle" });
   await check("load home");
-  for (const label of ["Live", "Drivers", "Teams", "Cars", "Tracks", "What if", "Sessions", "Track record", "Heatmap", "How it works", "Overview"]) {
+  for (const label of ["Live", "Drivers", "Teams", "Cars", "Tracks", "What if", "Sessions", "Track record", "Heatmap", "How it works"]) {
     await p.click(`nav.nav a:has-text("${label}")`);
     await check("tab " + label);
   }
+  await p.click("a.brand");
+  await check("logo to overview");
+  if (new URL(p.url()).pathname !== "/") { console.log("FAIL logo link " + p.url()); failed++; }
   const steps = [
     ["Drivers", ".card-grid .card", "driver card"],
     ["Teams", ".card-grid .card", "team card"],
@@ -70,7 +73,7 @@ const { chromium } = require("playwright");
   await check("compare: add a car");
   await p.click('.part-list button:has-text("Whole car")');
   await check("compare: whole car");
-  await p.click(`nav.nav a:has-text("Overview")`);
+  await p.click("a.brand");
   await p.waitForTimeout(1500);
   await p.click("svg g.clickable >> nth=1"); // a season row in the dot plot
   await check("overview season row");

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { MetaContext, useApi } from "./api";
 import { Wordmark } from "./components/Brand";
@@ -22,7 +22,6 @@ import TrackRecord from "./pages/TrackRecord";
 import HowItWorks from "./pages/HowItWorks";
 
 const NAV = [
-  ["/", "Overview"],
   ["/live", "Live"],
   ["/drivers", "Drivers"],
   ["/teams", "Teams"],
@@ -50,6 +49,19 @@ function dismissBoot() {
 export default function App() {
   const meta = useApi<Meta>("/api/meta");
   const { pathname } = useLocation();
+  const nav = useRef<HTMLElement>(null);
+  // phones: keep the current tab in view in the scrolling tab row, and fade the edge while more tabs are hidden
+  useEffect(() => {
+    const n = nav.current;
+    if (!n) return;
+    const mark = () => n.classList.toggle("more", n.scrollLeft + n.clientWidth < n.scrollWidth - 2);
+    const a = n.querySelector<HTMLElement>("a.active");
+    if (n.scrollWidth > n.clientWidth) n.scrollTo({ left: a ? a.offsetLeft - n.clientWidth / 2 + a.offsetWidth / 2 : 0 });
+    mark();
+    n.addEventListener("scroll", mark, { passive: true });
+    window.addEventListener("resize", mark);
+    return () => { n.removeEventListener("scroll", mark); window.removeEventListener("resize", mark); };
+  }, [pathname]);
   // Braces matter: in current Chrome window.scrollTo returns a Promise, and an effect must not return
   // anything but a cleanup function (React would try to call the Promise on the next navigation).
   useEffect(() => {
@@ -77,10 +89,10 @@ export default function App() {
       <a href="#main" className="skip-link">Skip to content</a>
       <header className="topbar">
         <div className="topbar-inner">
-          <NavLink to="/" className="brand" aria-label="Gridcast home"><Wordmark /></NavLink>
-          <nav className="nav" aria-label="Main">
+          <NavLink to="/" end className="brand" aria-label="Gridcast overview" title="Overview"><Wordmark /></NavLink>
+          <nav className="nav" aria-label="Main" ref={nav}>
             {NAV.map(([to, label]) => (
-              <NavLink key={to} to={to} end={to === "/"}>
+              <NavLink key={to} to={to}>
                 {label === "Live" && <span className={`live-dot${meta.data?.live.enabled ? " on" : ""}`} aria-hidden />}
                 {label}
               </NavLink>
