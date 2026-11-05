@@ -87,20 +87,6 @@ export default function HowItWorks() {
         </section>
 
         <section className="panel">
-          <h2>What the Q3 chance means</h2>
-          <p className="body-text">
-            Next to each predicted position, the app shows a chance of reaching Q3. A 70% chance means that in earlier races,
-            about 7 out of 10 drivers predicted at that position really made Q3. It is counted from the model's own past misses,
-            grouped by predicted position, using only races before the one being predicted.
-          </p>
-          <p className="body-text">
-            Between 30% and 70% the app calls it too close to call; those drivers are where most surprises happen.
-            {cal && <> Over {cal.races} races the chances are well calibrated: their Brier score (lower is better) is {cal.brier.toFixed(3)},
-              against {cal.brier_picks.toFixed(3)} for plain yes/no picks and {cal.brier_base_rate.toFixed(3)} for giving everyone the same chance.</>}
-          </p>
-        </section>
-
-        <section className="panel">
           <h2>Driver or car?</h2>
           <p className="body-text">
             Every prediction is split into what comes from the driver ({share("driver")}%), the car ({share("car")}%) and that
@@ -115,7 +101,22 @@ export default function HowItWorks() {
           <p className="body-text">
             The numbers above are a backtest: past races predicted as if in real time. Live predictions are also saved before
             each qualifying session and never changed, on the <Link className="link" to="/track-record">Track record page</Link>,
-            so anyone can check that a forecast existed before the result.
+            so anyone can check that a forecast existed before the result. Once qualifying is over, each saved forecast is
+            scored against the real top ten.
+          </p>
+        </section>
+
+        <section className="panel">
+          <h2>What the Q3 chance means</h2>
+          <p className="body-text">
+            Next to each predicted position, the app shows a chance of reaching Q3. A 70% chance means that in earlier races,
+            about 7 out of 10 drivers predicted at that position really made Q3. It is counted from the model's own past misses,
+            grouped by predicted position, using only races before the one being predicted.
+          </p>
+          <p className="body-text">
+            Between 30% and 70% the app calls it too close to call; those drivers are where most surprises happen.
+            {cal && <> Over {cal.races} races the chances are well calibrated: their Brier score (lower is better) is {cal.brier.toFixed(3)},
+              against {cal.brier_picks.toFixed(3)} for plain yes/no picks and {cal.brier_base_rate.toFixed(3)} for giving everyone the same chance.</>}
           </p>
         </section>
 
@@ -124,6 +125,7 @@ export default function HowItWorks() {
           <ul className="body-text plain-list">
             <li>Close midfield battles stay hard to call; a tenth of a second can move a driver five places.</li>
             <li>Rain and crashes during qualifying are not predicted.</li>
+            <li>It predicts the qualifying order, not the starting grid: grid penalties are applied after qualifying.</li>
             <li>Sector times exist only from 2023, and only once downloaded from OpenF1.</li>
             <li>The 3D cars show each era's car shape in team colours, not each team's real design.</li>
           </ul>

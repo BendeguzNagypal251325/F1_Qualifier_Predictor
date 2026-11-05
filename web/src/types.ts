@@ -188,6 +188,7 @@ export interface LivePrediction {
   date: string;
   sessions_used: string[];
   qualifying_done: boolean;
+  qualifying_start?: string | null;
   model: string;
   correct?: number;
   mae?: number;

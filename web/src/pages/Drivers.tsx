@@ -112,7 +112,7 @@ export function DriverPage() {
       </section>
 
       {error && <ErrorBox error={error} />}
-      {!data ? <Loading height={300} /> : (
+      {!data ? (error ? null : <Loading height={300} />) : (
         <>
           <div className="tiles stagger">
             <Tile label="Sessions" value={data.sessions} sub={`at ${data.tracks.length} tracks`} />

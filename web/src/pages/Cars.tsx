@@ -38,7 +38,7 @@ export function CarList() {
         </div>
       </div>
       {error && <ErrorBox error={error} />}
-      {!data ? <Loading height={400} /> : (
+      {!data ? (error ? null : <Loading height={400} />) : (
         <>
           <div className="panel">
             <div className="panel-head"><h2>{data.cars[0]?.era_label}<Info>{ERA_SPECS[data.era]?.extra}</Info></h2></div>

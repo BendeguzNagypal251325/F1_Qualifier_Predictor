@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useApi, useMeta } from "../api";
 import { PredictionTable } from "../components/PredictionTable";
+import { YourPicks } from "../components/YourPicks";
 import { Avatar, ChanceLegend, ContribStack, ErrorBox, GroupLegend, Info, Loading, PosChip, Q3Chance, Q3ChanceHead, Swatch, Tile, TrackOutline } from "../components/ui";
 import type { Live, SessionDetail, SessionSummary } from "../types";
 
@@ -53,6 +54,7 @@ export default function LivePage() {
               : <Tile label="Qualifying" value="Not run yet" small sub={p.date} />}
             {close.length > 0 && <Tile label="Too close to call" value={close.length} sub={close.map((r) => name(r.driver_id).split(" ").slice(-1)[0]).join(", ")} />}
           </div>
+          <YourPicks p={p} />
           <section className="panel reveal">
             <div className="panel-head"><h2>Predicted qualifying order <Info>The dashed line is the predicted Q3 cut. “Why” shows how much the driver, the car and practice moved each prediction.</Info></h2><div className="legends"><ChanceLegend /><GroupLegend /></div></div>
             <div className="scroll">

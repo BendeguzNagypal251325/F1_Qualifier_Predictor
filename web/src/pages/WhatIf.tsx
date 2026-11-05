@@ -60,7 +60,7 @@ export default function WhatIf() {
         </div>
       </section>
       {(sessions.error || session.error || swap.error) && <ErrorBox error={(sessions.error || session.error || swap.error)!} />}
-      {!s ? <Loading height={260} /> : (
+      {!s ? (session.error || sessions.error ? null : <Loading height={260} />) : (
         <div className="grid-2" style={{ opacity: swap.loading ? 0.6 : 1 }}>
           <section className="panel">
             <span className="eyebrow">Real car</span>

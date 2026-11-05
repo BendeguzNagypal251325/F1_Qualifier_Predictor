@@ -58,7 +58,7 @@ export default function Sessions() {
         </section>
       )}
       {(all.error || detail.error) && <ErrorBox error={(all.error || detail.error)!} />}
-      {!s ? <Loading height={480} /> : (
+      {!s ? (detail.error ? null : <Loading height={480} />) : (
         <>
           <div className="tiles stagger">
             <Tile label="Correct picks" value={<>{s.correct}<small> / 10</small></>} sub={avg != null ? `season average ${avg.toFixed(2)}` : undefined} />

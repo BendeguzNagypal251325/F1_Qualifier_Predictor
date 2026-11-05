@@ -9,6 +9,7 @@ import { PART_LABEL, type PartId } from "../three/parts";
 import { carKey, helmetKey } from "../three/thumbs";
 import { makeRenderer, makeStage, snapshot, want } from "../three/stage";
 import type { CameraSync } from "../three/sync";
+import { Spinner } from "./Spinner";
 
 type View = "3/4" | "front" | "side" | "top" | "rear";
 
@@ -168,14 +169,17 @@ export function Car3D({ era, livery, selected, onSelect, helmet, label, season, 
     });
   };
 
+  const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     if (!ready || !api.current) return;
     let stale = false;
+    setLoaded(false);
     void loadCar(era, livery, helmet, season).then((built) => {
       if (stale || !api.current) { disposeObject(built.group); return; }
       built.group.traverse((o) => { if ((o as THREE.Mesh).isMesh && (o as THREE.Mesh).material && ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissiveIntensity > 1) o.userData.light = true; });
       parts.current = built.parts;
       api.current.setObject(built.group);
+      setLoaded(true);
       highlight();
     });
     return () => { stale = true; };
@@ -231,6 +235,7 @@ export function Car3D({ era, livery, selected, onSelect, helmet, label, season, 
 
   return (
     <div className="viewer" ref={box} role="img" aria-label={`${label}, interactive 3D model`}>
+      {!loaded && <Spinner />}
       <span className="hint">{selected
         ? (hoverLabel ? `${hoverLabel} · click to show the whole car` : `${PART_LABEL[selected]} · click it again for the whole car`)
         : hoverLabel ? `${hoverLabel} · click` : "Drag to rotate · scroll to zoom · click a part"}</span>
@@ -290,7 +295,11 @@ export function Helmet3D({ spec, label }: { spec: HelmetSpec; label: string }) {
       el.removeEventListener("pointerleave", leave);
     };
   }, [ready, modelReady, spec.driverId, spec.colors.join(","), spec.motif, spec.number]); // eslint-disable-line react-hooks/exhaustive-deps
-  return <div className="viewer square helmet-viewer" ref={box} role="img" aria-label={`${label}, 3D helmet; move the pointer over it to turn it`} style={{ background: "transparent" }} />;
+  return (
+    <div className="viewer square helmet-viewer" ref={box} role="img" aria-label={`${label}, 3D helmet; move the pointer over it to turn it`} style={{ background: "transparent" }}>
+      {!(ready && modelReady) && <Spinner label="Loading 3D helmet" />}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------- still images
@@ -335,7 +344,7 @@ export function HelmetImage({ spec, alt }: { spec: HelmetSpec; alt: string }) {
       return cam;
     },
   }) : Promise.resolve(""));
-  return src ? <img src={src} alt={alt} /> : <span ref={box} className="helmet-ph" aria-label="Rendering helmet" />;
+  return src ? <img src={src} alt={alt} /> : <span ref={box} className="helmet-ph">{visible && <Spinner label="Rendering helmet" />}</span>;
 }
 
 export function CarImage({ era, livery, alt, season }: { era: string; livery: [string, string, string]; alt: string; season?: number }) {
@@ -355,5 +364,5 @@ export function CarImage({ era, livery, alt, season }: { era: string; livery: [s
   }) : Promise.resolve(""));
   return src
     ? <img src={src} alt={alt} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-    : <span ref={box} style={{ display: "block", width: "100%", height: "100%" }} aria-label="Rendering car" />;
+    : <span ref={box} style={{ display: "block", width: "100%", height: "100%", position: "relative" }}>{visible && <Spinner label="Rendering car" />}</span>;
 }

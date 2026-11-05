@@ -129,7 +129,7 @@ function CompareSlot({ slot, detail, error, part, sync, onPart, onChange, onRemo
         {onRemove && <button type="button" className="btn ghost small" onClick={onRemove} aria-label="Remove this car">Remove</button>}
       </div>
       {error && <ErrorBox error={error} />}
-      {!detail ? <Loading height={220} /> : (
+      {!detail ? (error ? null : <Loading height={220} />) : (
         <>
           <Car3D era={detail.era} livery={detail.livery} season={detail.season} selected={part} onSelect={onPart} sync={sync}
             label={`${detail.name} ${detail.chassis ?? ""} ${detail.season}`} />
