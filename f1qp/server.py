@@ -38,7 +38,7 @@ from . import model as M
 from . import names as N
 from .build import GROUPS, State, compute_state, data_mtime, load_state, save_state, ARTIFACT
 from .data import ROOT
-from . import sectors, snapshots
+from . import sectors, snapshots, upgrades
 from .tracks import outline_points, outlines
 
 log = logging.getLogger("f1qp")
@@ -412,7 +412,7 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
                 # /assets: file names are content hashes; /models: the app adds a version (?v=) it bumps when they change
                 response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
             return response
-        key = (app_state.state.built_at, sectors.version(), snapshots.version(), str(request.url.path) + "?" + str(request.url.query))
+        key = (app_state.state.built_at, sectors.version(), snapshots.version(), upgrades.version(), str(request.url.path) + "?" + str(request.url.query))
         hit = cache.get(key)
         if hit:
             cache.move_to_end(key)
@@ -621,7 +621,9 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
                 **C.car_info(season, team), "parts": C.PARTS,
                 **_stats(rows), "pace_gap": _f(team_best[team].mean(), 3),
                 "pace_rank": _f(rank[team].mean(), 1), "teams_in_season": int(team_best.shape[1]),
-                "trend": trend, "drivers": drivers}
+                "trend": trend, "drivers": drivers,
+                "upgrades": upgrades.effects(trend, upgrades.load().query("season == @season and team == @team")),
+                "upgrades_from": upgrades.FIRST_SEASON}
 
     # ---------------------------------------------------------------- teams (lineages: one team across renames)
 

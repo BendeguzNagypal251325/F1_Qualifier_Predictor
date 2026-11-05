@@ -92,6 +92,26 @@ next run (already saved sessions are never downloaded again). While live updates
 also fills in missing sessions in the background (`F1QP_SECTORS=0` turns that off, `F1QP_SECTOR_DIR` moves the folder).
 Tracks without downloaded sessions show the plain outline.
 
+## Car upgrades
+
+Before every Grand Prix the FIA publishes the teams' *car presentation submissions*: for each team, the
+new parts it brought, the reason category (for example *Performance - Local Load* or *Circuit specific -
+Drag Range*) and a short description. `f1qp/upgrades.py` downloads these PDFs from the FIA documents site
+(from 2024, the first season the site has them; cached in `data/raw/fia/`), reads them with `pypdf` and
+writes one row per part to `data/upgrades.csv` (season, round, race_key, team, part, reason, description).
+The CSV is committed, so the app works without downloading anything.
+
+```bash
+uv run f1qp-upgrades               # download missing documents, then rebuild data/upgrades.csv
+uv run f1qp-upgrades --offline     # rebuild the CSV from the cached PDFs only
+```
+
+Each car page from 2024 on marks its upgrade races on the *Pace through the season* chart and lists them
+with the parts (hover a part for the team's description) and the car's average gap to pole over the three
+races before and over that race and the next two. Gaps also depend on the track, so one change on its own
+says little. The documents are published on the Friday of the race weekend, before qualifying; the
+upgrades are shown on the site only and are not a model input.
+
 ## Live weekend predictions
 
 ```bash
@@ -183,7 +203,7 @@ Correct top-10 picks: 8/10
 | **Live** | this weekend's predicted qualifying order, rebuilt after every finished session; after qualifying, the real result next to it. A for-fun game, *Your pick vs the model*, lets you put a driver in each position from P1 to P10 before qualifying (1 point per driver in Q3, 2 more for the exact position) and scores you against the model's frozen top ten afterwards (kept only in the browser's localStorage, with a season tally) |
 | **Drivers** | every driver as initials in their team colour; each profile has the driver's record at every track, team history, and the driver-vs-car split |
 | **Teams** | one page per team across renames (Toro Rosso → AlphaTauri → RB → Racing Bulls…): pace rank per season and race by race, every car with its engine, teammate head-to-heads per season, strongest and weakest tracks |
-| **Cars** | every car of a season ranked by pace; each car has an interactive 3D model where each part can be shown on its own with what it does and its rules, pace through the season, its drivers, and a power-unit comparison; **Compare** puts up to three cars (or one part of each) side by side |
+| **Cars** | every car of a season ranked by pace; each car has an interactive 3D model where each part can be shown on its own with what it does and its rules, pace through the season with the upgrades the team brought (2024 on), its drivers, and a power-unit comparison; **Compare** puts up to three cars (or one part of each) side by side |
 | **Tracks** | the track map in its three timing sectors with the fastest time in each (all-time or per season), every driver's best sectors, ideal lap and top speed; every driver's record at that track, the model's score at each session there, and a Q1 / Q2 / Q3 breakdown (pick a session: fastest lap, the slowest lap that still got through, who was knocked out, and each driver's record in that session there), coloured like the position chips |
 | **What if** | put any driver in any car at any race and see the predicted grid slot |
 | **Sessions** | a season strip (one cell per race, shaded by correct picks) and the predicted order vs result for any race, with the reason behind each prediction |
@@ -462,11 +482,12 @@ f1qp/build.py       precompute everything the web app serves -> artifacts/state.
 f1qp/server.py      FastAPI app: JSON API (drivers, teams, cars, tracks, sessions, what-if, live), serves web/dist
 f1qp/cars.py        chassis names, liveries and regulation eras per team and season
 f1qp/tracks.py      track outlines as SVG paths (MIT GeoJSON in f1qp/assets/)
+f1qp/upgrades.py    car upgrades per team and race from the FIA car presentation PDFs -> data/upgrades.csv
 f1qp/names.py       display names and team colours
 web/                React + TypeScript front end (Vite); 3D in web/src/three (cars, helmets, references)
 web/public/models/  prepared 3D models (CC BY 4.0 sources, see 3D references)
 tools/models/       scripts that prepare those models from the downloaded originals
-data/               F1DB entries table, data/live/ weekends
+data/               F1DB entries table, upgrades.csv, data/live/ weekends
 Dockerfile, docker-compose.yml, .github/workflows/ci.yml
 tests/              data sanity, leakage, live (fake OpenF1), API and explanation tests
 ```
@@ -499,9 +520,6 @@ should keep them clearly as fan-made approximations (or switch to generic team-c
 keep the model credits in [3D references](#3d-references) visible in the app.
 
 ## Ideas for next steps
-
-- Data on which team brought upgrades to which race, as a car feature, to separate car from driver
-  more cleanly.
 
 - Predict the exact grid order (ranking model, e.g. LightGBM LambdaRank) instead of only top 10.
 - Add weather (wet qualifying is where the model fails most), long-run vs. short-run practice pace and
