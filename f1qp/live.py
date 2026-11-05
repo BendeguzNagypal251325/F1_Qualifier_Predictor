@@ -187,7 +187,8 @@ def find_race_dir(season_dir: Path, race: str | None) -> Path:
         if live.exists() and pd.read_csv(live)["quali_pos"].notna().all():
             continue  # qualifying already done (saved by an earlier live run)
         return d
-    raise LiveUnavailable("No upcoming race left in this season. Live predictions start again with next season's first weekend.")
+    raise LiveUnavailable("No upcoming race left in this season. Live predictions start again with next season's first weekend.",
+                          code="season_over")
 
 
 # ---------------------------------------------------------------- weekend table ---------------------------------------
@@ -322,7 +323,13 @@ def report(pred: pd.DataFrame, used: list[str]) -> str:
 
 
 class LiveUnavailable(RuntimeError):
-    """A live prediction cannot be made right now; the message is meant for people, not logs."""
+    """A live prediction cannot be made right now; the message is meant for people, not logs.
+
+    ``code`` tells the app why, where it matters (``"season_over"``: no weekend left this season)."""
+
+    def __init__(self, message: str, code: str | None = None):
+        super().__init__(message)
+        self.code = code
 
 
 def _prepare(race: str | None, season: int, update: bool, get):

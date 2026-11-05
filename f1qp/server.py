@@ -95,6 +95,7 @@ class LiveService:
         self.fetch = fetch  # injectable for tests: () -> snapshot dict
         self.snapshot: dict | None = None
         self.error: str | None = None
+        self.error_code: str | None = None  # e.g. "season_over" (no live weekend left this season)
         self.last_run: str | None = None
         self.running = False
         self._task: asyncio.Task | None = None
@@ -107,6 +108,7 @@ class LiveService:
             "last_run": self.last_run,
             "running": self.running,
             "error": self.error,
+            "error_code": self.error_code,
         }
 
     def _fetch(self) -> dict:
@@ -122,7 +124,7 @@ class LiveService:
             try:
                 snap = await asyncio.to_thread(self._fetch)
                 self.snapshot = with_q3_prob(snap, self.app_state.state.wf if self.app_state.state is not None else None)
-                self.error = None
+                self.error = self.error_code = None
                 try:  # write-once record of the prediction before qualifying (never breaks the refresh)
                     snapshots.freeze(self.snapshot)
                 except Exception as e:  # noqa: BLE001
@@ -131,6 +133,7 @@ class LiveService:
                 if isinstance(e, asyncio.CancelledError):
                     raise
                 self.error = _friendly(e)
+                self.error_code = getattr(e, "code", None)
                 log.warning("live refresh failed: %s: %s", type(e).__name__, e)
             finally:
                 self.last_run = datetime.now(timezone.utc).isoformat(timespec="seconds")

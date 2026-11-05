@@ -77,11 +77,22 @@ export function TrackMap({ data }: { data: TrackDetail }) {
           )}
         </div>
       ) : (
-        <p className="body-text">No sector times for this track yet. They cover {sec.first_season} onwards and appear once the app has downloaded them from OpenF1.</p>
+        <p className="body-text">{noSectorsReason(data)}</p>
       )}
       <p className="credit">Track outline: bacinger/f1-circuits (MIT). Timing: OpenF1.</p>
     </section>
   );
+}
+
+/** Why a track has no sector times: no session in the selected seasons, none since sector timing began, or not downloaded yet. */
+function noSectorsReason(data: TrackDetail) {
+  const first = data.sectors.first_season;
+  const seasons = data.sessions.map((s) => s.season);
+  if (!seasons.length) return "No sessions at this track in the selected seasons.";
+  if (Math.max(...seasons) < first) {
+    return `Sector times start in ${first}, and ${data.name} has no session from ${first} on in the selected seasons (the latest here is ${Math.max(...seasons)}).`;
+  }
+  return `Sector times for ${data.name} have not been downloaded yet. The app fetches them from OpenF1 in the background while live updates are on, or at once with uv run f1qp-sectors.`;
 }
 
 /** Every driver's best sectors in one session, fastest of each column in purple (like a timing screen). */

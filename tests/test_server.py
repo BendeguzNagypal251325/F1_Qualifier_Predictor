@@ -283,3 +283,23 @@ def test_track_record_matches_manual_recount(client, artifact, tmp_path, monkeyp
     detail = client.get(f"/api/snapshots/{race}").json()
     assert detail["snapshots"][0]["score"]["correct"] == expected and len(detail["result"]) == len(rows)
     assert client.get("/api/snapshots/2025-99-nowhere").status_code == 404
+
+
+def test_live_season_over_has_a_reason_code(artifact, tmp_path):
+    from f1qp.live import LiveUnavailable
+
+    def over():
+        raise LiveUnavailable("No upcoming race left in this season.", code="season_over")
+
+    app = create_app(Settings(live_interval=0, artifact=artifact, static_dir=tmp_path), live_fetch=over)
+    with TestClient(app) as c:
+        live = app.state.live
+        asyncio.run(live.refresh())
+        status = live.status()
+        assert status["error_code"] == "season_over" and "No upcoming race" in status["error"]
+        assert c.get("/api/live").json()["status"]["error_code"] == "season_over"
+
+
+def test_overview_reports_q3_calibration(client):
+    cal = client.get("/api/overview").json()["q3_calibration"]
+    assert cal["races"] > 100 and cal["brier"] < cal["brier_picks"] < cal["brier_base_rate"]

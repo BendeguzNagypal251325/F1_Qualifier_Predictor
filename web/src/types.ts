@@ -16,7 +16,7 @@ export interface DriverMeta {
 }
 export interface TeamMeta { id: string; name: string; color: string }
 export interface CircuitMeta { id: string; name: string; outline: string | null; length_m: number | null }
-export interface LiveStatus { enabled: boolean; interval_s: number; last_run: string | null; running: boolean; error: string | null }
+export interface LiveStatus { enabled: boolean; interval_s: number; last_run: string | null; running: boolean; error: string | null; error_code?: string | null }
 
 export interface Meta {
   seasons: number[];
@@ -51,6 +51,7 @@ export interface Overview {
   importance: [string, number][];
   group_size: Record<Group, number>;
   feature_groups: Record<Group, string[]>;
+  q3_calibration?: { races: number; brier: number; brier_picks: number; brier_base_rate: number };
 }
 
 export interface Result {

@@ -382,6 +382,7 @@ html { background: radial-gradient(1400px 700px at 85% -10%, rgb(255 42 58 / 0.0
 .status-bar.live { border-color: rgb(255 42 58 / 0.6); box-shadow: 0 0 18px -6px var(--glow-accent); }
 .status-bar.live b { color: var(--accent); }
 .status-bar.error b { color: var(--q2); }
+.status-bar.over b { color: var(--ink); }
 
 /* footer: one quiet line */
 footer.foot { max-width: 1240px; margin: 0 auto; padding: 8px max(16px, env(safe-area-inset-right, 0px)) 28px max(16px, env(safe-area-inset-left, 0px));
@@ -478,3 +479,23 @@ tr.sel-row td { background: var(--surface-2); }
 .tap3d-media { position: absolute; inset: 0; }
 .tap3d-media img { width: 100%; height: 100%; object-fit: contain; }
 .tap3d .btn { position: relative; align-self: end; margin-bottom: 14px; background: rgb(10 10 14 / 0.75); }
+
+/* ---------- how it works ---------- */
+.explain { columns: 2 440px; column-gap: 20px; }
+.explain > .panel { break-inside: avoid; margin-bottom: 20px; }
+.explain .body-text { margin: 0; line-height: 1.6; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+.facts > div { display: grid; gap: 2px; }
+.facts b { font-size: 1.5rem; font-weight: 500; }
+.facts span { color: var(--ink-2); font-size: 0.88rem; }
+.plain-list { padding-left: 18px; display: grid; gap: 6px; }
+
+/* top bar on desktop: one row with all tabs; search shrinks to its icon before anything wraps */
+@media (min-width: 701px) {
+  .topbar-inner { flex-wrap: nowrap; }
+  .nav a { padding-left: 9px; padding-right: 9px; }
+  .topbar-inner .search-btn { flex: none; }
+}
+@media (min-width: 701px) and (max-width: 1320px) {
+  .search-btn .search-label, .search-btn kbd { display: none; }
+}

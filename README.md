@@ -188,9 +188,15 @@ Correct top-10 picks: 8/10
 | **What if** | put any driver in any car at any race and see the predicted grid slot |
 | **Sessions** | a season strip (one cell per race, shaded by correct picks) and the predicted order vs result for any race, with the reason behind each prediction |
 | **Track record** | the frozen 2026 live predictions (saved after each practice session, before qualifying) against the real results, and how each prediction moved from FP1 to FP3 |
+| **How it works** | plain-language explanation: what a Q3 prediction is, the walk-forward test, why Ridge beat more complex models, what the Q3 chance means, driver vs car, backtest vs frozen predictions, limits (numbers come from the same results as the rest of the app) |
 | **Heatmap** | average qualifying position per driver × track |
 
 All of it comes from the walk-forward run, so every prediction shown is out-of-sample.
+
+**On phones** (narrow screens or touch-only pointers) no 3D code or model downloads until the visitor
+taps a "Show 3D" / "View in 3D" button; until then thumbnails come from the browser's cache only, with a
+light placeholder otherwise (`web/src/components/lazy3d.tsx`, `web/src/three/thumbs.ts`). One tap loads 3D
+for the rest of the visit. Desktop is unchanged.
 
 **Quick search** (Ctrl+K, ⌘K or `/`, or the search button in the top bar) jumps to any driver, team,
 track, car or page; it works with the keyboard (↑ ↓ Enter Esc).

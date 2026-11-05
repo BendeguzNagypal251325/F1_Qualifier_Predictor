@@ -25,7 +25,7 @@ from .features import FEATURE_GROUPS, FEATURES, build_features
 
 ARTIFACT = ROOT / "artifacts" / "state.pkl"
 GROUPS = list(FEATURE_GROUPS)
-STATE_VERSION = 2  # 2: q3_prob column
+STATE_VERSION = 3  # 2: q3_prob column; 3: q3_calibration in the overview
 
 
 @dataclass
@@ -87,7 +87,17 @@ def overview(feat: pd.DataFrame, wf: pd.DataFrame) -> dict:
         "group_size": {g: round(v, 3) for g, v in group_size.items()},
         "feature_groups": FEATURE_GROUPS,
         "n_features": len(FEATURES),
+        "q3_calibration": _q3_calibration(wf),
     }
+
+
+def _q3_calibration(wf: pd.DataFrame) -> dict:
+    """Brier scores of the Q3 probability vs simpler forecasts (lower is better), for the How it works page."""
+    d = wf.dropna(subset=["q3_prob", "quali_pos"])
+    y = (d["quali_pos"] <= 10).astype(float)
+    field = d.groupby("race_key")["race_key"].transform("size")
+    return {"races": int(d["race_key"].nunique()), "brier": round(M.brier(d["q3_prob"], y), 3),
+            "brier_picks": round(M.brier(d["picked"].astype(float), y), 3), "brier_base_rate": round(M.brier(10 / field, y), 3)}
 
 
 def data_mtime() -> float:

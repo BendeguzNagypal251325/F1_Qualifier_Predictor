@@ -16,7 +16,7 @@ export default function LivePage() {
   const name = (id: string) => meta.drivers.find((d) => d.id === id)?.name ?? id;
   const team = (id: string) => meta.teams.find((t) => t.id === id)?.name ?? id;
   const circuit = p ? meta.circuits.find((c) => c.id === p.circuit) : undefined;
-  const state = !status.enabled ? "off" : status.error ? "error" : p ? "live" : "waiting";
+  const state = !status.enabled ? "off" : status.error_code === "season_over" ? "over" : status.error ? "error" : p ? "live" : "waiting";
   const [lo, hi] = p?.close_call ?? [0.3, 0.7];
   const close = p ? p.rows.filter((r) => r.q3_prob != null && r.q3_prob >= lo && r.q3_prob < hi) : [];
 
@@ -33,9 +33,10 @@ export default function LivePage() {
       </div>
 
       <div className={`status-bar ${state}`} role="status">
-        <b>{state === "live" ? "Live" : state === "error" ? "Live data unavailable" : state === "off" ? "Live updates off" : "Waiting for the next session"}</b>
+        <b>{state === "live" ? "Live" : state === "error" ? "Live data unavailable" : state === "off" ? "Live updates off" : state === "over" ? "No live weekend" : "Waiting for the next session"}</b>
         <span>
           {state === "error" && status.error}
+          {state === "over" && `The ${meta.latest} season is over; live predictions start again with the first practice session of next season. Showing the last weekend.`}
           {state === "off" && "Live timing is switched off on this server. Showing the latest completed weekend."}
           {state === "waiting" && "Checking OpenF1 for this weekend's sessions."}
           {state === "live" && p && `${p.sessions_used.length} of 4 sessions in · ${p.model.startsWith("full") ? "using practice" : "pre-weekend model"}`}
@@ -87,6 +88,14 @@ function LatestWeekend() {
   const last = list.data?.[list.data.length - 1];
   const s = useApi<SessionDetail>(last ? `/api/sessions/${last.race_key}` : null);
   if (list.error || s.error) return <ErrorBox error={(list.error || s.error)!} />;
+  if (list.data && !last) {
+    return (
+      <section className="panel">
+        <h2>No {meta.latest} weekend yet</h2>
+        <p className="body-text">Predictions appear here once the first practice session of {meta.latest} is in. Past seasons are on the <Link className="link" to="/sessions">Sessions page</Link>.</p>
+      </section>
+    );
+  }
   if (!s.data) return <Loading height={420} />;
   const d = s.data;
   return (

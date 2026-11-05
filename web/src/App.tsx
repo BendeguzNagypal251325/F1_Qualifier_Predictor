@@ -19,6 +19,7 @@ import WhatIf from "./pages/WhatIf";
 import Sessions from "./pages/Sessions";
 import HeatmapPage from "./pages/Heatmap";
 import TrackRecord from "./pages/TrackRecord";
+import HowItWorks from "./pages/HowItWorks";
 
 const NAV = [
   ["/", "Overview"],
@@ -31,6 +32,7 @@ const NAV = [
   ["/sessions", "Sessions"],
   ["/track-record", "Track record"],
   ["/heatmap", "Heatmap"],
+  ["/how-it-works", "How it works"],
 ] as const;
 
 /** "Lights out": fade the boot screen from index.html once the first data is in. */
@@ -110,6 +112,7 @@ export default function App() {
                   <Route path="/sessions/:key" element={<Sessions />} />
                   <Route path="/heatmap" element={<HeatmapPage />} />
                   <Route path="/track-record" element={<TrackRecord />} />
+                  <Route path="/how-it-works" element={<HowItWorks />} />
                   <Route path="*" element={<div className="panel empty-state"><h2>Page not found</h2><NavLink to="/" className="btn">Back to the overview</NavLink></div>} />
                 </Routes>
               </ErrorBoundary>
