@@ -54,7 +54,7 @@ export function QualiBreakdown({ data }: { data: TrackDetail }) {
   return (
     <section className="panel quali" style={{ ["--seg" as string]: S.color, ["--seg-ink" as string]: S.ink }}>
       <div className="panel-head">
-        <h2>Qualifying, session by session <Info>Q1 has the whole field, Q2 the top 15 (16 with 22 cars), Q3 the top 10. Drivers are assigned by their final position, the official rule. Lap times are each driver's best in that session.</Info></h2>
+        <h2>Qualifying, session by session <Info>Q1: whole field, Q2: top 15 (16 with 22 cars), Q3: top 10, by final position. Times are each driver's best.</Info></h2>
         <div className="seg seg-q" role="tablist" aria-label="Qualifying session">
           {SEGS.map((s) => (
             <button key={s.id} type="button" role="tab" aria-selected={seg === s.id} aria-pressed={seg === s.id} onClick={() => pick(s.id)}

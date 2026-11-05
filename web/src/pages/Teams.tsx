@@ -21,7 +21,7 @@ export function TeamList() {
         <div>
           <span className="eyebrow">Teams</span>
           <h1>Every team since {meta.seasons[0]}</h1>
-          <p className="lede">One page per team, across renames (AlphaTauri → RB → Racing Bulls, Alfa Romeo → Kick Sauber → Audi, and so on): how the car ranked each season, who beat whom inside the garage, and where the team is strongest.</p>
+          <p className="lede">Each team across its renames: car rank by season, teammate battles and best tracks.</p>
         </div>
         <Show3DButton what="cars" />
       </div>

@@ -23,9 +23,8 @@ export default function TrackRecord() {
           <span className="eyebrow">Track record · {data.season}</span>
           <h1>Frozen live predictions</h1>
           <p className="lede">
-            Each weekend the live prediction is saved after FP1, FP2 and FP3, before qualifying starts, and never changed
-            afterwards. These are the real forecasts, separate from the backtest on the other pages.
-            <Info label="How predictions are frozen">Each file gets a UTC timestamp and is written once: an existing file is never replaced, and nothing is saved once OpenF1's qualifying start time has passed. Files live in data/live/snapshots on the server.</Info>
+            Live predictions saved after each practice session, before qualifying, and never changed: the real forecasts, not a backtest.
+            <Info label="How predictions are frozen">Written once with a UTC timestamp, never replaced, and nothing is saved after qualifying starts.</Info>
           </p>
         </div>
       </div>
@@ -33,9 +32,7 @@ export default function TrackRecord() {
         <section className="panel">
           <h2>No frozen predictions yet</h2>
           <p className="body-text">
-            They are saved automatically while the app runs with live updates on: after FP1, FP2 and FP3 of each {data.season} weekend,
-            and only before qualifying starts. Until then, the <Link className="link" to="/sessions">backtest on the Sessions page</Link> shows
-            how the model did on past races.
+            They are saved while live updates are on. Until then, see the <Link className="link" to="/sessions">backtest on the Sessions page</Link>.
           </p>
         </section>
       ) : (

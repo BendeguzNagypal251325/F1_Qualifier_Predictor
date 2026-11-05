@@ -28,7 +28,7 @@ export function CarList() {
         <div>
           <span className="eyebrow">Cars · {season}</span>
           <h1>The {season} cars, fastest first</h1>
-          <p className="lede">Cars and drivers are modelled separately: a car's form stays with the team when a driver leaves. Open a car to explore it part by part.</p>
+          <p className="lede">Open a car to explore it part by part. Car form is modelled apart from the driver.</p>
         </div>
         <div className="controls">
           <div className="seg" role="group" aria-label="Season">

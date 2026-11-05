@@ -527,5 +527,3 @@ tr.sel-row td { background: var(--surface-2); }
 .pick.hit { background: var(--q3); border-color: var(--q3); color: var(--chip-ink); }
 .pick.miss { background: var(--surface-2); border-color: var(--line); color: var(--ink-2); }
 .pick.miss span { text-decoration: line-through; }
-.explain > .panel.wide { grid-column: 1 / -1; }
-.plain-list.future { max-width: none; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 28px; }

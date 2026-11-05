@@ -76,7 +76,7 @@ export function YourPicks({ p }: { p: LivePrediction }) {
     <section className="panel picks reveal">
       <div className="panel-head">
         <h2>Your pick vs the model <span className="fun">for fun</span>
-          <Info>Pick the ten drivers you think reach Q3. Picks close when qualifying starts and are scored against the real result and the model's frozen picks. Saved only in this browser; nothing is sent to the server.</Info>
+          <Info>Pick ten drivers for Q3. Picks close when qualifying starts and are scored against the result and the model. Saved only in this browser.</Info>
         </h2>
         {races.length > 0 && (
           <span className="picks-tally mono">Season: you {sum("you")} · model {sum("model")} over {races.length} race{races.length > 1 ? "s" : ""}</span>

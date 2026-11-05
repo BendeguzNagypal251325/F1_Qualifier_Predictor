@@ -40,7 +40,7 @@ export function DriverList() {
         <div>
           <span className="eyebrow">Drivers</span>
           <h1>{current ? `The ${meta.latest} grid` : `Every driver since ${meta.seasons[0]}`}</h1>
-          <p className="lede">Open a driver for their qualifying record at every track, the teams they drove for, and how much of their predictions comes from the driver and how much from the car.</p>
+          <p className="lede">Each driver's qualifying record by track and team, and how much of their prediction comes from them rather than the car.</p>
         </div>
         <div className="controls">
           <div className="seg" role="group" aria-label="Which drivers">
@@ -123,7 +123,7 @@ export function DriverPage() {
           </div>
           <div className="split">
             <section className="panel">
-              <div className="panel-head"><h2>Driver or car?<Info>average push, in grid places Negative = the model moved {d.name.split(" ")[0]} up the grid, compared with an average entry. Car = the form of the team's car; driver = {d.name.split(" ")[0]}'s own record, which also reflects the cars driven before.</Info></h2></div>
+              <div className="panel-head"><h2>Driver or car?<Info>average push, in grid places Negative = moved up the grid. Car = the team's form; driver = {d.name.split(" ")[0]}'s own record (which reflects earlier cars too).</Info></h2></div>
               <ContribBars contrib={{ driver: data.contrib_driver ?? 0, car: data.contrib_car ?? 0, weekend: data.contrib_weekend ?? 0, context: data.contrib_context ?? 0 }} />
             </section>
             <section className="panel">

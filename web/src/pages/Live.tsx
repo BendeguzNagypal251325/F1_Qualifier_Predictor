@@ -27,7 +27,7 @@ export default function LivePage() {
         <div>
           <span className="eyebrow"><span className={`live-dot${state === "live" ? " on" : ""}`} aria-hidden /> Live weekend</span>
           <h1>{p ? `${p.season} ${titleCase(p.grand_prix)} Grand Prix` : "Live weekend"}
-            <Info>Rebuilt after every finished session: before FP1 from form and standings, then with each practice result. After qualifying the real result appears and the race joins the training data.</Info>
+            <Info>Rebuilt after every session. After qualifying, the real result appears next to it.</Info>
           </h1>
         </div>
         {circuit && <TrackOutline circuit={circuit.id} size={96} stroke={5} />}
@@ -37,8 +37,8 @@ export default function LivePage() {
         <b>{state === "live" ? "Live" : state === "error" ? "Live data unavailable" : state === "off" ? "Live updates off" : state === "over" ? "No live weekend" : "Waiting for the next session"}</b>
         <span>
           {state === "error" && status.error}
-          {state === "over" && `The ${meta.latest} season is over; live predictions start again with the first practice session of next season. Showing the last weekend.`}
-          {state === "off" && "Live timing is switched off on this server. Showing the latest completed weekend."}
+          {state === "over" && `The ${meta.latest} season is over. Showing the last weekend.`}
+          {state === "off" && "Live timing is off on this server. Showing the last weekend."}
           {state === "waiting" && "Checking OpenF1 for this weekend's sessions."}
           {state === "live" && p && `${p.sessions_used.length} of 4 sessions in · ${p.model.startsWith("full") ? "using practice" : "pre-weekend model"}`}
         </span>
