@@ -241,3 +241,19 @@ def test_track_sectors(client, tmp_path, monkeypatch):
     assert s["season"] == 2025 and s["best"]["s1"]["driver"] == "max-verstappen" and s["best"]["s2"]["driver"] == "lando-norris"
     assert s["ideal"] == round(26.0 + 26.9 + 26.2, 3) and s["top_speed"]["time"] == 350 and s["pole_lap"]["driver"] == "max-verstappen"
     assert sec["records"]["s3"]["season"] == 2025 and sec["map"]["season"] == 2025 and len(sec["map"]["paths"]) == 3
+
+
+def test_q3_probability_in_session_and_live(client, artifact):
+    from f1qp.build import load_state
+    from f1qp.server import with_q3_prob
+
+    s = client.get("/api/sessions").json()[-1]
+    rows = client.get(f"/api/sessions/{s['race_key']}").json()["rows"]
+    probs = [r["q3_prob"] for r in rows]
+    assert all(0 <= p <= 1 for p in probs) and probs[0] > probs[-1]
+    st = load_state(artifact, rebuild_if_stale=False)
+    snap = {"date": "2026-12-06", "rows": [{"pred_pos": 1}, {"pred_pos": 10}, {"pred_pos": 20}]}
+    live = with_q3_prob(snap, st.wf)
+    p = [r["q3_prob"] for r in live["rows"]]
+    assert p[0] > p[1] > p[2] and live["close_call"] == [0.3, 0.7]
+    assert with_q3_prob(None, st.wf) is None

@@ -85,6 +85,8 @@ def run() -> str:
     per_season[f"**{seasons[0]}-{seasons[-1]}**"] = M.evaluate(wf, pred.loc[wf.index])
     lines += [_fmt(per_season), ""]
 
+    lines += _calibration(wf.assign(pred=pred.loc[wf.index]), seasons)
+
     # Feature importance: model trained on everything before the latest season, scored on it.
     imp = M.feature_importance(M.fit(feat[feat["season"] < latest]), test)
     lines += [
@@ -106,6 +108,44 @@ def run() -> str:
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     REPORT.write_text(report)
     return report
+
+
+def _calibration(wf: pd.DataFrame, seasons: list[int]) -> list[str]:
+    """Reliability table and Brier scores for the Q3 probability (walk-forward, earlier races only)."""
+    wf = wf.copy()
+    wf["pred_rank"] = M.predicted_grid(wf, wf["pred"])
+    wf["q3_prob"] = M.walk_forward_q3(wf)
+    d = wf.dropna(subset=["q3_prob", "quali_pos"])
+    y = (d["quali_pos"] <= 10).astype(float)
+    field = d.groupby("race_key")["race_key"].transform("size")
+    champ = M.pick_top10(d, d["driver_champ_pos_before"]).astype(float)
+    bucket = pd.cut(d["q3_prob"], [i / 10 for i in range(11)], include_lowest=True)
+    lines = [
+        f"## Q3 probability: calibration ({seasons[0]}-{seasons[-1]})",
+        "",
+        "Each driver's chance of reaching Q3: the share of earlier races' residuals (real position minus",
+        "predicted grid position, grouped by predicted position P1-3, 4-6, 7-9, 10-12, 13-15, 16+) that",
+        "would still put the driver in the top 10. Only races before the predicted one are used, starting",
+        f"once {M.MIN_PRIOR_RACES} earlier races exist ({d['race_key'].nunique()} races, {len(d)} driver entries).",
+        "",
+        "| Predicted probability | Entries | Mean predicted | Observed Q3 rate |",
+        "|---|---|---|---|",
+    ]
+    for b, g in d.groupby(bucket, observed=True):
+        lines.append(f"| {max(b.left, 0):.0%}-{b.right:.0%} | {len(g)} | {g['q3_prob'].mean():.2f} | {y.loc[g.index].mean():.2f} |")
+    lines += [
+        "",
+        "Brier score (mean squared error of the probability against reaching Q3 or not; lower is better):",
+        "",
+        "| Forecast | Brier |",
+        "|---|---|",
+        f"| **Q3 probability (this model)** | **{M.brier(d['q3_prob'], y):.3f}** |",
+        f"| Model's yes/no picks (top 10 predicted = 1) | {M.brier((d['pred_rank'] <= 10).astype(float), y):.3f} |",
+        f"| Championship order picks (top 10 = 1) | {M.brier(champ, y):.3f} |",
+        f"| Base rate (10 / field size for everyone) | {M.brier(10 / field, y):.3f} |",
+        "",
+    ]
+    return lines
 
 
 def main() -> None:

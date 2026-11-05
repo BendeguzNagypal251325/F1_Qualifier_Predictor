@@ -33,6 +33,13 @@ earlier sessions, so every real result is added before the next race is predicte
 the drivers who really qualified top 10). Full tables, all seasons and feature importance are in
 [`reports/evaluation.md`](reports/evaluation.md).
 
+**Q3 chance.** Each driver also gets a probability of reaching Q3: how often drivers at the same
+predicted grid position (grouped P1–3, 4–6, 7–9, 10–12, 13–15, 16+) still reached Q3 in earlier races,
+from the walk-forward misses of races before this one only (`q3_probability` in `f1qp/model.py`). The
+Live and Sessions pages show it in the timing colours, with 30–70% marked as too close to call. Over
+2020–26 it is well calibrated (Brier score 0.136, against 0.195 for the plain yes/no picks; see
+[`reports/evaluation.md`](reports/evaluation.md)).
+
 The top 6–7 cars are easy to call. Nearly all of the misses come from the midfield fight for P8–P12,
 where the gaps are often under a tenth.
 

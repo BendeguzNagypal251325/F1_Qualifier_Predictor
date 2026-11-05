@@ -25,7 +25,7 @@ from .features import FEATURE_GROUPS, FEATURES, build_features
 
 ARTIFACT = ROOT / "artifacts" / "state.pkl"
 GROUPS = list(FEATURE_GROUPS)
-STATE_VERSION = 1
+STATE_VERSION = 2  # 2: q3_prob column
 
 
 @dataclass
@@ -62,6 +62,7 @@ def walk_forward_explained(feat: pd.DataFrame, seasons=SEASONS) -> pd.DataFrame:
     wf["pred_rank"] = M.predicted_grid(wf, wf["pred"])
     wf["picked"] = wf["pred_rank"] <= 10
     wf["right"] = wf["picked"] == (wf["top10"] == 1)
+    wf["q3_prob"] = M.walk_forward_q3(wf)  # from earlier races' residuals only
     return wf.sort_values(["season", "round", "pred_rank"])
 
 

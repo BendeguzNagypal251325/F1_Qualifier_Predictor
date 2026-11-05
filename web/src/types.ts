@@ -118,8 +118,8 @@ export interface QualiSegment {
 
 export interface SessionSummary { race_key: string; season: number; round: number; gp: string; circuit: string; date: string; sprint: boolean; correct: number }
 
-export interface SessionRow extends Result { driver: string; fp_last_pos: number | null; contrib: Contrib; baseline: number }
-export interface SessionDetail extends Omit<SessionSummary, "correct"> { correct: number; mae: number; rows: SessionRow[] }
+export interface SessionRow extends Result { driver: string; fp_last_pos: number | null; contrib: Contrib; baseline: number; q3_prob: number | null }
+export interface SessionDetail extends Omit<SessionSummary, "correct"> { correct: number; mae: number; rows: SessionRow[]; close_call?: [number, number] }
 
 export interface CarSummary {
   team: string;
@@ -190,7 +190,8 @@ export interface LivePrediction {
   model: string;
   correct?: number;
   mae?: number;
-  rows: { pred_pos: number; score: number; driver_id: string; constructor_id: string; fp_last_pos: number | null; quali_pos: number | null; contrib: Contrib }[];
+  rows: { pred_pos: number; score: number; driver_id: string; constructor_id: string; fp_last_pos: number | null; quali_pos: number | null; contrib: Contrib; q3_prob?: number | null }[];
+  close_call?: [number, number];
 }
 export interface Live { status: LiveStatus; prediction: LivePrediction | null }
 

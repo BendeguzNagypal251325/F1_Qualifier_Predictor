@@ -1,7 +1,7 @@
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApi, useMeta } from "../api";
 import { PredictionTable } from "../components/PredictionTable";
-import { ErrorBox, GroupLegend, Info, Loading, Tile, TrackOutline } from "../components/ui";
+import { ChanceLegend, ErrorBox, GroupLegend, Info, Loading, Tile, TrackOutline } from "../components/ui";
 import type { SessionDetail, SessionSummary } from "../types";
 
 export default function Sessions() {
@@ -66,7 +66,7 @@ export default function Sessions() {
             <Tile label="Weekend" value={s.date} small sub={s.sprint ? "sprint weekend (one practice)" : "standard weekend"} />
           </div>
           <section className="panel">
-            <div className="panel-head"><h2>Predicted order vs result <Info>“Why” shows how far each group moved the driver: solid segments moved them forward, faded ones backward. The dashed line is the predicted Q3 cut. <Link to={`/what-if?season=${s.season}&race=${s.race_key}`}>Try a car swap for this race →</Link></Info></h2><GroupLegend /></div>
+            <div className="panel-head"><h2>Predicted order vs result <Info>“Why” shows how far each group moved the driver: solid segments moved them forward, faded ones backward. The dashed line is the predicted Q3 cut. <Link to={`/what-if?season=${s.season}&race=${s.race_key}`}>Try a car swap for this race →</Link></Info></h2><div className="legends"><ChanceLegend /><GroupLegend /></div></div>
             <PredictionTable s={s} />
           </section>
         </>

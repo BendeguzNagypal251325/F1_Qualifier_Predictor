@@ -87,6 +87,68 @@ def evaluate(df: pd.DataFrame, score) -> dict:
     }
 
 
+
+# ---------------------------------------------------------------- Q3 probability
+# How sure is a predicted Q3 place? Empirically: take the walk-forward residuals of earlier races
+# (actual position minus predicted grid position) and count how often a driver at this predicted
+# position would still end up in the top 10. Residuals are grouped by predicted position, because
+# their spread depends on it: drivers predicted near the front can only lose places, those near the
+# back can only gain, and the spread is widest around the cut-off. No extra model is fitted.
+
+Q3_BIN_EDGES = (3, 6, 9, 12, 15)  # predicted grid groups: P1-3, P4-6, P7-9, P10-12, P13-15, P16+
+MIN_PRIOR_RACES = 10              # races of residuals needed before a probability is given
+CLOSE_CALL = (0.3, 0.7)           # "too close to call" band shown in the app
+
+
+def q3_bin(pred_rank) -> np.ndarray:
+    """Group index (0-5) of each predicted grid position."""
+    return np.searchsorted(Q3_BIN_EDGES, np.asarray(pred_rank, dtype=float), side="left")
+
+
+def q3_probability(pred_rank, past_rank, past_pos) -> np.ndarray:
+    """P(qualifying in the top 10) for each predicted grid position, from earlier races' residuals.
+
+    ``past_rank`` / ``past_pos`` are the predicted grid positions and real positions of earlier races
+    only (the caller guarantees that). The probability is the share of residuals r from the same group
+    with ``pred_rank + r <= 10``.
+    """
+    pred_rank = np.asarray(pred_rank, dtype=float)
+    past_rank, past_pos = np.asarray(past_rank, dtype=float), np.asarray(past_pos, dtype=float)
+    res, past_bin = past_pos - past_rank, q3_bin(past_rank)
+    out = np.full(len(pred_rank), np.nan)
+    for b in np.unique(q3_bin(pred_rank)):
+        pool = np.sort(res[past_bin == b])
+        if len(pool) == 0:
+            continue
+        mine = q3_bin(pred_rank) == b
+        # count of residuals r <= 10 - rank, via the sorted pool
+        out[mine] = np.searchsorted(pool, 10 - pred_rank[mine], side="right") / len(pool)
+    return out
+
+
+def walk_forward_q3(wf: pd.DataFrame) -> pd.Series:
+    """Q3 probability for every walk-forward row, using only races strictly before that row's race.
+
+    Needs columns race_key, date, pred_rank and quali_pos. Races with fewer than MIN_PRIOR_RACES
+    earlier races get NaN.
+    """
+    done = wf[wf["quali_pos"].notna()]
+    races = wf.drop_duplicates("race_key").sort_values("date")[["race_key", "date"]]
+    out = pd.Series(np.nan, index=wf.index, dtype=float)
+    for key, date in races.itertuples(index=False):
+        past = done[done["date"] < date]
+        if past["race_key"].nunique() < MIN_PRIOR_RACES:
+            continue
+        rows = wf.index[wf["race_key"] == key]
+        out.loc[rows] = q3_probability(wf.loc[rows, "pred_rank"], past["pred_rank"], past["quali_pos"])
+    return out
+
+
+def brier(prob, outcome) -> float:
+    """Mean squared error of probabilities against 0/1 outcomes (lower is better)."""
+    prob, outcome = np.asarray(prob, dtype=float), np.asarray(outcome, dtype=float)
+    return float(np.mean((prob - outcome) ** 2))
+
 def evaluate_baselines(df: pd.DataFrame) -> dict[str, dict]:
     return {name: evaluate(df, df[col]) for name, col in BASELINES.items()}
 

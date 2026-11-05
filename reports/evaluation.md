@@ -30,6 +30,35 @@ predicted Q3. Walk-forward: before every session the model is retrained on all e
 | 2026 | 8.95 | 2/19 | 8 | 2.00 | 2.02 |
 | **2020-2026** | 8.06 | 6/150 | 5 | 2.75 | 2.47 |
 
+## Q3 probability: calibration (2020-2026)
+
+Each driver's chance of reaching Q3: the share of earlier races' residuals (real position minus
+predicted grid position, grouped by predicted position P1-3, 4-6, 7-9, 10-12, 13-15, 16+) that
+would still put the driver in the top 10. Only races before the predicted one are used, starting
+once 10 earlier races exist (140 races, 2827 driver entries).
+
+| Predicted probability | Entries | Mean predicted | Observed Q3 rate |
+|---|---|---|---|
+| 0%-10% | 616 | 0.03 | 0.07 |
+| 10%-20% | 283 | 0.15 | 0.14 |
+| 20%-30% | 160 | 0.24 | 0.31 |
+| 30%-40% | 183 | 0.35 | 0.32 |
+| 40%-50% | 119 | 0.47 | 0.41 |
+| 50%-60% | 262 | 0.57 | 0.56 |
+| 60%-70% | 201 | 0.66 | 0.60 |
+| 70%-80% | 172 | 0.75 | 0.82 |
+| 80%-90% | 358 | 0.86 | 0.85 |
+| 90%-100% | 473 | 0.96 | 0.95 |
+
+Brier score (mean squared error of the probability against reaching Q3 or not; lower is better):
+
+| Forecast | Brier |
+|---|---|
+| **Q3 probability (this model)** | **0.136** |
+| Model's yes/no picks (top 10 predicted = 1) | 0.195 |
+| Championship order picks (top 10 = 1) | 0.214 |
+| Base rate (10 / field size for everyone) | 0.250 |
+
 ## Feature importance (permutation, 2026)
 
 Drop in correct picks per 10 when the feature is shuffled.

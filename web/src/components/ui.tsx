@@ -151,6 +151,29 @@ export function YearChips({ results, seasons, driverName }: { results: Result[];
   );
 }
 
+/** Chance of reaching Q3 as a chip in the timing colours: green likely, yellow too close to call, grey unlikely. */
+export function Q3Chance({ p, band = [0.3, 0.7] }: { p: number | null | undefined; band?: [number, number] | number[] }) {
+  if (p == null) return <span className="chip empty" data-tip="Not enough earlier races to estimate this yet">–</span>;
+  const [lo, hi] = band;
+  const word = p >= hi ? "likely" : p >= lo ? "too close to call" : "unlikely";
+  return <span className={`chip ${p >= hi ? "q3" : p >= lo ? "q2" : "out"}`} data-tip={`${Math.round(p * 100)}% chance of Q3 · ${word}`}>{Math.round(p * 100)}%</span>;
+}
+
+/** Header cell for the Q3 chance column, with the explanation in a popover. */
+export function Q3ChanceHead() {
+  return (
+    <th className="num q3-head">Q3<span className="hide-sm"> chance</span> <Info label="About the Q3 chance">How often drivers at this predicted grid position still reached Q3 in earlier races (the model's misses, grouped by predicted position). Only races before this one are used. 70% or more is likely, 30 to 70% is too close to call, under 30% is unlikely.</Info></th>
+  );
+}
+
+export function ChanceLegend() {
+  return (
+    <div className="legend">
+      <span className="chip q3">70%+</span>likely <span className="chip q2">30–70%</span>too close to call <span className="chip out">&lt;30%</span>unlikely
+    </div>
+  );
+}
+
 export function PosLegend() {
   return (
     <div className="legend">

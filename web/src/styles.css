@@ -450,3 +450,14 @@ main:focus { outline: none; }
 .sector-sum b { text-align: right; font-weight: 500; }
 .sector-sum small { color: var(--ink-2); font-family: var(--font-body); }
 td.fastest { color: var(--pole); font-weight: 600; }
+
+.legends { display: flex; flex-wrap: wrap; gap: 6px 22px; justify-content: flex-end; }
+@media (max-width: 600px) {
+  .hide-sm { display: none; }
+  /* keep the Q3 chance next to the driver on phones: tighter cells, no room lost to the header */
+  th.q3-head { white-space: nowrap; }
+}
+@media (max-width: 600px) {
+  /* an odd last tile takes the full row instead of leaving half of it empty */
+  .tiles > .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}

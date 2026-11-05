@@ -75,6 +75,18 @@ def _friendly(e: BaseException) -> str:
     return "The live update failed. Retrying automatically; details are in the server log."
 
 
+def with_q3_prob(snap: dict | None, wf: pd.DataFrame | None) -> dict | None:
+    """Add each live row's Q3 probability (from the walk-forward residuals of races before this one)."""
+    if not snap or wf is None or not snap.get("rows"):
+        return snap
+    past = wf[(wf["date"] < pd.Timestamp(snap["date"])) & wf["quali_pos"].notna()]
+    if past["race_key"].nunique() < M.MIN_PRIOR_RACES:
+        return snap
+    probs = M.q3_probability([r["pred_pos"] for r in snap["rows"]], past["pred_rank"], past["quali_pos"])
+    rows = [{**r, "q3_prob": _f(p, 3)} for r, p in zip(snap["rows"], probs)]
+    return {**snap, "rows": rows, "close_call": list(M.CLOSE_CALL)}
+
+
 class LiveService:
     """Refreshes the live prediction in the background and reloads the data when it changes."""
 
@@ -108,7 +120,8 @@ class LiveService:
         async with self._lock:
             self.running = True
             try:
-                self.snapshot = await asyncio.to_thread(self._fetch)
+                snap = await asyncio.to_thread(self._fetch)
+                self.snapshot = with_q3_prob(snap, self.app_state.state.wf if self.app_state.state is not None else None)
                 self.error = None
             except BaseException as e:  # noqa: BLE001 - SystemExit from the CLI code means "no race"
                 if isinstance(e, asyncio.CancelledError):
@@ -552,7 +565,8 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
             "circuit": r0.circuit, "date": str(r0.date)[:10], "sprint": bool(r0.sprint_weekend),
             "correct": int((rows["picked"] & (rows["top10"] == 1)).sum()),
             "mae": _f((rows["pred_rank"] - rows["quali_pos"]).abs().mean()),
-            "rows": [{**_result(r), "driver": r.driver_id, "fp_last_pos": _f(r.fp_last_pos, 0),
+            "close_call": list(M.CLOSE_CALL),
+            "rows": [{**_result(r), "driver": r.driver_id, "fp_last_pos": _f(r.fp_last_pos, 0), "q3_prob": _f(r.q3_prob, 3),
                       "contrib": {g: _f(getattr(r, f"contrib_{g}")) for g in GROUPS}, "baseline": _f(r.contrib_baseline)}
                      for r in rows.itertuples()],
         }
