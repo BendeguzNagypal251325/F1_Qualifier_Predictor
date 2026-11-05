@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useApi, useMeta } from "../api";
-import { ErrorBox, Loading } from "../components/ui";
+import { ErrorBox, Info, Loading } from "../components/ui";
 import type { Overview } from "../types";
 import { METHOD_NAMES } from "./Overview";
 
@@ -128,6 +128,15 @@ export default function HowItWorks() {
             <li>It predicts the qualifying order, not the starting grid: grid penalties are applied after qualifying.</li>
             <li>Sector times exist only from 2023, and only once downloaded from OpenF1.</li>
             <li>The 3D cars show each era's car shape in team colours, not each team's real design.</li>
+          </ul>
+        </section>
+        <section className="panel wide">
+          <h2>Future work <Info>Plans only; none of this is built yet. The README has the longer version.</Info></h2>
+          <ul className="body-text plain-list future">
+            <li><b>Free hosting.</b> The same docker compose setup on an Oracle Cloud Always Free VM, with HTTPS in front.</li>
+            <li><b>Static version.</b> A scheduled GitHub Action rebuilds static files after each practice session and commits the frozen predictions, so git history proves when each forecast was made. Costs a rewrite of the live service.</li>
+            <li><b>Installable app.</b> A PWA that phones can install from the browser, with an optional notification when the post-FP3 prediction is ready.</li>
+            <li><b>Helmets.</b> Real drivers' helmet designs are a grey area; a public version would keep them as fan-made approximations and keep the 3D model credits visible.</li>
           </ul>
         </section>
       </div>

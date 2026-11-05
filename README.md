@@ -471,6 +471,33 @@ Dockerfile, docker-compose.yml, .github/workflows/ci.yml
 tests/              data sanity, leakage, live (fake OpenF1), API and explanation tests
 ```
 
+## Future work
+
+These are plans, not features: nothing below is built yet.
+
+**Hosting on an always-free VM.** The app already runs with `docker compose up`. The simplest public
+home is an Oracle Cloud Always Free VM running the same compose file, with a reverse proxy (for example
+Caddy) in front for automatic HTTPS. It keeps everything that exists today: the live refresher, the API
+cache and the background sector downloads.
+
+**A static, serverless version.** Most pages only change after a session, so `build.py` could write
+every API response to static JSON instead. A scheduled GitHub Action would run after each practice
+session, fetch OpenF1, rebuild the files and commit the frozen predictions; the git history then works
+as a tamper-evident record that each forecast existed before qualifying. The site could be served from
+static hosting such as Vercel at no cost. The trade-off is a real rewrite: the live service, the
+server-side response cache and the sector fetcher would all be replaced by the scheduled job, and
+updates would arrive on the Action's schedule rather than within minutes.
+
+**An installable app (PWA).** A service worker and a web app manifest would let phones install Gridcast
+from the browser and open it offline with the last data, with an optional push notification when the
+prediction after FP3 is ready. This is preferred over a native app: one code base, no app store review,
+and the 3D views already work in mobile browsers.
+
+**Helmet designs and credits.** The helmets are painted from public descriptions of real drivers'
+designs. That is a grey area: the designs belong to the drivers and their designers, so a public version
+should keep them clearly as fan-made approximations (or switch to generic team-coloured helmets), and
+keep the model credits in [3D references](#3d-references) visible in the app.
+
 ## Ideas for next steps
 
 - Data on which team brought upgrades to which race, as a car feature, to separate car from driver
