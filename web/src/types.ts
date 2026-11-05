@@ -155,6 +155,8 @@ export interface CarDetail extends Stats {
   teams_in_season: number;
   lineage: { season: number; team: string; name: string }[];
   trend: { race_key: string; round: number; gp: string; circuit: string; gap: number | null; rank: number | null; best_pos: number; car_contrib: number }[];
+  upgrades: Upgrade[];
+  upgrades_from: number;
   drivers: (Stats & { driver: string; name: string; vs_teammate: number | null })[];
 }
 
@@ -260,3 +262,6 @@ export interface SnapshotSummary {
   races: { race_key: string; round: number; gp: string; circuit: string; date: string; sessions: { session: string; created_at: string }[]; final_session: string; qualifying_start: string; correct: number | null }[];
   totals: { races: number; scored: number; correct_per_10: number | null };
 }
+
+export interface UpgradePart { part: string; reason: string; description: string }
+export interface Upgrade { race_key: string; round: number; gp: string; parts: UpgradePart[]; before: number | null; after: number | null; change: number | null }

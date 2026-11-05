@@ -13,6 +13,7 @@ dependencies = [
     "fastapi>=0.162.0",
     "uvicorn[standard]>=0.54.0",
     "httpx>=0.28.1",
+    "pypdf>=6.21.4",
 ]
 
 [project.scripts]
@@ -23,6 +24,7 @@ f1qp-build = "f1qp.build:main"
 f1qp-serve = "f1qp.server:main"
 f1qp-sectors = "f1qp.sectors:main"
 f1qp-live = "f1qp.live:main"
+f1qp-upgrades = "f1qp.upgrades:main"
 
 [dependency-groups]
 dev = [

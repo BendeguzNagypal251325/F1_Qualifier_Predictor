@@ -126,6 +126,15 @@ def test_driver_track_and_car_pages(client):
     assert [x["team"] for x in car["lineage"] if x["season"] == 2020] == ["mclaren"]
 
 
+def test_car_page_lists_upgrades(client):
+    car = client.get("/api/cars/2025/mercedes").json()
+    assert car["upgrades_from"] == 2024 and car["upgrades"]
+    first = car["upgrades"][0]
+    assert {"race_key", "round", "gp", "parts", "before", "after", "change"} <= first.keys()
+    assert first["race_key"] in {t["race_key"] for t in car["trend"]}
+    assert client.get("/api/cars/2022/mercedes").json()["upgrades"] == []
+
+
 def test_swap_endpoint(client):
     s = client.get(f"/api/swap?race_key={KEY}&driver=max-verstappen&team=williams").json()
     assert s["from_team"] == "red-bull"
