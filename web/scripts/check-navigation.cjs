@@ -74,6 +74,28 @@ const { chromium } = require("playwright");
   await p.waitForTimeout(1500);
   await p.click("svg g.clickable >> nth=1"); // a season row in the dot plot
   await check("overview season row");
+
+  // Phone: no three.js (or model download) on the Cars and Drivers pages until the visitor taps.
+  const phone = await b.newContext({ viewport: { width: 400, height: 860 }, isMobile: true, hasTouch: true });
+  await phone.addInitScript(() => { try { localStorage.setItem("gridcast-intro", "1"); } catch {} });
+  const ph = await phone.newPage();
+  ph.on("pageerror", (e) => errs.push("PAGEERROR (phone) " + e.message));
+  const heavy = [];
+  ph.on("request", (r) => { if (/\/assets\/ThreeViews-|\/models\//.test(r.url())) heavy.push(r.url().replace(base, "")); });
+  for (const path of ["/cars", "/drivers", "/cars/2026/mercedes"]) {
+    await ph.goto(base + path, { waitUntil: "networkidle" });
+    await ph.waitForTimeout(1500);
+    const ok = heavy.length === 0;
+    console.log((ok ? "ok  " : "FAIL") + " " + ("phone: no 3D on " + path).padEnd(26) + JSON.stringify({ requested: heavy.slice(0, 3) }));
+    if (!ok) failed++;
+  }
+  await ph.tap('.tap3d button');
+  await ph.waitForSelector(".viewer canvas", { timeout: 30000 }).catch(() => {});
+  const loaded = heavy.some((u) => u.includes("ThreeViews-")) && !!(await ph.$(".viewer canvas"));
+  console.log((loaded ? "ok  " : "FAIL") + " " + "phone: 3D after tap".padEnd(26) + JSON.stringify({ requested: heavy.length }));
+  if (!loaded) failed++;
+  await phone.close();
+
   console.log(errs.length ? errs.join("\n") : "no errors");
   await b.close();
   if (failed || errs.length) process.exit(1);

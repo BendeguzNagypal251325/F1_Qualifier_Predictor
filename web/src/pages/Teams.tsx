@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { prefetchCar } from "../three/modelFiles";
 import { useApi, useMeta } from "../api";
 import { RaceLine } from "../components/Charts";
-import { CarImage } from "../components/lazy3d";
+import { CarImage, Show3DButton } from "../components/lazy3d";
 import { Avatar, Bar, ErrorBox, fmt, Loading, pct, Swatch, Tile, TrackOutline, Info } from "../components/ui";
 import type { TeamDetail, TeamSummary } from "../types";
 import { engineName } from "./Cars";
@@ -23,6 +23,7 @@ export function TeamList() {
           <h1>Every team since {meta.seasons[0]}</h1>
           <p className="lede">One page per team, across renames (AlphaTauri → RB → Racing Bulls, Alfa Romeo → Kick Sauber → Audi, and so on): how the car ranked each season, who beat whom inside the garage, and where the team is strongest.</p>
         </div>
+        <Show3DButton what="cars" />
       </div>
       {!data ? <Loading height={420} /> : (
         <>

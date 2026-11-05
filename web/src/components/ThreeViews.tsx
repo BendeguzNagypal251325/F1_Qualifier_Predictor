@@ -6,6 +6,7 @@ import { disposeObject } from "../three/car";
 import { loadCar } from "../three/models";
 import { buildHelmet, helmetModelReady, type HelmetSpec } from "../three/helmet";
 import { PART_LABEL, type PartId } from "../three/parts";
+import { carKey, helmetKey } from "../three/thumbs";
 import { makeRenderer, makeStage, snapshot, want } from "../three/stage";
 import type { CameraSync } from "../three/sync";
 
@@ -321,7 +322,7 @@ function useSnapshot(key: string, make: () => Promise<string>) {
 }
 
 export function HelmetImage({ spec, alt }: { spec: HelmetSpec; alt: string }) {
-  const key = `helmet|${spec.driverId}|${spec.colors.join(",")}|${spec.motif}|${spec.number}`;
+  const key = helmetKey(spec);
   const [box, visible] = useNearScreen<HTMLSpanElement>();
   const src = useSnapshot(visible ? key : "", () => visible ? snapshot({
     key, width: 360, height: 360, floor: false,
@@ -338,7 +339,7 @@ export function HelmetImage({ spec, alt }: { spec: HelmetSpec; alt: string }) {
 }
 
 export function CarImage({ era, livery, alt, season }: { era: string; livery: [string, string, string]; alt: string; season?: number }) {
-  const key = `car|${era}|${livery.join(",")}|${season === 2021 ? 2021 : ""}`;
+  const key = carKey(era, livery, season);
   const [box, visible] = useNearScreen<HTMLSpanElement>();
   const src = useSnapshot(visible ? key : "", () => visible ? snapshot({
     key, width: 720, height: 405,

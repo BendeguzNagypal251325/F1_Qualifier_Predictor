@@ -1,3 +1,5 @@
+import { allow3D } from "./thumbs";
+
 // Model files in /models, fetched once and shared. Kept free of three.js so pages can start the
 // download as soon as they mount, in parallel with the 3D code; the loader then parses these bytes.
 
@@ -29,10 +31,12 @@ export function fetchModel(file: string): Promise<ArrayBuffer> {
 
 /** Start downloading a season's car (and the helmet that sits in it) without waiting for it. */
 export function prefetchCar(season: number) {
+  if (!allow3D()) return; // phones: nothing 3D downloads before a tap
   const f = CAR_MODEL_FILE[eraOf(season)];
   for (const file of [`${f}.glb`, `${f}.json`, "helmet.glb"]) void fetchModel(file).catch(() => {});
 }
 
 export function prefetchHelmet() {
+  if (!allow3D()) return;
   void fetchModel("helmet.glb").catch(() => {});
 }

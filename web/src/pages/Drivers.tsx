@@ -7,7 +7,7 @@ import {
   TrackOutline, useSeasons, useTeam, YearChips,
 } from "../components/ui";
 import type { DriverDetail, DriverMeta } from "../types";
-import { Helmet3D, HelmetImage } from "../components/lazy3d";
+import { Helmet3D, HelmetImage, Show3DButton } from "../components/lazy3d";
 
 function DriverCard({ d, latest }: { d: DriverMeta; latest: number }) {
   const team = useTeam(d.team);
@@ -48,6 +48,7 @@ export function DriverList() {
             <button type="button" aria-pressed={!current} onClick={() => setCurrent(false)}>All</button>
           </div>
           <input id="driver-search" type="search" placeholder="Search drivers" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search drivers" />
+          <Show3DButton what="helmets" />
         </div>
       </div>
       <div className="card-grid stagger">{list.map((d) => <DriverCard key={d.id} d={d} latest={meta.latest} />)}</div>

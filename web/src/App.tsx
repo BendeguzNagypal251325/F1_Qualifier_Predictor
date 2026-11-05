@@ -5,6 +5,7 @@ import { Wordmark } from "./components/Brand";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SpeedLines } from "./components/SpeedLines";
 import { Search } from "./components/Search";
+import { allow3D } from "./three/thumbs";
 import { ErrorBox, Info, TooltipLayer } from "./components/ui";
 import type { Meta } from "./types";
 import Overview from "./pages/Overview";
@@ -59,6 +60,7 @@ export default function App() {
   useEffect(() => {
     if (!meta.data) return;
     // not on connections where the visitor asked to save data, or that are very slow
+    if (!allow3D()) return; // phones: 3D loads only after a tap (three/thumbs.ts)
     const conn = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
     if (conn?.saveData || /(^|-)2g$/.test(conn?.effectiveType ?? "")) return;
     const idle = (window as unknown as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 1500));
