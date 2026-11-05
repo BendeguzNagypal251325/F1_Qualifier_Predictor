@@ -247,3 +247,14 @@ export interface TeamDetail extends Stats {
   best_tracks: TeamTrack[];
   worst_tracks: TeamTrack[];
 }
+
+/** Frozen live predictions (write-once, saved before qualifying) and their scores. */
+export interface FrozenRow { pred_pos: number; driver_id: string; constructor_id: string | null; q3_prob: number | null }
+export interface FrozenScore { correct: number; missed: string[]; surprises: string[] }
+export interface Frozen { race_key: string; session: "fp1" | "fp2" | "fp3"; after: string; created_at: string; qualifying_start: string; model: string; rows: FrozenRow[]; score: FrozenScore | null }
+export interface SnapshotRace { race_key: string; gp: string; season: number; result: Record<string, number> | null; snapshots: Frozen[] }
+export interface SnapshotSummary {
+  season: number;
+  races: { race_key: string; round: number; gp: string; circuit: string; date: string; sessions: { session: string; created_at: string }[]; final_session: string; qualifying_start: string; correct: number | null }[];
+  totals: { races: number; scored: number; correct_per_10: number | null };
+}

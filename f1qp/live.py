@@ -326,7 +326,7 @@ class LiveUnavailable(RuntimeError):
 
 
 def _prepare(race: str | None, season: int, update: bool, get):
-    """Shared by the CLI and the web server: (entries, prediction table, finished sessions used)."""
+    """Shared by the CLI and the web server: (entries, prediction table, finished sessions used, OpenF1 sessions)."""
     sdir = seasons_dir()
     if update:
         try:
@@ -351,11 +351,11 @@ def _prepare(race: str | None, season: int, update: bool, get):
 
     LIVE_DIR.mkdir(parents=True, exist_ok=True)
     weekend.to_csv(LIVE_DIR / f"{weekend['race_key'].iloc[0]}.csv", index=False)
-    return entries, predict_weekend(entries, weekend), used
+    return entries, predict_weekend(entries, weekend), used, sessions
 
 
 def run(race: str | None = None, season: int = CURRENT_SEASON, update: bool = True, get=openf1_get) -> str:
-    _, pred, used = _prepare(race, season, update, get)
+    _, pred, used, _ = _prepare(race, season, update, get)
     return report(pred, used)
 
 
@@ -384,8 +384,11 @@ def snapshot(pred: pd.DataFrame, used: list[str]) -> dict:
 
 
 def live_snapshot(race: str | None = None, season: int = CURRENT_SEASON, update: bool = True, get=openf1_get) -> dict:
-    _, pred, used = _prepare(race, season, update, get)
-    return snapshot(pred, used)
+    _, pred, used, sessions = _prepare(race, season, update, get)
+    out = snapshot(pred, used)
+    # when qualifying starts (OpenF1): frozen predictions are refused from then on (f1qp/snapshots.py)
+    out["qualifying_start"] = (sessions.get("Qualifying") or {}).get("date_start")
+    return out
 
 
 def main() -> None:

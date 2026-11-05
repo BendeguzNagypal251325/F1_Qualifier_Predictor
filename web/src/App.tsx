@@ -17,6 +17,7 @@ import { TeamList, TeamPage } from "./pages/Teams";
 import WhatIf from "./pages/WhatIf";
 import Sessions from "./pages/Sessions";
 import HeatmapPage from "./pages/Heatmap";
+import TrackRecord from "./pages/TrackRecord";
 
 const NAV = [
   ["/", "Overview"],
@@ -27,6 +28,7 @@ const NAV = [
   ["/tracks", "Tracks"],
   ["/what-if", "What if"],
   ["/sessions", "Sessions"],
+  ["/track-record", "Track record"],
   ["/heatmap", "Heatmap"],
 ] as const;
 
@@ -105,6 +107,7 @@ export default function App() {
                   <Route path="/sessions" element={<Sessions />} />
                   <Route path="/sessions/:key" element={<Sessions />} />
                   <Route path="/heatmap" element={<HeatmapPage />} />
+                  <Route path="/track-record" element={<TrackRecord />} />
                   <Route path="*" element={<div className="panel empty-state"><h2>Page not found</h2><NavLink to="/" className="btn">Back to the overview</NavLink></div>} />
                 </Routes>
               </ErrorBoundary>

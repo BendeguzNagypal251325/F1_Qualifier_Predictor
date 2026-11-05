@@ -461,3 +461,12 @@ td.fastest { color: var(--pole); font-weight: 600; }
   /* an odd last tile takes the full row instead of leaving half of it empty */
   .tiles > .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
+
+/* ---------- track record ---------- */
+.link-btn { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; color: var(--ink); font: inherit; cursor: pointer; text-align: left; }
+.link-btn:hover { color: #fff; text-decoration: underline; }
+tr.sel-row td { background: var(--surface-2); }
+.frozen-list { display: flex; gap: 6px; flex-wrap: wrap; }
+.moves .up { color: var(--q3); font-size: 0.8rem; }
+.moves .down { color: var(--bad); font-size: 0.8rem; }
+.moves th .score { color: var(--ink-2); font-weight: 500; }

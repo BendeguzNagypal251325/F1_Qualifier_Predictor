@@ -61,6 +61,17 @@ where the gaps are often under a tenth.
   Alfa Romeo/Sauber → Audi) are tracked as one team (`TEAM_LINEAGE` in `features.py`), so team form
   carries over a rebrand. This lowered MAE slightly.
 
+## Track record (frozen live predictions)
+
+While live updates are on, the server saves the live prediction after each finished practice session
+to `data/live/snapshots/<race_key>/<fp1|fp2|fp3>.json` (on the `f1qp-live` volume), with the Q3 chances
+and a UTC timestamp (`f1qp/snapshots.py`). The files are write-once: an existing one is never replaced
+(written through a hard link, which fails if the file exists), and nothing is saved once OpenF1's
+qualifying start time has passed; refusals are logged. `GET /api/snapshots?season=2026` summarises a
+season and `GET /api/snapshots/{race_key}` returns one race. The **Track record** page shows them
+against the real results, separate from the backtest numbers, including how the prediction moved from
+FP1 to FP3. Back up `data/live/snapshots`: it is the only data that cannot be rebuilt.
+
 ## Sector times
 
 Sector times, speed traps and car positions come from [OpenF1](https://openf1.org), which has them from
@@ -176,6 +187,7 @@ Correct top-10 picks: 8/10
 | **Tracks** | the track map in its three timing sectors with the fastest time in each (all-time or per season), every driver's best sectors, ideal lap and top speed; every driver's record at that track, the model's score at each session there, and a Q1 / Q2 / Q3 breakdown (pick a session: fastest lap, the slowest lap that still got through, who was knocked out, and each driver's record in that session there), coloured like the position chips |
 | **What if** | put any driver in any car at any race and see the predicted grid slot |
 | **Sessions** | a season strip (one cell per race, shaded by correct picks) and the predicted order vs result for any race, with the reason behind each prediction |
+| **Track record** | the frozen 2026 live predictions (saved after each practice session, before qualifying) against the real results, and how each prediction moved from FP1 to FP3 |
 | **Heatmap** | average qualifying position per driver × track |
 
 All of it comes from the walk-forward run, so every prediction shown is out-of-sample.
