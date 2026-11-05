@@ -180,7 +180,7 @@ Correct top-10 picks: 8/10
 | Page | What it shows |
 |---|---|
 | **Overview** | correct picks per season vs the simple rules, how much car / driver / practice decide a prediction, most useful inputs |
-| **Live** | this weekend's predicted qualifying order, rebuilt after every finished session; after qualifying, the real result next to it. A for-fun game, *Your pick vs the model*, lets you pick ten drivers for Q3 before qualifying and scores them against the model's frozen picks afterwards (kept only in the browser's localStorage, with a season tally) |
+| **Live** | this weekend's predicted qualifying order, rebuilt after every finished session; after qualifying, the real result next to it. A for-fun game, *Your pick vs the model*, lets you put a driver in each position from P1 to P10 before qualifying (1 point per driver in Q3, 2 more for the exact position) and scores you against the model's frozen top ten afterwards (kept only in the browser's localStorage, with a season tally) |
 | **Drivers** | every driver as initials in their team colour; each profile has the driver's record at every track, team history, and the driver-vs-car split |
 | **Teams** | one page per team across renames (Toro Rosso → AlphaTauri → RB → Racing Bulls…): pace rank per season and race by race, every car with its engine, teammate head-to-heads per season, strongest and weakest tracks |
 | **Cars** | every car of a season ranked by pace; each car has an interactive 3D model where each part can be shown on its own with what it does and its rules, pace through the season, its drivers, and a power-unit comparison; **Compare** puts up to three cars (or one part of each) side by side |

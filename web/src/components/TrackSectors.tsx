@@ -30,7 +30,7 @@ export function TrackMap({ data }: { data: TrackDetail }) {
   return (
     <section className="panel track-map">
       <div className="panel-head">
-        <h2>Sectors <Info>{SOURCE} Split as on the {sec.map?.season ?? "latest"} pole lap.</Info></h2>
+        <h2>Sectors <Info>{SOURCE} Split as on the {sec.map?.season ?? "latest"} pole lap. Track outline: bacinger/f1-circuits (MIT).</Info></h2>
         {years.length > 0 && (
           <div className="seg" role="group" aria-label="Season">
             <button type="button" aria-pressed={year === "all"} onClick={() => setYear("all")}>Best</button>
@@ -38,48 +38,49 @@ export function TrackMap({ data }: { data: TrackDetail }) {
           </div>
         )}
       </div>
-      <div className="map-wrap">
-        {sec.map ? (
-          <svg className="sector-map" viewBox="0 0 100 100" role="img" aria-label={`${data.name} in three sectors`}>
-            {c?.outline && <path d={c.outline} className="base" />}
-            {sec.map.paths.map((d, i) => (
-              <path key={i} d={d} className={`sec${hover && hover !== SECTORS[i].id ? " dim" : ""}`} style={{ stroke: SECTORS[i].color }}
-                onMouseEnter={() => setHover(SECTORS[i].id)} onMouseLeave={() => setHover(null)} />
-            ))}
-            <g transform={`translate(${sec.map.start[0]} ${sec.map.start[1]})`} className="start"><circle r="2.3" /><text y="-4" textAnchor="middle">START</text></g>
-          </svg>
-        ) : (
-          <div className="sector-map plain"><TrackOutline circuit={data.id} size={300} stroke={6} /></div>
-        )}
-      </div>
-      {sec.sessions.length ? (
-        <div className="sector-legend">
-          {SECTORS.map((s) => {
-            const h = holder(s.id);
-            return (
-              <div key={s.id} className={`sector-row${hover === s.id ? " on" : ""}`} onMouseEnter={() => setHover(s.id)} onMouseLeave={() => setHover(null)}>
-                <i style={{ background: s.color }} aria-hidden />
-                <span className="sector-name">{s.label}</span>
-                {h ? (
-                  <Link to={`/drivers/${h.driver}`} className="cell-name"><Avatar driver={h.driver} team={h.team} size={24} /><span>{h.name}</span></Link>
-                ) : <span className="sub">no time</span>}
-                <b className="mono">{h ? h.time.toFixed(3) : "–"}</b>
-                {year === "all" && h?.season && <span className="mono yr">{h.season}</span>}
-              </div>
-            );
-          })}
-          {sess && (
-            <div className="sector-sum">
-              <span>Ideal lap <Info>Best three sectors of the session added together.</Info></span><b className="mono">{lapTime(sess.ideal)}</b>
-              <span>Pole lap</span><b className="mono">{lapTime(sess.pole_lap?.time)}</b>
-              {sess.top_speed && <><span>Top speed</span><b className="mono">{Math.round(sess.top_speed.time)} km/h <small>{sess.top_speed.name.split(" ").slice(-1)}</small></b></>}
-            </div>
+      <div className="map-body">
+        <div className="map-wrap">
+          {sec.map ? (
+            <svg className="sector-map" viewBox="0 0 100 100" role="img" aria-label={`${data.name} in three sectors`}>
+              {c?.outline && <path d={c.outline} className="base" />}
+              {sec.map.paths.map((d, i) => (
+                <path key={i} d={d} className={`sec${hover && hover !== SECTORS[i].id ? " dim" : ""}`} style={{ stroke: SECTORS[i].color }}
+                  onMouseEnter={() => setHover(SECTORS[i].id)} onMouseLeave={() => setHover(null)} />
+              ))}
+              <g transform={`translate(${sec.map.start[0]} ${sec.map.start[1]})`} className="start"><circle r="2.3" /><text y="-4" textAnchor="middle">START</text></g>
+            </svg>
+          ) : (
+            <div className="sector-map plain"><TrackOutline circuit={data.id} size={300} stroke={6} /></div>
           )}
         </div>
-      ) : (
-        <p className="body-text">{noSectorsReason(data)}</p>
-      )}
-      <p className="credit">Track outline: bacinger/f1-circuits (MIT). Timing: OpenF1.</p>
+        {sec.sessions.length ? (
+          <div className="sector-legend">
+            {SECTORS.map((s) => {
+              const h = holder(s.id);
+              return (
+                <div key={s.id} className={`sector-row${hover === s.id ? " on" : ""}`} onMouseEnter={() => setHover(s.id)} onMouseLeave={() => setHover(null)}>
+                  <i style={{ background: s.color }} aria-hidden />
+                  <span className="sector-name">{s.label}</span>
+                  {h ? (
+                    <Link to={`/drivers/${h.driver}`} className="cell-name"><Avatar driver={h.driver} team={h.team} size={24} /><span>{h.name}</span></Link>
+                  ) : <span className="sub">no time</span>}
+                  <b className="mono">{h ? h.time.toFixed(3) : "–"}</b>
+                  {year === "all" && h?.season && <span className="mono yr">{h.season}</span>}
+                </div>
+              );
+            })}
+            {sess && (
+              <div className="sector-sum">
+                <span>Ideal lap <Info>Best three sectors of the session added together.</Info></span><b className="mono">{lapTime(sess.ideal)}</b>
+                <span>Pole lap</span><b className="mono">{lapTime(sess.pole_lap?.time)}</b>
+                {sess.top_speed && <><span>Top speed</span><b className="mono">{Math.round(sess.top_speed.time)} km/h <small>{sess.top_speed.name.split(" ").slice(-1)}</small></b></>}
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="body-text">{noSectorsReason(data)}</p>
+        )}
+      </div>
     </section>
   );
 }

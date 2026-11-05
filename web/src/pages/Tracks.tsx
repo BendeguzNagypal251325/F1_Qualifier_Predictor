@@ -74,7 +74,7 @@ export function TrackPage() {
             <div style={{ display: "grid", placeItems: "center", padding: 12 }}><TrackOutline circuit={c.id} size={300} stroke={6} /></div>
           </section>
         )}
-        <div style={{ display: "grid", gap: 12, alignContent: "start" }}>
+        <div className="track-side">
           {!data ? (error ? null : <Loading />) : (
             <>
               <div className="tiles two-one stagger">
