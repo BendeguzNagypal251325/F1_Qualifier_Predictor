@@ -38,7 +38,7 @@ from . import model as M
 from . import names as N
 from .build import GROUPS, State, compute_state, data_mtime, load_state, save_state, ARTIFACT
 from .data import ROOT
-from . import sectors
+from . import sectors, snapshots
 from .tracks import outline_points, outlines
 
 log = logging.getLogger("f1qp")
@@ -75,6 +75,18 @@ def _friendly(e: BaseException) -> str:
     return "The live update failed. Retrying automatically; details are in the server log."
 
 
+def with_q3_prob(snap: dict | None, wf: pd.DataFrame | None) -> dict | None:
+    """Add each live row's Q3 probability (from the walk-forward residuals of races before this one)."""
+    if not snap or wf is None or not snap.get("rows"):
+        return snap
+    past = wf[(wf["date"] < pd.Timestamp(snap["date"])) & wf["quali_pos"].notna()]
+    if past["race_key"].nunique() < M.MIN_PRIOR_RACES:
+        return snap
+    probs = M.q3_probability([r["pred_pos"] for r in snap["rows"]], past["pred_rank"], past["quali_pos"])
+    rows = [{**r, "q3_prob": _f(p, 3)} for r, p in zip(snap["rows"], probs)]
+    return {**snap, "rows": rows, "close_call": list(M.CLOSE_CALL)}
+
+
 class LiveService:
     """Refreshes the live prediction in the background and reloads the data when it changes."""
 
@@ -83,6 +95,7 @@ class LiveService:
         self.fetch = fetch  # injectable for tests: () -> snapshot dict
         self.snapshot: dict | None = None
         self.error: str | None = None
+        self.error_code: str | None = None  # e.g. "season_over" (no live weekend left this season)
         self.last_run: str | None = None
         self.running = False
         self._task: asyncio.Task | None = None
@@ -95,6 +108,7 @@ class LiveService:
             "last_run": self.last_run,
             "running": self.running,
             "error": self.error,
+            "error_code": self.error_code,
         }
 
     def _fetch(self) -> dict:
@@ -108,12 +122,18 @@ class LiveService:
         async with self._lock:
             self.running = True
             try:
-                self.snapshot = await asyncio.to_thread(self._fetch)
-                self.error = None
+                snap = await asyncio.to_thread(self._fetch)
+                self.snapshot = with_q3_prob(snap, self.app_state.state.wf if self.app_state.state is not None else None)
+                self.error = self.error_code = None
+                try:  # write-once record of the prediction before qualifying (never breaks the refresh)
+                    snapshots.freeze(self.snapshot)
+                except Exception as e:  # noqa: BLE001
+                    log.warning("could not save the frozen prediction: %s", e)
             except BaseException as e:  # noqa: BLE001 - SystemExit from the CLI code means "no race"
                 if isinstance(e, asyncio.CancelledError):
                     raise
                 self.error = _friendly(e)
+                self.error_code = getattr(e, "code", None)
                 log.warning("live refresh failed: %s: %s", type(e).__name__, e)
             finally:
                 self.last_run = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -392,7 +412,7 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
                 # /assets: file names are content hashes; /models: the app adds a version (?v=) it bumps when they change
                 response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
             return response
-        key = (app_state.state.built_at, sectors.version(), str(request.url.path) + "?" + str(request.url.query))
+        key = (app_state.state.built_at, sectors.version(), snapshots.version(), str(request.url.path) + "?" + str(request.url.query))
         hit = cache.get(key)
         if hit:
             cache.move_to_end(key)
@@ -552,7 +572,8 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
             "circuit": r0.circuit, "date": str(r0.date)[:10], "sprint": bool(r0.sprint_weekend),
             "correct": int((rows["picked"] & (rows["top10"] == 1)).sum()),
             "mae": _f((rows["pred_rank"] - rows["quali_pos"]).abs().mean()),
-            "rows": [{**_result(r), "driver": r.driver_id, "fp_last_pos": _f(r.fp_last_pos, 0),
+            "close_call": list(M.CLOSE_CALL),
+            "rows": [{**_result(r), "driver": r.driver_id, "fp_last_pos": _f(r.fp_last_pos, 0), "q3_prob": _f(r.q3_prob, 3),
                       "contrib": {g: _f(getattr(r, f"contrib_{g}")) for g in GROUPS}, "baseline": _f(r.contrib_baseline)}
                      for r in rows.itertuples()],
         }
@@ -723,6 +744,44 @@ def create_app(settings: Settings | None = None, live_fetch=None) -> FastAPI:
         }
 
     # ---------------------------------------------------------------- live
+
+    # ---------------------------------------------------------------- frozen predictions (track record)
+
+    def _actual(race_key: str) -> dict[str, int]:
+        rows = S().wf[S().wf["race_key"] == race_key]
+        return {d: int(p) for d, p in zip(rows["driver_id"], rows["quali_pos"]) if pd.notna(p)}
+
+    @app.get("/api/snapshots", tags=["track record"])
+    def snapshot_summary(season: int | None = None):
+        """Frozen live predictions of a season (default: the latest), scored against the real results."""
+        season = season or S().overview["latest"]
+        races = []
+        for key in snapshots.races():
+            snaps = snapshots.load_race(key)
+            if not snaps or snaps[-1].get("season") != season:
+                continue
+            final = snaps[-1]  # the last prediction frozen before qualifying
+            sc = snapshots.score(final["rows"], _actual(key))
+            races.append({"race_key": key, "round": final.get("round"), "gp": N.gp_name(final.get("grand_prix") or ""),
+                          "circuit": final.get("circuit"), "date": final.get("date"),
+                          "sessions": [{"session": x["session"], "created_at": x["created_at"]} for x in snaps],
+                          "final_session": final["session"], "qualifying_start": final.get("qualifying_start"),
+                          "correct": sc["correct"] if sc else None})
+        races.sort(key=lambda r: r["round"] or 0)
+        scored = [r["correct"] for r in races if r["correct"] is not None]
+        return {"season": season, "races": races,
+                "totals": {"races": len(races), "scored": len(scored), "correct_per_10": _f(sum(scored) / len(scored)) if scored else None}}
+
+    @app.get("/api/snapshots/{race_key}", tags=["track record"])
+    def snapshot_race(race_key: str):
+        """Every frozen prediction of one race (FP1 first), each scored if the result is known."""
+        snaps = snapshots.load_race(race_key)
+        if not snaps:
+            raise HTTPException(404, f"No frozen predictions for '{race_key}'")
+        actual = _actual(race_key)
+        return {"race_key": race_key, "gp": N.gp_name(snaps[-1].get("grand_prix") or ""), "season": snaps[-1].get("season"),
+                "result": actual or None,
+                "snapshots": [{**x, "score": snapshots.score(x["rows"], actual)} for x in snaps]}
 
     @app.get("/api/live", tags=["live"])
     def live_get():

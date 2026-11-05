@@ -60,7 +60,7 @@ export default function Overview() {
         <div>
           <span className="eyebrow">Formula 1 qualifying · {range}</span>
           <h1>Which ten drivers make it into Q3?</h1>
-          <p className="lede">A Ridge regression model predicts every driver's qualifying position from car form, driver form and that weekend's practice. Each of the {o.sessions} sessions below was predicted using only what was known before qualifying.</p>
+          <p className="lede">Every driver's qualifying position, predicted from car form, driver form and practice. All {o.sessions} sessions below were predicted with only what was known beforehand.</p>
         </div>
         <Link to="/live" className="btn">See the live weekend</Link>
       </div>
@@ -85,7 +85,7 @@ export default function Overview() {
             <Lollipops items={methods} lo={mlo} hi={mhi} step={0.2} />
           </section>
           <section className="panel">
-            <div className="panel-head"><h2>What decides the prediction <Info>Average size of each group's push on a prediction. <b>Car</b> = team form, tracked per team (it stays with the car when a driver leaves). <b>Driver</b> = the driver's own results and teammate battle; these follow the driver to a new team, but they also include the cars the driver had. <b>Practice</b> mixes both.</Info></h2><Link to="/what-if" className="link">Try a driver in another car →</Link></div>
+            <div className="panel-head"><h2>What decides the prediction <Info>Average push of each group on a prediction. <b>Car</b> = team form, which stays with the team. <b>Driver</b> = the driver's own record, which follows them (and reflects their earlier cars). <b>Practice</b> mixes both.</Info></h2><Link to="/what-if" className="link">Try a driver in another car →</Link></div>
             <div className="stack" style={{ height: 18 }}>
             {GROUPS.map((g) => <span key={g} className={focus === g ? "sel" : ""} onClick={() => setFocus(focus === g ? null : g)} style={{ width: `${(gs[g] / gsTotal) * 100}%`, background: `var(--g-${g})`, cursor: "pointer" }} data-tip={`${GROUP_LABEL[g]}\nmoves a prediction by ${gs[g].toFixed(2)} places on average\nClick to highlight its inputs`} />)}
           </div>

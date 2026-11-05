@@ -16,7 +16,7 @@ export interface DriverMeta {
 }
 export interface TeamMeta { id: string; name: string; color: string }
 export interface CircuitMeta { id: string; name: string; outline: string | null; length_m: number | null }
-export interface LiveStatus { enabled: boolean; interval_s: number; last_run: string | null; running: boolean; error: string | null }
+export interface LiveStatus { enabled: boolean; interval_s: number; last_run: string | null; running: boolean; error: string | null; error_code?: string | null }
 
 export interface Meta {
   seasons: number[];
@@ -51,6 +51,7 @@ export interface Overview {
   importance: [string, number][];
   group_size: Record<Group, number>;
   feature_groups: Record<Group, string[]>;
+  q3_calibration?: { races: number; brier: number; brier_picks: number; brier_base_rate: number };
 }
 
 export interface Result {
@@ -118,8 +119,8 @@ export interface QualiSegment {
 
 export interface SessionSummary { race_key: string; season: number; round: number; gp: string; circuit: string; date: string; sprint: boolean; correct: number }
 
-export interface SessionRow extends Result { driver: string; fp_last_pos: number | null; contrib: Contrib; baseline: number }
-export interface SessionDetail extends Omit<SessionSummary, "correct"> { correct: number; mae: number; rows: SessionRow[] }
+export interface SessionRow extends Result { driver: string; fp_last_pos: number | null; contrib: Contrib; baseline: number; q3_prob: number | null }
+export interface SessionDetail extends Omit<SessionSummary, "correct"> { correct: number; mae: number; rows: SessionRow[]; close_call?: [number, number] }
 
 export interface CarSummary {
   team: string;
@@ -187,10 +188,12 @@ export interface LivePrediction {
   date: string;
   sessions_used: string[];
   qualifying_done: boolean;
+  qualifying_start?: string | null;
   model: string;
   correct?: number;
   mae?: number;
-  rows: { pred_pos: number; score: number; driver_id: string; constructor_id: string; fp_last_pos: number | null; quali_pos: number | null; contrib: Contrib }[];
+  rows: { pred_pos: number; score: number; driver_id: string; constructor_id: string; fp_last_pos: number | null; quali_pos: number | null; contrib: Contrib; q3_prob?: number | null }[];
+  close_call?: [number, number];
 }
 export interface Live { status: LiveStatus; prediction: LivePrediction | null }
 
@@ -245,4 +248,15 @@ export interface TeamDetail extends Stats {
   trend: { race_key: string; season: number; round: number; gp: string; gap: number | null; rank: number | null }[];
   best_tracks: TeamTrack[];
   worst_tracks: TeamTrack[];
+}
+
+/** Frozen live predictions (write-once, saved before qualifying) and their scores. */
+export interface FrozenRow { pred_pos: number; driver_id: string; constructor_id: string | null; q3_prob: number | null }
+export interface FrozenScore { correct: number; missed: string[]; surprises: string[] }
+export interface Frozen { race_key: string; session: "fp1" | "fp2" | "fp3"; after: string; created_at: string; qualifying_start: string; model: string; rows: FrozenRow[]; score: FrozenScore | null }
+export interface SnapshotRace { race_key: string; gp: string; season: number; result: Record<string, number> | null; snapshots: Frozen[] }
+export interface SnapshotSummary {
+  season: number;
+  races: { race_key: string; round: number; gp: string; circuit: string; date: string; sessions: { session: string; created_at: string }[]; final_session: string; qualifying_start: string; correct: number | null }[];
+  totals: { races: number; scored: number; correct_per_10: number | null };
 }

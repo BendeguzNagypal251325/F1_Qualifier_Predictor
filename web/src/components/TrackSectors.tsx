@@ -15,7 +15,7 @@ const SECTORS: { id: S; label: string; color: string }[] = [
   { id: "s3", label: "Sector 3", color: "var(--sector-3)" },
 ];
 
-const SOURCE = "Sector times and positions come from OpenF1's timing data (2023 onwards). The app downloads them in the background while live updates are on; run uv run f1qp-sectors to fetch them at once.";
+const SOURCE = "Sector times from OpenF1 timing data (2023 on).";
 
 export function TrackMap({ data }: { data: TrackDetail }) {
   const meta = useMeta();
@@ -30,7 +30,7 @@ export function TrackMap({ data }: { data: TrackDetail }) {
   return (
     <section className="panel track-map">
       <div className="panel-head">
-        <h2>Sectors <Info>{SOURCE} The map is split where the sectors began on the fastest lap of the {sec.map?.season ?? "latest"} session.</Info></h2>
+        <h2>Sectors <Info>{SOURCE} Split as on the {sec.map?.season ?? "latest"} pole lap.</Info></h2>
         {years.length > 0 && (
           <div className="seg" role="group" aria-label="Season">
             <button type="button" aria-pressed={year === "all"} onClick={() => setYear("all")}>Best</button>
@@ -77,11 +77,22 @@ export function TrackMap({ data }: { data: TrackDetail }) {
           )}
         </div>
       ) : (
-        <p className="body-text">No sector times for this track yet. They cover {sec.first_season} onwards and appear once the app has downloaded them from OpenF1.</p>
+        <p className="body-text">{noSectorsReason(data)}</p>
       )}
       <p className="credit">Track outline: bacinger/f1-circuits (MIT). Timing: OpenF1.</p>
     </section>
   );
+}
+
+/** Why a track has no sector times: no session in the selected seasons, none since sector timing began, or not downloaded yet. */
+function noSectorsReason(data: TrackDetail) {
+  const first = data.sectors.first_season;
+  const seasons = data.sessions.map((s) => s.season);
+  if (!seasons.length) return "No sessions at this track in the selected seasons.";
+  if (Math.max(...seasons) < first) {
+    return `Sector times start in ${first}, and ${data.name} has no session from ${first} on in the selected seasons (the latest here is ${Math.max(...seasons)}).`;
+  }
+  return `Sector times for ${data.name} are not downloaded yet; they load in the background while live updates are on.`;
 }
 
 /** Every driver's best sectors in one session, fastest of each column in purple (like a timing screen). */
@@ -96,7 +107,7 @@ export function SectorTable({ data }: { data: TrackDetail }) {
   return (
     <section className="panel">
       <div className="panel-head">
-        <h2>Sector times <Info>Each driver's best sector times and best lap in qualifying. Purple marks the fastest of the session. {SOURCE}</Info></h2>
+        <h2>Sector times <Info>Best sectors and lap in qualifying; purple is fastest. {SOURCE}</Info></h2>
         <div className="seg" role="group" aria-label="Season">
           {sessions.map((s) => <button key={s.season} type="button" aria-pressed={s.season === sess.season} onClick={() => setYear(s.season)}>{s.season}</button>)}
         </div>

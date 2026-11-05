@@ -75,9 +75,9 @@ export function TrackPage() {
           </section>
         )}
         <div style={{ display: "grid", gap: 12, alignContent: "start" }}>
-          {!data ? <Loading /> : (
+          {!data ? (error ? null : <Loading />) : (
             <>
-              <div className="tiles stagger">
+              <div className="tiles two-one stagger">
                 <Tile label="Sessions" value={data.sessions.length} sub={data.sessions.map((s) => s.season).join(", ") || "none in range"} />
                 <Tile label="Model here" value={<>{fmt(data.model_correct, 2)}<small> / 10</small></>} sub="correct Q3 picks" />
                 <Tile label="Most poles" value={topPole?.[0] ?? "–"} small sub={topPole ? `${topPole[1]} pole${topPole[1] > 1 ? "s" : ""}` : ""} />

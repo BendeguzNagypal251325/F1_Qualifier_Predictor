@@ -5,6 +5,7 @@ import { Wordmark } from "./components/Brand";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SpeedLines } from "./components/SpeedLines";
 import { Search } from "./components/Search";
+import { allow3D } from "./three/thumbs";
 import { ErrorBox, Info, TooltipLayer } from "./components/ui";
 import type { Meta } from "./types";
 import Overview from "./pages/Overview";
@@ -17,6 +18,8 @@ import { TeamList, TeamPage } from "./pages/Teams";
 import WhatIf from "./pages/WhatIf";
 import Sessions from "./pages/Sessions";
 import HeatmapPage from "./pages/Heatmap";
+import TrackRecord from "./pages/TrackRecord";
+import HowItWorks from "./pages/HowItWorks";
 
 const NAV = [
   ["/", "Overview"],
@@ -27,7 +30,9 @@ const NAV = [
   ["/tracks", "Tracks"],
   ["/what-if", "What if"],
   ["/sessions", "Sessions"],
+  ["/track-record", "Track record"],
   ["/heatmap", "Heatmap"],
+  ["/how-it-works", "How it works"],
 ] as const;
 
 /** "Lights out": fade the boot screen from index.html once the first data is in. */
@@ -57,6 +62,7 @@ export default function App() {
   useEffect(() => {
     if (!meta.data) return;
     // not on connections where the visitor asked to save data, or that are very slow
+    if (!allow3D()) return; // phones: 3D loads only after a tap (three/thumbs.ts)
     const conn = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
     if (conn?.saveData || /(^|-)2g$/.test(conn?.effectiveType ?? "")) return;
     const idle = (window as unknown as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 1500));
@@ -105,6 +111,8 @@ export default function App() {
                   <Route path="/sessions" element={<Sessions />} />
                   <Route path="/sessions/:key" element={<Sessions />} />
                   <Route path="/heatmap" element={<HeatmapPage />} />
+                  <Route path="/track-record" element={<TrackRecord />} />
+                  <Route path="/how-it-works" element={<HowItWorks />} />
                   <Route path="*" element={<div className="panel empty-state"><h2>Page not found</h2><NavLink to="/" className="btn">Back to the overview</NavLink></div>} />
                 </Routes>
               </ErrorBoundary>

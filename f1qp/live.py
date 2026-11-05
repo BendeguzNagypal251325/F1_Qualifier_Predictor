@@ -187,7 +187,8 @@ def find_race_dir(season_dir: Path, race: str | None) -> Path:
         if live.exists() and pd.read_csv(live)["quali_pos"].notna().all():
             continue  # qualifying already done (saved by an earlier live run)
         return d
-    raise LiveUnavailable("No upcoming race left in this season. Live predictions start again with next season's first weekend.")
+    raise LiveUnavailable("No upcoming race left in this season. Live predictions start again with next season's first weekend.",
+                          code="season_over")
 
 
 # ---------------------------------------------------------------- weekend table ---------------------------------------
@@ -322,11 +323,17 @@ def report(pred: pd.DataFrame, used: list[str]) -> str:
 
 
 class LiveUnavailable(RuntimeError):
-    """A live prediction cannot be made right now; the message is meant for people, not logs."""
+    """A live prediction cannot be made right now; the message is meant for people, not logs.
+
+    ``code`` tells the app why, where it matters (``"season_over"``: no weekend left this season)."""
+
+    def __init__(self, message: str, code: str | None = None):
+        super().__init__(message)
+        self.code = code
 
 
 def _prepare(race: str | None, season: int, update: bool, get):
-    """Shared by the CLI and the web server: (entries, prediction table, finished sessions used)."""
+    """Shared by the CLI and the web server: (entries, prediction table, finished sessions used, OpenF1 sessions)."""
     sdir = seasons_dir()
     if update:
         try:
@@ -351,11 +358,11 @@ def _prepare(race: str | None, season: int, update: bool, get):
 
     LIVE_DIR.mkdir(parents=True, exist_ok=True)
     weekend.to_csv(LIVE_DIR / f"{weekend['race_key'].iloc[0]}.csv", index=False)
-    return entries, predict_weekend(entries, weekend), used
+    return entries, predict_weekend(entries, weekend), used, sessions
 
 
 def run(race: str | None = None, season: int = CURRENT_SEASON, update: bool = True, get=openf1_get) -> str:
-    _, pred, used = _prepare(race, season, update, get)
+    _, pred, used, _ = _prepare(race, season, update, get)
     return report(pred, used)
 
 
@@ -384,8 +391,11 @@ def snapshot(pred: pd.DataFrame, used: list[str]) -> dict:
 
 
 def live_snapshot(race: str | None = None, season: int = CURRENT_SEASON, update: bool = True, get=openf1_get) -> dict:
-    _, pred, used = _prepare(race, season, update, get)
-    return snapshot(pred, used)
+    _, pred, used, sessions = _prepare(race, season, update, get)
+    out = snapshot(pred, used)
+    # when qualifying starts (OpenF1): frozen predictions are refused from then on (f1qp/snapshots.py)
+    out["qualifying_start"] = (sessions.get("Qualifying") or {}).get("date_start")
+    return out
 
 
 def main() -> None:

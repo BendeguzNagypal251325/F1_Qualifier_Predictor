@@ -33,6 +33,13 @@ earlier sessions, so every real result is added before the next race is predicte
 the drivers who really qualified top 10). Full tables, all seasons and feature importance are in
 [`reports/evaluation.md`](reports/evaluation.md).
 
+**Q3 chance.** Each driver also gets a probability of reaching Q3: how often drivers at the same
+predicted grid position (grouped P1–3, 4–6, 7–9, 10–12, 13–15, 16+) still reached Q3 in earlier races,
+from the walk-forward misses of races before this one only (`q3_probability` in `f1qp/model.py`). The
+Live and Sessions pages show it in the timing colours, with 30–70% marked as too close to call. Over
+2020–26 it is well calibrated (Brier score 0.136, against 0.195 for the plain yes/no picks; see
+[`reports/evaluation.md`](reports/evaluation.md)).
+
 The top 6–7 cars are easy to call. Nearly all of the misses come from the midfield fight for P8–P12,
 where the gaps are often under a tenth.
 
@@ -53,6 +60,17 @@ where the gaps are often under a tenth.
 - **Renamed teams** (Racing Point → Aston Martin, Renault → Alpine, Toro Rosso/AlphaTauri/RB → Racing Bulls,
   Alfa Romeo/Sauber → Audi) are tracked as one team (`TEAM_LINEAGE` in `features.py`), so team form
   carries over a rebrand. This lowered MAE slightly.
+
+## Track record (frozen live predictions)
+
+While live updates are on, the server saves the live prediction after each finished practice session
+to `data/live/snapshots/<race_key>/<fp1|fp2|fp3>.json` (on the `f1qp-live` volume), with the Q3 chances
+and a UTC timestamp (`f1qp/snapshots.py`). The files are write-once: an existing one is never replaced
+(written through a hard link, which fails if the file exists), and nothing is saved once OpenF1's
+qualifying start time has passed; refusals are logged. `GET /api/snapshots?season=2026` summarises a
+season and `GET /api/snapshots/{race_key}` returns one race. The **Track record** page shows them
+against the real results, separate from the backtest numbers, including how the prediction moved from
+FP1 to FP3. Back up `data/live/snapshots`: it is the only data that cannot be rebuilt.
 
 ## Sector times
 
@@ -162,16 +180,23 @@ Correct top-10 picks: 8/10
 | Page | What it shows |
 |---|---|
 | **Overview** | correct picks per season vs the simple rules, how much car / driver / practice decide a prediction, most useful inputs |
-| **Live** | this weekend's predicted qualifying order, rebuilt after every finished session; after qualifying, the real result next to it |
+| **Live** | this weekend's predicted qualifying order, rebuilt after every finished session; after qualifying, the real result next to it. A for-fun game, *Your pick vs the model*, lets you pick ten drivers for Q3 before qualifying and scores them against the model's frozen picks afterwards (kept only in the browser's localStorage, with a season tally) |
 | **Drivers** | every driver as initials in their team colour; each profile has the driver's record at every track, team history, and the driver-vs-car split |
 | **Teams** | one page per team across renames (Toro Rosso → AlphaTauri → RB → Racing Bulls…): pace rank per season and race by race, every car with its engine, teammate head-to-heads per season, strongest and weakest tracks |
 | **Cars** | every car of a season ranked by pace; each car has an interactive 3D model where each part can be shown on its own with what it does and its rules, pace through the season, its drivers, and a power-unit comparison; **Compare** puts up to three cars (or one part of each) side by side |
 | **Tracks** | the track map in its three timing sectors with the fastest time in each (all-time or per season), every driver's best sectors, ideal lap and top speed; every driver's record at that track, the model's score at each session there, and a Q1 / Q2 / Q3 breakdown (pick a session: fastest lap, the slowest lap that still got through, who was knocked out, and each driver's record in that session there), coloured like the position chips |
 | **What if** | put any driver in any car at any race and see the predicted grid slot |
 | **Sessions** | a season strip (one cell per race, shaded by correct picks) and the predicted order vs result for any race, with the reason behind each prediction |
+| **Track record** | the frozen 2026 live predictions (saved after each practice session, before qualifying) against the real results, and how each prediction moved from FP1 to FP3 |
+| **How it works** | plain-language explanation: what a Q3 prediction is, the walk-forward test, why Ridge beat more complex models, what the Q3 chance means, driver vs car, backtest vs frozen predictions, limits (numbers come from the same results as the rest of the app) |
 | **Heatmap** | average qualifying position per driver × track |
 
 All of it comes from the walk-forward run, so every prediction shown is out-of-sample.
+
+**On phones** (narrow screens or touch-only pointers) no 3D code or model downloads until the visitor
+taps a "Show 3D" / "View in 3D" button; until then thumbnails come from the browser's cache only, with a
+light placeholder otherwise (`web/src/components/lazy3d.tsx`, `web/src/three/thumbs.ts`). One tap loads 3D
+for the rest of the visit. Desktop is unchanged.
 
 **Quick search** (Ctrl+K, ⌘K or `/`, or the search button in the top bar) jumps to any driver, team,
 track, car or page; it works with the keyboard (↑ ↓ Enter Esc).
@@ -445,6 +470,33 @@ data/               F1DB entries table, data/live/ weekends
 Dockerfile, docker-compose.yml, .github/workflows/ci.yml
 tests/              data sanity, leakage, live (fake OpenF1), API and explanation tests
 ```
+
+## Future work
+
+These are plans, not features: nothing below is built yet.
+
+**Hosting on an always-free VM.** The app already runs with `docker compose up`. The simplest public
+home is an Oracle Cloud Always Free VM running the same compose file, with a reverse proxy (for example
+Caddy) in front for automatic HTTPS. It keeps everything that exists today: the live refresher, the API
+cache and the background sector downloads.
+
+**A static, serverless version.** Most pages only change after a session, so `build.py` could write
+every API response to static JSON instead. A scheduled GitHub Action would run after each practice
+session, fetch OpenF1, rebuild the files and commit the frozen predictions; the git history then works
+as a tamper-evident record that each forecast existed before qualifying. The site could be served from
+static hosting such as Vercel at no cost. The trade-off is a real rewrite: the live service, the
+server-side response cache and the sector fetcher would all be replaced by the scheduled job, and
+updates would arrive on the Action's schedule rather than within minutes.
+
+**An installable app (PWA).** A service worker and a web app manifest would let phones install Gridcast
+from the browser and open it offline with the last data, with an optional push notification when the
+prediction after FP3 is ready. This is preferred over a native app: one code base, no app store review,
+and the 3D views already work in mobile browsers.
+
+**Helmet designs and credits.** The helmets are painted from public descriptions of real drivers'
+designs. That is a grey area: the designs belong to the drivers and their designers, so a public version
+should keep them clearly as fan-made approximations (or switch to generic team-coloured helmets), and
+keep the model credits in [3D references](#3d-references) visible in the app.
 
 ## Ideas for next steps
 

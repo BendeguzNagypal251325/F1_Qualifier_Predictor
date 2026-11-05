@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { fromStore, SNAP_VERSION, STORE, storeUrl } from "./thumbs";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
 /** Studio stage: soft environment reflections, a key light with shadows, a dark floor. */
@@ -66,22 +67,6 @@ export interface SnapJob {
   build: () => THREE.Object3D | Promise<THREE.Object3D>;
   camera: (obj: THREE.Object3D) => THREE.PerspectiveCamera;
   floor?: boolean;
-}
-
-// Bump when the car or helmet models change, so stored thumbnails are re-rendered.
-const SNAP_VERSION = "gridcast-v7";
-const STORE = "gridcast-snapshots";
-const storeUrl = (key: string) => `/__snapshot/${SNAP_VERSION}/${encodeURIComponent(key)}`;
-
-/** Previously rendered image from the browser's Cache Storage (survives reloads), if any. */
-async function fromStore(key: string): Promise<string | null> {
-  try {
-    if (!("caches" in window)) return null;
-    const hit = await (await caches.open(STORE)).match(storeUrl(key));
-    return hit ? URL.createObjectURL(await hit.blob()) : null;
-  } catch {
-    return null;
-  }
 }
 
 async function toStore(key: string, blob: Blob) {

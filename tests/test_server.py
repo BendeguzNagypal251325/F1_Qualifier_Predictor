@@ -241,3 +241,65 @@ def test_track_sectors(client, tmp_path, monkeypatch):
     assert s["season"] == 2025 and s["best"]["s1"]["driver"] == "max-verstappen" and s["best"]["s2"]["driver"] == "lando-norris"
     assert s["ideal"] == round(26.0 + 26.9 + 26.2, 3) and s["top_speed"]["time"] == 350 and s["pole_lap"]["driver"] == "max-verstappen"
     assert sec["records"]["s3"]["season"] == 2025 and sec["map"]["season"] == 2025 and len(sec["map"]["paths"]) == 3
+
+
+def test_q3_probability_in_session_and_live(client, artifact):
+    from f1qp.build import load_state
+    from f1qp.server import with_q3_prob
+
+    s = client.get("/api/sessions").json()[-1]
+    rows = client.get(f"/api/sessions/{s['race_key']}").json()["rows"]
+    probs = [r["q3_prob"] for r in rows]
+    assert all(0 <= p <= 1 for p in probs) and probs[0] > probs[-1]
+    st = load_state(artifact, rebuild_if_stale=False)
+    snap = {"date": "2026-12-06", "rows": [{"pred_pos": 1}, {"pred_pos": 10}, {"pred_pos": 20}]}
+    live = with_q3_prob(snap, st.wf)
+    p = [r["q3_prob"] for r in live["rows"]]
+    assert p[0] > p[1] > p[2] and live["close_call"] == [0.3, 0.7]
+    assert with_q3_prob(None, st.wf) is None
+
+
+def test_track_record_matches_manual_recount(client, artifact, tmp_path, monkeypatch):
+    from f1qp import snapshots
+    from f1qp.build import load_state
+
+    monkeypatch.setattr(snapshots, "SNAP_DIR", tmp_path)
+    assert client.get("/api/snapshots?season=2025").json()["races"] == []
+    st = load_state(artifact, rebuild_if_stale=False)
+    race = st.wf[st.wf["season"] == 2025].sort_values("date")["race_key"].iloc[3]
+    rows = st.wf[st.wf["race_key"] == race].sort_values("fp_last_pos")  # a "frozen" order: practice order
+    snap = {"race_key": race, "season": 2025, "round": int(rows["round"].iloc[0]), "grand_prix": rows["grand_prix"].iloc[0],
+            "circuit": rows["circuit"].iloc[0], "date": "2025-01-01", "sessions_used": ["Practice 1"], "qualifying_done": False,
+            "qualifying_start": "2099-01-01T00:00:00+00:00",
+            "rows": [{"pred_pos": i + 1, "driver_id": d, "constructor_id": t} for i, (d, t) in enumerate(zip(rows["driver_id"], rows["constructor_id"]))]}
+    assert snapshots.freeze(snap) is not None
+    # manual recount: frozen top 10 vs the drivers who really qualified top 10
+    top10 = set(rows["driver_id"].iloc[:10])
+    real = set(rows.loc[rows["quali_pos"] <= 10, "driver_id"])
+    expected = len(top10 & real)
+    summary = client.get("/api/snapshots?season=2025").json()  # new file: not served from the cache
+    assert summary["races"][0]["race_key"] == race and summary["races"][0]["correct"] == expected
+    assert summary["totals"] == {"races": 1, "scored": 1, "correct_per_10": float(expected)}
+    detail = client.get(f"/api/snapshots/{race}").json()
+    assert detail["snapshots"][0]["score"]["correct"] == expected and len(detail["result"]) == len(rows)
+    assert client.get("/api/snapshots/2025-99-nowhere").status_code == 404
+
+
+def test_live_season_over_has_a_reason_code(artifact, tmp_path):
+    from f1qp.live import LiveUnavailable
+
+    def over():
+        raise LiveUnavailable("No upcoming race left in this season.", code="season_over")
+
+    app = create_app(Settings(live_interval=0, artifact=artifact, static_dir=tmp_path), live_fetch=over)
+    with TestClient(app) as c:
+        live = app.state.live
+        asyncio.run(live.refresh())
+        status = live.status()
+        assert status["error_code"] == "season_over" and "No upcoming race" in status["error"]
+        assert c.get("/api/live").json()["status"]["error_code"] == "season_over"
+
+
+def test_overview_reports_q3_calibration(client):
+    cal = client.get("/api/overview").json()["q3_calibration"]
+    assert cal["races"] > 100 and cal["brier"] < cal["brier_picks"] < cal["brier_base_rate"]

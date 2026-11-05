@@ -34,7 +34,7 @@ export default function HeatmapPage() {
         </div>
       </section>
       {error && <ErrorBox error={error} />}
-      {!data ? <Loading height={500} /> : (
+      {!data ? (error ? null : <Loading height={500} />) : (
         <section className="panel">
           <div className="scroll">
             <table className="heat">

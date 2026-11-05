@@ -35,8 +35,8 @@ export default function WhatIf() {
       <div className="page-head">
         <div>
           <span className="eyebrow">What if</span>
-          <h1>Put any driver in any car <Info>Grid position = rank of the what-if score among the other drivers of that session. This is a model estimate, not a simulation: the driver features still carry some of the cars the driver drove before. See <Link to={`/sessions/${key ?? ""}`}>the full session</Link>.</Info></h1>
-          <p className="lede">The model keeps the driver's own features (form, teammate battles, experience, track record) and swaps in the car's: the team's recent form, its standings and its practice pace that weekend.</p>
+          <h1>Put any driver in any car <Info>Grid position = rank of the what-if score in that session. A model estimate, not a simulation. See <Link to={`/sessions/${key ?? ""}`}>the full session</Link>.</Info></h1>
+          <p className="lede">Keeps the driver's own form and record; swaps in the car's form, standings and practice pace.</p>
         </div>
       </div>
       <section className="panel">
@@ -60,7 +60,7 @@ export default function WhatIf() {
         </div>
       </section>
       {(sessions.error || session.error || swap.error) && <ErrorBox error={(sessions.error || session.error || swap.error)!} />}
-      {!s ? <Loading height={260} /> : (
+      {!s ? (session.error || sessions.error ? null : <Loading height={260} />) : (
         <div className="grid-2" style={{ opacity: swap.loading ? 0.6 : 1 }}>
           <section className="panel">
             <span className="eyebrow">Real car</span>

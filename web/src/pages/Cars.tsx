@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { prefetchCar } from "../three/modelFiles";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApi, useMeta } from "../api";
-import { Car3D, CarImage, HelmetImage } from "../components/lazy3d";
+import { Car3D, CarImage, HelmetImage, Show3DButton } from "../components/lazy3d";
 import { MODEL_CREDIT } from "../three/credits";
 import { ERA_SPECS, PART_LABEL, PART_ORDER, partInfo, type PartId } from "../three/parts";
 import { carPhysics, partPhysics, type Fact } from "../three/physics";
@@ -28,14 +28,17 @@ export function CarList() {
         <div>
           <span className="eyebrow">Cars · {season}</span>
           <h1>The {season} cars, fastest first</h1>
-          <p className="lede">Cars and drivers are modelled separately: a car's form stays with the team when a driver leaves. Open a car to explore it part by part.</p>
+          <p className="lede">Open a car to explore it part by part. Car form is modelled apart from the driver.</p>
         </div>
-        <div className="seg" role="group" aria-label="Season">
-          {meta.seasons.map((y) => <button key={y} type="button" aria-pressed={y === season} onClick={() => setParams({ season: String(y) })}>{y}</button>)}
+        <div className="controls">
+          <div className="seg" role="group" aria-label="Season">
+            {meta.seasons.map((y) => <button key={y} type="button" aria-pressed={y === season} onClick={() => setParams({ season: String(y) })}>{y}</button>)}
+          </div>
+          <Show3DButton what="cars" />
         </div>
       </div>
       {error && <ErrorBox error={error} />}
-      {!data ? <Loading height={400} /> : (
+      {!data ? (error ? null : <Loading height={400} />) : (
         <>
           <div className="panel">
             <div className="panel-head"><h2>{data.cars[0]?.era_label}<Info>{ERA_SPECS[data.era]?.extra}</Info></h2></div>
