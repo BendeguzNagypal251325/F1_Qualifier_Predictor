@@ -35,7 +35,7 @@ export default function WhatIf() {
       <div className="page-head">
         <div>
           <span className="eyebrow">What if</span>
-          <h1>Put any driver in any car <Info>Grid position = rank of the what-if score in that session. A model estimate, not a simulation. See <Link to={`/sessions/${key ?? ""}`}>the full session</Link>.</Info></h1>
+          <h1>Put any driver in any car <Info>Predicted qualifying position = rank of the what-if score among that session's drivers. A model estimate, not a simulation. See <Link to={`/sessions/${key ?? ""}`}>the full session</Link>.</Info></h1>
           <p className="lede">Keeps the driver's own form and record; swaps in the car's form, standings and practice pace.</p>
         </div>
       </div>
@@ -76,7 +76,7 @@ export default function WhatIf() {
             <div className="cell-name"><Avatar driver={s.driver} team={s.team} size={48} /><div><h2>{name(s.driver)}</h2><span className="sub"><Swatch team={s.team} /> in the {tname(s.team)}</span></div></div>
             <div className="tiles">
               <div className="tile"><span className="eyebrow">Predicted</span><span className="v">P{s.grid}</span><span className="s">model score {s.score.toFixed(1)}</span></div>
-              <div className="tile"><span className="eyebrow">Change</span><span className="v" style={{ color: s.grid < s.own_grid ? "var(--good)" : s.grid > s.own_grid ? "var(--bad)" : undefined }}>{s.grid === s.own_grid ? "±0" : `${s.grid < s.own_grid ? "▲" : "▼"} ${Math.abs(s.grid - s.own_grid)}`}</span><span className="s">grid places</span></div>
+              <div className="tile"><span className="eyebrow">Change</span><span className="v" style={{ color: s.grid < s.own_grid ? "var(--good)" : s.grid > s.own_grid ? "var(--bad)" : undefined }}>{s.grid === s.own_grid ? "±0" : `${s.grid < s.own_grid ? "▲" : "▼"} ${Math.abs(s.grid - s.own_grid)}`}</span><span className="s">qualifying places</span></div>
             </div>
             <ContribBars contrib={s.contrib} />
           </section>

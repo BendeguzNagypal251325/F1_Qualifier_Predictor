@@ -1,12 +1,17 @@
 # Gridcast
 
-**Gridcast** is a Formula 1 qualifying forecaster: it calls the grid before the cars go out. The logo is
+**Gridcast** is a Formula 1 qualifying forecaster: it calls the qualifying order before the cars go out. The logo is
 a red, forward-leaning plate with two staggered grid-slot brackets (the painted boxes on a starting
 grid) and speed lines behind it; the wordmark is GRID in white and CAST in red, set in Saira Condensed.
 
 Predicts which 10 drivers reach Q3 (qualify in the top 10) for every Formula 1 Grand Prix, using only
 information available **before** qualifying starts. It can also run live during a race weekend: after
 every practice session and after qualifying (see [Live weekend predictions](#live-weekend-predictions)).
+
+It predicts **qualifying only, not the race**. The target is the official qualifying classification
+(F1DB's qualifying results, and OpenF1's *Qualifying* session for live weekends), so grid penalties, the
+starting grid and race results are not part of it: a driver who qualifies P1 and starts P11 after a
+penalty counts as P1.
 
 The results are served as a **web app** (FastAPI back end + React front end, one Docker image) in a
 dark red-and-black theme: driver pages with 3D helmets, team breakdowns, interactive 3D cars for every
