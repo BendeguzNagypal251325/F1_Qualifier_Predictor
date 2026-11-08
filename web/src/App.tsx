@@ -135,7 +135,7 @@ export default function App() {
       {meta.data && (
         <footer className="foot">
           <span className="chequer" aria-hidden />
-          <span>Gridcast · data to {meta.data.data_version} · out-of-sample forecasts</span>
+          <span>Gridcast · data to {meta.data.data_version} · out-of-sample qualifying forecasts</span>
           <Info label="Sources and credits">
             Every prediction is out-of-sample: before each session the model is retrained on earlier sessions only.
             Results: <a href="https://github.com/f1db/f1db">F1DB</a> (CC BY 4.0). Live sessions: <a href="https://openf1.org">OpenF1</a>.

@@ -11,7 +11,7 @@ export function PredictionTable({ s }: { s: SessionDetail }) {
   return (
     <div className="scroll">
       <table>
-        <thead><tr><th className="num">Pred</th><th>Driver</th><Q3ChanceHead /><th>Team</th><th className="num">Practice</th><th>Why</th><th className="num">Model</th><th className="num">Actual</th><th>Call</th></tr></thead>
+        <thead><tr><th className="num">Pred</th><th>Driver</th><Q3ChanceHead /><th>Team</th><th className="num">Practice</th><th>Why</th><th className="num">Model</th><th className="num">Qualified</th><th>Call</th></tr></thead>
         <tbody>
           {s.rows.map((r) => (
             <tr key={r.driver} className={r.pred_rank === 10 ? "cut" : ""}>

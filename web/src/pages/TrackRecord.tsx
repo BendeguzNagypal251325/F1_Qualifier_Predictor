@@ -46,7 +46,7 @@ export default function TrackRecord() {
             <h2>Every frozen weekend</h2>
             <div className="scroll">
               <table>
-                <thead><tr><th>Race</th><th>Frozen after</th><th className="num">Correct</th></tr></thead>
+                <thead><tr><th>Grand Prix</th><th>Frozen after</th><th className="num">Correct</th></tr></thead>
                 <tbody>
                   {[...data.races].reverse().map((r) => (
                     <tr key={r.race_key} className={r.race_key === sel ? "sel-row" : ""}>
@@ -84,7 +84,7 @@ function RaceMoves({ raceKey }: { raceKey: string }) {
   return (
     <section className="panel">
       <div className="panel-head">
-        <h2>{data.season} {data.gp}: how the prediction moved <Info>Predicted grid position after each practice session, as it was frozen. The arrow compares with the previous session. Sorted by the real result once qualifying is done.</Info></h2>
+        <h2>{data.season} {data.gp}: how the prediction moved <Info>Predicted qualifying position after each practice session, as it was frozen. The arrow compares with the previous session. Sorted by the real result once qualifying is done.</Info></h2>
         <ChanceLegend />
       </div>
       <div className="scroll">
@@ -94,7 +94,7 @@ function RaceMoves({ raceKey }: { raceKey: string }) {
               <th>Driver</th>
               {snaps.map((s) => <th key={s.session} className="num" data-tip={`Frozen ${utc(s.created_at)}`}>{LABEL[s.session]}{s.score && <span className="score"> {s.score.correct}/10</span>}</th>)}
               <th className="num">Q3 chance</th>
-              {data.result && <th className="num">Actual</th>}
+              {data.result && <th className="num">Qualified</th>}
             </tr>
           </thead>
           <tbody>
