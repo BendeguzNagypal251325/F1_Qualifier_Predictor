@@ -84,7 +84,7 @@ export function TeamPage() {
 
       <div className="tiles stagger">
         <Tile label="Avg quali position" value={fmt(t.avg_pos)} sub={`${t.sessions} entries`} countUp={t.avg_pos} decimals={1} />
-        <Tile label="Avg pace rank" value={fmt(t.pace_rank)} sub="team's best car each qualifying" countUp={t.pace_rank} decimals={1} />
+        <Tile label="Avg pace rank" value={fmt(t.pace_rank)} sub="team's best car each race" countUp={t.pace_rank} decimals={1} />
         <Tile label="Reached Q3" value={pct(t.q3_rate)} countUp={t.q3_rate != null ? t.q3_rate * 100 : null} decimals={0} suffix="%" />
         <Tile label="Poles" value={t.poles} countUp={t.poles} decimals={0} />
         <Tile label="Model called it" value={pct(t.right / Math.max(1, t.sessions))} sub="in or out of Q3, both cars" />
@@ -96,13 +96,13 @@ export function TeamPage() {
           <RaceLine points={bySeason} yLabel="Average pace rank per season" fmt={(v) => v.toFixed(1)} />
         </section>
         <section className="panel reveal">
-          <div className="panel-head"><h2>Qualifying by qualifying<Info>pace rank, rolling average over 5 sessions</Info></h2></div>
-          <RaceLine points={rolling(t.trend.map((r) => r.rank), 5).map((v, i) => { const r = t.trend[i]; return { label: `${r.season}`, value: v, tip: `${r.season} R${r.round} ${r.gp}\nrank ${r.rank} in this qualifying · ${fmt(v)} rolling\n+${fmt(r.gap, 2)}% to pole` }; })} yLabel="Qualifying pace rank, rolling average" fmt={(v) => v.toFixed(1)} />
+          <div className="panel-head"><h2>Race by race<Info>pace rank, 5-race rolling average</Info></h2></div>
+          <RaceLine points={rolling(t.trend.map((r) => r.rank), 5).map((v, i) => { const r = t.trend[i]; return { label: `${r.season}`, value: v, tip: `${r.season} R${r.round} ${r.gp}\nrank ${r.rank} this race · ${fmt(v)} rolling\n+${fmt(r.gap, 2)}% to pole` }; })} yLabel="Pace rank per race, rolling average" fmt={(v) => v.toFixed(1)} />
         </section>
       </div>
 
       <section className="panel reveal">
-        <div className="panel-head"><h2>Season by season<Info>teammate battle = who out-qualified whom, session by session</Info></h2></div>
+        <div className="panel-head"><h2>Season by season<Info>teammate battle = who out-qualified whom, race by race</Info></h2></div>
         <div className="scroll">
           <table>
             <thead><tr><th>Season</th><th>Car</th><th>Engine</th><th className="num">Pace rank</th><th className="num">Gap</th><th className="num">Avg</th><th>Q3 rate</th><th className="num">Poles</th><th>Teammate battle</th></tr></thead>

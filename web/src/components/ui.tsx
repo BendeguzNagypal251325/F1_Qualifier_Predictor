@@ -162,7 +162,7 @@ export function Q3Chance({ p, band = [0.3, 0.7] }: { p: number | null | undefine
 /** Header cell for the Q3 chance column, with the explanation in a popover. */
 export function Q3ChanceHead() {
   return (
-    <th className="num q3-head">Q3<span className="hide-sm"> chance</span> <Info label="About the Q3 chance">Share of drivers predicted at this position who reached Q3 in earlier qualifying sessions. 70%+ likely, 30–70% too close to call, under 30% unlikely.</Info></th>
+    <th className="num q3-head">Q3<span className="hide-sm"> chance</span> <Info label="About the Q3 chance">Share of drivers predicted at this position who reached Q3 in earlier races. 70%+ likely, 30–70% too close to call, under 30% unlikely.</Info></th>
   );
 }
 
@@ -308,7 +308,7 @@ export function SeasonStrip({ driver, labels = false }: { driver: string; labels
         const t = meta.teams.find((x) => x.id === tid);
         return (
           <span key={y} className={t ? "" : "none"} style={t ? { background: t.color, color: inkOn(t.color) } : undefined}
-            data-tip={t ? `${y}\n${t.name}` : `${y}\nNot entered`}>
+            data-tip={t ? `${y}\n${t.name}` : `${y}\nNot on the grid`}>
             {labels ? String(y).slice(2) : null}
           </span>
         );

@@ -8,7 +8,7 @@ import { ERA_SPECS, PART_LABEL, PART_ORDER, partInfo, type PartId } from "../thr
 import { carPhysics, partPhysics, type Fact } from "../three/physics";
 import { RaceLine } from "../components/Charts";
 import { Avatar, ContribBars, ErrorBox, fmt, Loading, pct, signed, Swatch, Tile, TrackOutline, useHelmetSpec, Info } from "../components/ui";
-import type { CarDetail, CarList as CarListData, UpgradePart } from "../types";
+import type { CarDetail, CarList as CarListData } from "../types";
 
 const ENGINE_NAMES: Record<string, string> = {
   mercedes: "Mercedes", "bwt-mercedes": "BWT Mercedes", ferrari: "Ferrari", renault: "Renault", honda: "Honda",
@@ -129,7 +129,7 @@ function PartPanel({ part, car, cars }: { part: PartId | null; car: CarDetail; c
     body = (
       <div className="tiles stagger">
         <Tile label="Reached Q3" value={pct(car.q3_rate)} sub="of this car's entries" />
-        <Tile label="Best qualifying" value={`P${car.best}`} sub={`${car.poles} pole${car.poles === 1 ? "" : "s"}`} />
+        <Tile label="Best grid slot" value={`P${car.best}`} sub={`${car.poles} pole${car.poles === 1 ? "" : "s"}`} />
       </div>
     );
   } else {
@@ -164,7 +164,7 @@ function BestWorstTracks({ car }: { car: CarDetail }) {
   return (
     <section className="panel best-worst-panel">
       <div className="panel-head">
-        <h2>Best and worst tracks<Info>Ranked by the car's best qualifying position at each Grand Prix of {car.season}, then by its gap to pole. The gap is the team's fastest qualifying lap as a percentage slower than pole.</Info></h2>
+        <h2>Best and worst tracks<Info>Ranked by the car's best grid slot at each race of {car.season}, then by its gap to pole. The gap is the team's fastest qualifying lap as a percentage slower than pole.</Info></h2>
       </div>
       <div className="best-worst">
         {lists.map(([title, list]) => (
@@ -307,61 +307,16 @@ export function CarPage() {
       </div>
 
 
-      <div className="stackcol">
+      <div>
         <section className="panel">
-          <div className="panel-head"><h2>Pace through the season<Info>gap to pole, % (lower is faster) The team's fastest qualifying lap at each Grand Prix, as a percentage slower than pole.{car.season >= car.upgrades_from && " Dashed lines mark weekends where the team declared new parts."}</Info></h2></div>
+          <div className="panel-head"><h2>Pace through the season<Info>gap to pole, % (lower is faster) The team's fastest qualifying lap at each race, as a percentage slower than pole. Upgrades and regressions show up here.</Info></h2></div>
           <RaceLine
-            points={car.trend.map((t) => {
-              const up = car.upgrades.find((u) => u.race_key === t.race_key);
-              return { label: `R${t.round}`, value: t.gap, mark: !!up,
-                tip: `R${t.round} ${t.gp}\n+${t.gap?.toFixed(3)}% to pole · pace rank ${t.rank}\nbest qualifying P${t.best_pos}${up ? `\nUpgrades: ${up.parts.map((x) => x.part).join(", ")}` : ""}` };
-            })}
-            yLabel="Gap to pole in qualifying, by Grand Prix" fmt={(v) => `${v.toFixed(1)}%`} width={1120} height={240}
+            points={car.trend.map((t) => ({ label: `R${t.round}`, value: t.gap, tip: `R${t.round} ${t.gp}\n+${t.gap?.toFixed(3)}% to pole · pace rank ${t.rank}\nbest grid slot P${t.best_pos}` }))}
+            yLabel="Gap to pole by race" fmt={(v) => `${v.toFixed(1)}%`} width={1120} height={240}
           />
         </section>
-        {car.season >= car.upgrades_from && <Upgrades car={car} />}
       </div>
 
     </>
-  );
-}
-
-/** Parts with the same name in one race (e.g. two front-corner items), kept together. */
-function groupParts(parts: UpgradePart[]): [string, UpgradePart[]][] {
-  const m = new Map<string, UpgradePart[]>();
-  parts.forEach((x) => m.set(x.part, [...(m.get(x.part) ?? []), x]));
-  return [...m.entries()];
-}
-
-/** Every race where the team declared new parts (FIA car presentation documents), and how its pace moved. */
-function Upgrades({ car }: { car: CarDetail }) {
-  const ups = car.upgrades;
-  return (
-    <section className="panel">
-      <div className="panel-head">
-        <h2>Upgrades<Info>New parts each team declared to the FIA before the race weekend (car presentation submissions, 2024 on). Before = average gap to pole over the three qualifying sessions before; after = that weekend and the next two. Gaps also depend on the track, so treat a single change with care. Hover a part for the team's description.</Info></h2>
-        {ups.length > 0 && <span className="mono">{ups.reduce((a, u) => a + u.parts.length, 0)} parts · {ups.length} weekends</span>}
-      </div>
-      {ups.length === 0 ? <p className="body-text">No new parts declared for this car{car.season === new Date().getFullYear() ? " so far" : ""}.</p> : (
-        <div className="scroll">
-          <table className="upgrades">
-            <thead><tr><th>Grand Prix</th><th>New parts</th><th className="num hide-sm">Before</th><th className="num hide-sm">After</th><th className="num">Change</th></tr></thead>
-            <tbody>
-              {ups.map((u) => (
-                <tr key={u.race_key}>
-                  <td className="nowrap"><Link className="link" to={`/sessions/${u.race_key}`}>R{u.round} {u.gp}</Link></td>
-                  <td><div className="up-parts">{groupParts(u.parts).map(([name, xs]) => (
-                    <span key={name} className="up-part" data-tip={xs.map((x) => `${x.reason}\n${x.description}`).join("\n\n")}>{name}{xs.length > 1 && <b> ×{xs.length}</b>}</span>
-                  ))}</div></td>
-                  <td className="num hide-sm">{u.before != null ? `${u.before.toFixed(2)}%` : "–"}</td>
-                  <td className="num hide-sm">{u.after != null ? `${u.after.toFixed(2)}%` : "–"}</td>
-                  <td className={`num${u.change == null ? "" : u.change < 0 ? " ok" : " no"}`}>{u.change != null ? `${u.change > 0 ? "+" : "−"}${Math.abs(u.change).toFixed(2)}` : "–"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
   );
 }
