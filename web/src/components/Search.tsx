@@ -8,7 +8,7 @@ import type { Meta, TeamSummary } from "../types";
 interface Item { kind: "Driver" | "Team" | "Track" | "Car" | "Page"; label: string; sub: string; to: string; color?: string; key: string }
 
 const PAGES: [string, string][] = [["/live", "Live weekend"], ["/drivers", "Drivers"], ["/teams", "Teams"], ["/cars", "Cars"],
-  ["/tracks", "Tracks"], ["/what-if", "What if"], ["/sessions", "Sessions"], ["/track-record", "Track record"], ["/heatmap", "Heatmap"], ["/how-it-works", "How it works"]];
+  ["/tracks", "Tracks"], ["/what-if", "What if"], ["/sessions", "Sessions"], ["/heatmap", "Heatmap"], ["/how-it-works", "How it works"]];
 
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 

@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApi, useMeta } from "../api";
-import { PredictionTable } from "../components/PredictionTable";
+import { GridCompare, PredictionTable } from "../components/PredictionTable";
 import { ChanceLegend, ErrorBox, GroupLegend, Info, Loading, Tile, TrackOutline } from "../components/ui";
 import type { SessionDetail, SessionSummary } from "../types";
 
@@ -18,6 +19,7 @@ export default function Sessions() {
   const s = detail.data;
   const season = s?.season ?? meta.latest;
   const inSeason = all.data?.filter((x) => x.season === season) ?? [];
+  const [view, setView] = useState<"detail" | "grids">("detail");
   const avg = inSeason.length ? inSeason.reduce((a, x) => a + x.correct, 0) / inSeason.length : null;
 
   return (
@@ -25,7 +27,7 @@ export default function Sessions() {
       <div className="page-head">
         <div>
           <span className="eyebrow">Sessions</span>
-          <h1>{s ? `${s.season} ${s.gp} GP qualifying` : "Qualifying sessions"}</h1>
+          <h1>{s ? `${s.season} ${s.gp} Grand Prix` : "Qualifying sessions"}</h1>
           <div className="controls">
             <label htmlFor="ss-season">Season
               <select id="ss-season" value={season} onChange={(e) => { const f = all.data?.find((x) => x.season === Number(e.target.value)); if (f) nav(`/sessions/${f.race_key}`); }}>
@@ -44,7 +46,7 @@ export default function Sessions() {
       {all.data && (
         <section className="panel reveal">
           <div className="panel-head">
-            <h2>{wantCorrect != null ? `Every session with ${wantCorrect}/10 correct` : `${season} at a glance`} <Info>Each cell is one qualifying session, shaded by how many of the ten picks were right. Click a cell to open it.</Info></h2>
+            <h2>{wantCorrect != null ? `Every session with ${wantCorrect}/10 correct` : `${season} at a glance`} <Info>Each cell is one race, shaded by how many of the ten picks were right. Click a cell to open it.</Info></h2>
             {wantCorrect != null && <Link to="/sessions" className="link">Show all sessions</Link>}
           </div>
           <div className="season-strip-lg">
@@ -66,8 +68,14 @@ export default function Sessions() {
             <Tile label="Weekend" value={s.date} small sub={s.sprint ? "sprint weekend (one practice)" : "standard weekend"} />
           </div>
           <section className="panel">
-            <div className="panel-head"><h2>Predicted qualifying order vs result <Info>“Why” shows how far each group moved the driver: solid segments moved them forward, faded ones backward. The dashed line is the predicted Q3 cut. <Link to={`/what-if?season=${s.season}&race=${s.race_key}`}>Try a car swap for this session →</Link></Info></h2><div className="legends"><ChanceLegend /><GroupLegend /></div></div>
-            <PredictionTable s={s} />
+            <div className="panel-head"><h2>Predicted order vs result <Info>“Why” shows how far each group moved the driver: solid segments moved them forward, faded ones backward. The dashed line is the predicted Q3 cut. <Link to={`/what-if?season=${s.season}&race=${s.race_key}`}>Try a car swap for this race →</Link></Info></h2><div className="legends">
+              <div className="seg" role="group" aria-label="View">
+                <button type="button" aria-pressed={view === "detail"} onClick={() => setView("detail")}>Detailed</button>
+                <button type="button" aria-pressed={view === "grids"} onClick={() => setView("grids")}>Predicted vs actual</button>
+              </div>
+              <ChanceLegend />{view === "detail" && <GroupLegend />}
+            </div></div>
+            {view === "detail" ? <PredictionTable s={s} /> : <GridCompare s={s} />}
           </section>
         </>
       )}

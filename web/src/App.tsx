@@ -18,7 +18,6 @@ import { TeamList, TeamPage } from "./pages/Teams";
 import WhatIf from "./pages/WhatIf";
 import Sessions from "./pages/Sessions";
 import HeatmapPage from "./pages/Heatmap";
-import TrackRecord from "./pages/TrackRecord";
 import HowItWorks from "./pages/HowItWorks";
 
 const NAV = [
@@ -29,7 +28,6 @@ const NAV = [
   ["/tracks", "Tracks"],
   ["/what-if", "What if"],
   ["/sessions", "Sessions"],
-  ["/track-record", "Track record"],
   ["/heatmap", "Heatmap"],
   ["/how-it-works", "How it works"],
 ] as const;
@@ -123,7 +121,6 @@ export default function App() {
                   <Route path="/sessions" element={<Sessions />} />
                   <Route path="/sessions/:key" element={<Sessions />} />
                   <Route path="/heatmap" element={<HeatmapPage />} />
-                  <Route path="/track-record" element={<TrackRecord />} />
                   <Route path="/how-it-works" element={<HowItWorks />} />
                   <Route path="*" element={<div className="panel empty-state"><h2>Page not found</h2><NavLink to="/" className="btn">Back to the overview</NavLink></div>} />
                 </Routes>
@@ -135,7 +132,7 @@ export default function App() {
       {meta.data && (
         <footer className="foot">
           <span className="chequer" aria-hidden />
-          <span>Gridcast · data to {meta.data.data_version} · out-of-sample qualifying forecasts</span>
+          <span>Gridcast · data to {meta.data.data_version} · out-of-sample forecasts</span>
           <Info label="Sources and credits">
             Every prediction is out-of-sample: before each session the model is retrained on earlier sessions only.
             Results: <a href="https://github.com/f1db/f1db">F1DB</a> (CC BY 4.0). Live sessions: <a href="https://openf1.org">OpenF1</a>.

@@ -31,11 +31,11 @@ export default function HowItWorks() {
         <section className="panel">
           <h2>The question</h2>
           <p className="body-text">
-            Gridcast predicts qualifying, not the race. Only the ten fastest qualifiers reach Q3; before qualifying, it
-            predicts every driver's qualifying position from driver and team form, the standings and that weekend's practice.
+            Only the ten fastest qualifiers reach Q3. Before qualifying, Gridcast predicts every driver's position from
+            driver form, team form, the standings and that weekend's practice. Its top ten are the Q3 picks.
           </p>
           <div className="facts">
-            <div><b className="mono">{o.overall.correct_per_10.toFixed(2)}<small> / 10</small></b><span>right per session ({o.overall.sessions})</span></div>
+            <div><b className="mono">{o.overall.correct_per_10.toFixed(2)}<small> / 10</small></b><span>right per race ({o.overall.sessions})</span></div>
             <div><b className="mono">{latest.correct_per_10.toFixed(2)}<small> / 10</small></b><span>in {o.latest}</span></div>
             <div><b className="mono">{best.correct_per_10.toFixed(2)}<small> / 10</small></b><span>best simple rule</span></div>
           </div>
@@ -44,12 +44,11 @@ export default function HowItWorks() {
         <section className="panel">
           <h2>How it is tested</h2>
           <p className="body-text">
-            Walk-forward: going session by session through {range}, the model is retrained on every earlier qualifying and then
-            predicts the next one. It never sees a result before predicting it, and neither does the Q3 chance.
+            Walk-forward: going race by race through {range}, the model is retrained on every earlier race and then predicts
+            the next one. It never sees a result before predicting it, and neither does the Q3 chance.
           </p>
           <p className="body-text">
-            That is a backtest. Live predictions are also frozen before each qualifying session and scored afterwards on
-            the <Link className="link" to="/track-record">Track record page</Link>.
+            That is a backtest. Live predictions are also frozen before each qualifying session and scored afterwards.
           </p>
         </section>
 
@@ -58,7 +57,7 @@ export default function HowItWorks() {
           <p className="body-text">
             Ridge regression: a weighted sum of {meta.groups ? Object.values(meta.groups).flat().length : "the"} inputs, with small weights.
             Other linear models scored within about one pick a season of it; random forests, gradient boosting, XGBoost and
-            LightGBM did no better. With about {Math.round(o.overall.sessions / Math.max(1, o.seasons.length))} weekends
+            LightGBM did no better. With about {Math.round(o.overall.sessions / Math.max(1, o.seasons.length))} races
             a season and new cars every year, flexible models learn quirks that do not repeat; a simple one keeps patterns
             that do, like “fast in practice, fast in qualifying”.
           </p>
@@ -69,7 +68,7 @@ export default function HowItWorks() {
           <ul className="body-text plain-list">
             <li>The top six or seven cars are easy to call; nearly every miss is in the P8 to P12 fight, often decided by under a tenth.</li>
             <li>Rain and crashes in qualifying are not predicted.</li>
-            <li>Race results, grid penalties and the starting grid are not predicted.</li>
+            <li>It predicts the qualifying order, not the grid after penalties.</li>
             <li>The 3D cars show each era's shape in team colours.</li>
           </ul>
         </section>
@@ -77,8 +76,8 @@ export default function HowItWorks() {
         <section className="panel">
           <h2>What the Q3 chance means</h2>
           <p className="body-text">
-            The share of drivers predicted at that position who made Q3 in earlier qualifying sessions. Between 30% and 70% is too close to call.
-            {cal && <> Over {cal.races} sessions its Brier score (lower is better) is {cal.brier.toFixed(3)}, against {cal.brier_picks.toFixed(3)} for
+            The share of drivers predicted at that position who made Q3 in earlier races. Between 30% and 70% is too close to call.
+            {cal && <> Over {cal.races} races its Brier score (lower is better) is {cal.brier.toFixed(3)}, against {cal.brier_picks.toFixed(3)} for
               yes/no picks and {cal.brier_base_rate.toFixed(3)} for one flat chance.</>}
           </p>
         </section>

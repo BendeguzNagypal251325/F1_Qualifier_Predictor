@@ -549,12 +549,6 @@ tr.sel-row td { background: var(--surface-2); }
 .slot.out .slot-name { text-decoration: line-through; }
 @media (max-width: 700px) { .slot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .slot .avatar { display: none; } }
 .pick:disabled:not([aria-pressed="true"]) { opacity: 0.5; }
-
-/* Upgrades (car page) */
-svg .mark-line { stroke: var(--ink-2); stroke-dasharray: 3 4; opacity: 0.6; }
-.up-parts { display: flex; flex-wrap: wrap; gap: 4px; }
-.up-part { font-size: 0.82rem; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); cursor: help; white-space: nowrap; }
-table.upgrades td { vertical-align: top; }
-.nowrap { white-space: nowrap; }
-.up-part b { font-weight: 600; margin-left: 2px; }
-@media (max-width: 600px) { table.upgrades td.nowrap { white-space: normal; min-width: 72px; } .up-part { font-size: 0.76rem; padding: 1px 6px; } }
+.grid-compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.grid-compare .eyebrow { display: block; margin-bottom: 6px; }
+@media (max-width: 700px) { .grid-compare { grid-template-columns: 1fr; } }

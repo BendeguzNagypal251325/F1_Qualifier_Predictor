@@ -25,7 +25,7 @@ const { chromium } = require("playwright");
   };
   await p.goto(base + "/", { waitUntil: "networkidle" });
   await check("load home");
-  for (const label of ["Live", "Drivers", "Teams", "Cars", "Tracks", "What if", "Sessions", "Track record", "Heatmap", "How it works"]) {
+  for (const label of ["Live", "Drivers", "Teams", "Cars", "Tracks", "What if", "Sessions", "Heatmap", "How it works"]) {
     await p.click(`nav.nav a:has-text("${label}")`);
     await check("tab " + label);
   }
