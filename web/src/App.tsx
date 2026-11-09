@@ -6,7 +6,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SpeedLines } from "./components/SpeedLines";
 import { Search } from "./components/Search";
 import { allow3D } from "./three/thumbs";
-import { ErrorBox, Info, TooltipLayer } from "./components/ui";
+import { ErrorBox, Info, TeamTints, TooltipLayer } from "./components/ui";
 import type { Meta } from "./types";
 import Overview from "./pages/Overview";
 import LivePage from "./pages/Live";
@@ -103,6 +103,7 @@ export default function App() {
         {meta.error && <ErrorBox error={meta.error} />}
         {meta.data && (
           <MetaContext.Provider value={meta.data}>
+            <TeamTints />
             <div className="page" key={pathname} style={{ display: "grid", gap: 20 }}>
               <ErrorBoundary>
                 <Routes>

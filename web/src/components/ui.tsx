@@ -290,7 +290,7 @@ export function Avatar({ driver, season, team, size = 36 }: { driver: string; se
   const t = useTeam(team ?? seasonTeam);
   const name = d?.name ?? driver;
   return (
-    <span className="avatar" role="img" aria-label={`${name}, ${t.name}`}
+    <span className="avatar" role="img" aria-label={`${name}, ${t.name}`} data-team={t.id}
       style={{ width: size, height: size, fontSize: size * 0.4, background: t.color, color: inkOn(t.color) }}>
       {initials(name)}
     </span>
@@ -398,4 +398,11 @@ export function Sortable<T>({ rows, initial, children }: {
     </th>
   );
   return <>{children(sorted, th)}</>;
+}
+
+/** A faint team-colour fade behind every table row that starts with a driver (found by the row's avatar). */
+export function TeamTints() {
+  const meta = useMeta();
+  const css = meta.teams.map((t) => `tr:has(> td:nth-child(-n+2) .avatar[data-team="${t.id}"]) { background-image: linear-gradient(90deg, color-mix(in oklab, ${t.color} 20%, transparent), transparent 80%); }`).join("\n");
+  return <style>{css}</style>;
 }

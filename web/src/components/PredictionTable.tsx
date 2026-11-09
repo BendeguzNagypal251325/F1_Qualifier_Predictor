@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useMeta } from "../api";
 import type { SessionDetail } from "../types";
-import { Avatar, ContribStack, PosChip, Q3Chance, Q3ChanceHead, Swatch, useTeam } from "./ui";
+import { Avatar, ContribStack, PosChip, Q3Chance, Q3ChanceHead, Swatch } from "./ui";
 
 /** Predicted order vs result for one session (used by Sessions and the Live fallback). */
 export function PredictionTable({ s }: { s: SessionDetail }) {
@@ -37,10 +37,9 @@ type Row = SessionDetail["rows"][number];
 /** One line of a grid: faint team colour behind it, position, driver, Q3 chance and a note. */
 function GridRow({ r, place, note, band }: { r: Row; place: number; note: string; band?: [number, number] }) {
   const meta = useMeta();
-  const color = useTeam(r.team).color;
   const name = meta.drivers.find((d) => d.id === r.driver)?.name ?? r.driver;
   return (
-    <tr className={place === 10 ? "cut" : ""} style={{ background: `linear-gradient(90deg, color-mix(in oklab, ${color} 22%, transparent), transparent 80%)` }}>
+    <tr className={place === 10 ? "cut" : ""}>
       <td className="num">P{place}</td>
       <td><Link className="cell-name" to={`/drivers/${r.driver}`}><Avatar driver={r.driver} team={r.team} size={26} /><span>{name}</span></Link></td>
       <td className="num"><Q3Chance p={r.q3_prob} band={band} /></td>
