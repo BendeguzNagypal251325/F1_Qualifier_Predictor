@@ -60,7 +60,7 @@ export default function Overview() {
         <div>
           <span className="eyebrow">Formula 1 qualifying · {range}</span>
           <h1>Which ten drivers make it into Q3?</h1>
-          <p className="lede">Every driver's qualifying position, predicted from car form, driver form and practice. All {o.sessions} sessions below were predicted with only what was known beforehand.</p>
+          <p className="lede">Gridcast predicts <b>qualifying, not the race</b>: every driver's qualifying position and who reaches Q3, the top ten. All {o.sessions} sessions below were predicted with only what was known before qualifying.</p>
         </div>
         <Link to="/live" className="btn">See the live weekend</Link>
       </div>

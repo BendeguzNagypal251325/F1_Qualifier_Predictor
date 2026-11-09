@@ -89,7 +89,7 @@ export function Bars({ items, total, onBar, height = 210 }: { items: { label: st
 
 /** Line over races (lower = better is drawn higher when ``invert``). */
 export function RaceLine({ points, yLabel, invert = true, fmt = (v: number) => v.toFixed(2), color = "var(--series-model)", width = 640, height = 220 }: {
-  points: { label: string; value: number | null; tip?: string }[];
+  points: { label: string; value: number | null; tip?: string; mark?: boolean }[];
   yLabel: string;
   invert?: boolean;
   fmt?: (v: number) => string;
@@ -117,6 +117,7 @@ export function RaceLine({ points, yLabel, invert = true, fmt = (v: number) => v
       {tk.map((t, i) => <text key={i} x={left - 6} y={y(t) + 4} textAnchor="end">{fmt(t)}</text>)}
       <text x={left} y={H - 4}>{points[0].label}</text>
       <text x={W - right} y={H - 4} textAnchor="end">{points[n - 1].label}</text>
+      {points.map((p, i) => p.mark && <line key={`m${i}`} className="mark-line" x1={x(i)} x2={x(i)} y1={top} y2={H - bottom} />)}
       <path className="draw glow" pathLength={1} d={d} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
       {points.map((p, i) => p.value != null && (
         <g key={i} data-tip={p.tip ?? `${p.label}\n${fmt(p.value)}`}>

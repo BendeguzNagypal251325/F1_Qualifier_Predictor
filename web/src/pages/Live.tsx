@@ -26,7 +26,7 @@ export default function LivePage() {
       <div className="page-head reveal">
         <div>
           <span className="eyebrow"><span className={`live-dot${state === "live" ? " on" : ""}`} aria-hidden /> Live weekend</span>
-          <h1>{p ? `${p.season} ${titleCase(p.grand_prix)} Grand Prix` : "Live weekend"}
+          <h1>{p ? `${p.season} ${titleCase(p.grand_prix)} GP qualifying` : "Live qualifying forecast"}
             <Info>Rebuilt after every session. After qualifying, the real result appears next to it.</Info>
           </h1>
         </div>
@@ -59,7 +59,7 @@ export default function LivePage() {
             <div className="panel-head"><h2>Predicted qualifying order <Info>The dashed line is the predicted Q3 cut. “Why” shows how much the driver, the car and practice moved each prediction.</Info></h2><div className="legends"><ChanceLegend /><GroupLegend /></div></div>
             <div className="scroll">
               <table>
-                <thead><tr><th className="num">Pred</th><th>Driver</th><Q3ChanceHead /><th>Team</th><th className="num">Practice</th><th>Why</th><th className="num">Model</th>{p.qualifying_done && <th className="num">Actual</th>}</tr></thead>
+                <thead><tr><th className="num">Pred</th><th>Driver</th><Q3ChanceHead /><th>Team</th><th className="num">Practice</th><th>Why</th><th className="num">Model</th>{p.qualifying_done && <th className="num">Qualified</th>}</tr></thead>
                 <tbody>
                   {p.rows.map((r) => (
                     <tr key={r.driver_id} className={r.pred_pos === 10 ? "cut" : ""}>
@@ -109,7 +109,7 @@ function LatestWeekend() {
       </div>
       <section className="panel reveal">
         <div className="panel-head">
-          <h2>{d.season} {d.gp}: prediction vs result <Info>Shown until the next weekend's first session is in. The dashed line is the predicted Q3 cut.</Info></h2>
+          <h2>{d.season} {d.gp}: qualifying prediction vs result <Info>Shown until the next weekend's first session is in. The dashed line is the predicted Q3 cut.</Info></h2>
           <Link to={`/sessions/${d.race_key}`} className="btn ghost">Open session</Link>
         </div>
         <PredictionTable s={d} />
